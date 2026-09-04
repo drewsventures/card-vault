@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Card Vault</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#181b20;--mut:#6b7280;--line:#e4e7ec;--accent:#c8102e;--green:#0a7d33;--blue:#3b6fd4;--gold:#b8860b;--chip:#eef2ff;--track:#e9ecf1;--nav:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#181c22;--ink:#e8eaed;--mut:#9aa3af;--line:#2a2f37;--chip:#1e2430;--track:#252b34;--nav:#12161c}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-bottom:70px}
+.wrap{max-width:860px;margin:0 auto;padding:14px 14px 40px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 14px 8px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:19px;margin:0;letter-spacing:-.3px}
+header .as{font-size:11px;color:var(--mut)}
+.hide{display:none!important}
+/* kpis */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+.kpi .n{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.kpi .l{color:var(--mut);font-size:12px;margin-top:2px}
+.kpi .d{font-size:11.5px;margin-top:4px;font-weight:600}
+h2{font-size:15px;margin:22px 0 8px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.srow:last-child{border-bottom:none}
+.srow .bar{flex:1;height:7px;background:var(--track);border-radius:5px;overflow:hidden;max-width:120px}
+.srow .bar>i{display:block;height:100%;background:var(--green);border-radius:5px}
+.srow .v{font-weight:700;min-width:64px;text-align:right}
+.srow .nm{flex:1;min-width:0}
+.dupe{background:var(--chip);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-top:10px;font-size:13.5px}
+.dupe b{color:var(--accent)}
+/* search */
+.searchbar{position:sticky;top:52px;z-index:4;background:var(--bg);padding:4px 0 8px}
+.searchbar input{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:16px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:20px;padding:5px 12px;font-size:12.5px;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.count{color:var(--mut);font-size:12.5px;margin:8px 2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:11px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
+.tile .ph{aspect-ratio:3/4.1;background:#0000000d;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tile .ph img{width:100%;height:100%;object-fit:cover}
+.tile .ph .no{color:var(--mut);font-size:11px;text-align:center;padding:8px}
+.tile .m{padding:8px 9px}
+.tile .pl{font-weight:650;font-size:12.5px;line-height:1.25}
+.tile .st{color:var(--mut);font-size:11px;margin-top:1px;line-height:1.2}
+.tile .pr{font-weight:800;margin-top:4px;font-size:14px}
+.tile .pr small{font-weight:500;color:var(--mut);font-size:10px}
+.badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--gold);color:#fff;margin-left:5px;vertical-align:middle}
+/* detail */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheetC{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px 40px}
+.sheetC .x{float:right;font-size:22px;color:var(--mut);cursor:pointer;line-height:1;padding:2px 6px}
+.dphotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}
+.dphotos img{width:100%;border-radius:10px;border:1px solid var(--line)}
+.dphotos .no{aspect-ratio:3/4;background:var(--card);border:1px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+.dval{font-size:26px;font-weight:800}
+.dval small{font-size:12px;color:var(--mut);font-weight:500}
+.krow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
+.krow .k{color:var(--mut)} .krow .val{text-align:right;font-weight:600}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--chip);border:1px solid var(--line);color:var(--mut)}
+/* nav */
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--nav);border-top:1px solid var(--line);display:flex;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:none;color:var(--mut);font-size:11px;padding:9px 0 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600}
+nav button.on{color:var(--accent)}
+nav button .ic{font-size:18px;line-height:1}
+.spin{text-align:center;color:var(--mut);padding:40px;font-size:14px}
+.kpi[onclick]{cursor:pointer;transition:transform .05s} .kpi[onclick]:active{transform:scale(.985)}
+.srow[onclick]{cursor:pointer}
+.segbanner{display:inline-flex;align-items:center;background:var(--chip);border:1px solid var(--line);border-radius:20px;padding:4px 6px 4px 11px;margin-right:9px;font-size:12.5px;color:var(--ink);font-weight:600}
+.segbanner b{color:var(--accent);cursor:pointer;margin-left:8px;font-weight:700}
+</style>
+</head><body>
+<header><div><h1>Card Vault</h1></div><div class="as" id="asof"></div></header>
+<div class="wrap">
+  <div id="dash"><div class="spin">Loading your collection...</div></div>
+  <div id="search" class="hide">
+    <div class="searchbar"><input id="q" placeholder="Search player, set, year..." autocomplete="off"></div>
+    <div class="chips" id="chips"></div>
+    <div class="count" id="scount"></div>
+    <div class="grid" id="results"></div>
+  </div>
+</div>
+<div id="sheet"></div>
+<nav>
+  <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Dashboard</button>
+  <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Search</button>
+</nav>
+<script>
+const SB="https://kcmrmswazprkizbzewpm.supabase.co";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbXJtc3dhenBya2l6Ynpld3BtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NTEzMzAsImV4cCI6MjEwNDEyNzMzMH0.EuB77E8I0b6HzdK8zfDG1qlg-q_k0FUej6pYLyEFiJI";
+let CARDS=[], DUPE={}, SEGFILTER=null;
+const money=v=>v==null?'--':'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0});
+function seg(c){const cat=(c.category||''),ref=c.ref||'';
+ if(c.sport)return c.sport;
+ if(cat.includes('Project 70')||ref.startsWith('P70'))return 'Topps Project 70';
+ if(cat.startsWith('SW')||/^(SW|SWA|SWSK|SWPP|SPSK)/.test(ref)){if(cat.includes('Auto'))return 'Star Wars - autos';if(cat.includes('Sketch'))return 'Star Wars - sketch 1/1';return 'Star Wars - relic/parallel/art';}
+ if(cat.includes('Entertainment'))return 'Entertainment';
+ if(cat.includes('Sealed'))return 'Sealed wax';
+ if(cat.includes('Pokemon'))return 'Pokemon';
+ if(/Sports|Basketball|Graded|Raw Sports/.test(cat))return 'Sports (other)';
+ return 'Other';}
+function primary(c){if(!c.photos||!c.photos.length)return null;const f=c.photos.find(p=>p.is_primary)||c.photos.find(p=>p.side==='front')||c.photos[0];return f?f.url:null;}
+async function fetchJSON(u,tries){
+ for(let i=0;i<(tries||3);i++){
+   try{const r=await fetch(u,{headers:{apikey:KEY,Authorization:"Bearer "+KEY}});
+     if(!r.ok)throw new Error("HTTP "+r.status);return await r.json();}
+   catch(e){if(i===(tries||3)-1)throw e;await new Promise(s=>setTimeout(s,600*(i+1)));}
+ }
+}
+async function load(){
+ try{
+  CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
+  DUPE={};CARDS.forEach(c=>{(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
+  renderDash(); buildChips();
+  document.getElementById('asof').textContent='as of '+new Date().toLocaleDateString();
+ }catch(e){
+  document.getElementById('dash').innerHTML='<div class="spin">Could not load ('+e.message+'). Pull to refresh.</div>';
+ }
+}
+function renderDash(){
+ const own=CARDS.filter(c=>c.status!=='sold');
+ const val=own.reduce((s,c)=>s+(+c.current_value||0),0);
+ const cost=own.reduce((s,c)=>s+(+c.cost_basis||0),0);
+ const valued=own.filter(c=>c.current_value!=null).length;
+ const withPhoto=own.filter(c=>c.photos&&c.photos.length).length;
+ const dupeGroups=Object.values(DUPE).filter(g=>g.filter(c=>c.status!=='sold').length>1).length;
+ const segs={};own.forEach(c=>{const s=seg(c);(segs[s]=segs[s]||{n:0,v:0}); segs[s].n++; segs[s].v+=(+c.current_value||0);});
+ const segArr=Object.entries(segs).sort((a,b)=>b[1].v-a[1].v);const maxV=Math.max(...segArr.map(s=>s[1].v),1);
+ const gain=val-cost;
+ let h=`<div class="kpis">
+  <div class="kpi" onclick="openAll('value')"><div class="n">${money(val)}</div><div class="l">Collection value &rsaquo;</div><div class="d" style="color:var(--green)">across ${valued.toLocaleString()} priced</div></div>
+  <div class="kpi" onclick="openAll('all')"><div class="n">${own.length.toLocaleString()}</div><div class="l">Cards owned &rsaquo;</div><div class="d" style="color:var(--mut)">${withPhoto} with photos</div></div>
+  <div class="kpi"><div class="n">${money(cost)}</div><div class="l">Cost basis</div><div class="d" style="color:${gain>=0?'var(--green)':'var(--accent)'}">${gain>=0?'+':''}${money(gain)} vs cost</div></div>
+  <div class="kpi" onclick="openDupes()"><div class="n">${dupeGroups}</div><div class="l">Duplicate groups &rsaquo;</div><div class="d" style="color:var(--mut)">cards you own 2+ of</div></div>
+ </div>`;
+ h+=`<div class="dupe">Value shown is your latest comped/ask number per card. Only your Maine lot sits on live sold comps so far; tap Search to dig in. <b>${dupeGroups} groups</b> have duplicates worth reviewing.</div>`;
+ h+=`<h2>By segment</h2><div class="panel">`;
+ segArr.forEach(([n,d])=>{h+=`<div class="srow" data-seg="${n}" onclick="openSeg(this.dataset.seg)"><span class="nm">${n} &rsaquo;<br><span style="color:var(--mut);font-size:11px">${d.n} cards</span></span><span class="bar"><i style="width:${d.v/maxV*100}%"></i></span><span class="v">${d.v?money(d.v):'--'}</span></div>`;});
+ h+=`</div>`;
+ h+=`<h2>Top cards by value</h2><div class="panel">`;
+ own.filter(c=>c.current_value!=null).sort((a,b)=>b.current_value-a.current_value).slice(0,8).forEach(c=>{
+   h+=`<div class="srow" onclick='openCard("${c.id}")' style="cursor:pointer"><span class="nm">${c.player||c.ref}<br><span style="color:var(--mut);font-size:11px">${c.set_name||''}</span></span><span class="v">${money(c.current_value)}</span></div>`;});
+ h+=`</div>`;
+ document.getElementById('dash').innerHTML=h;
+}
+let FILT='all';
+function buildChips(){
+ const c=['all','own','graded','has photo','rookies','autos','relics','duplicates'];
+ document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
+}
+function setFilt(f,el){FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
+function runSearch(){
+ const q=document.getElementById('q').value.toLowerCase().trim();
+ let list=CARDS.filter(c=>c.status!=='sold');
+ if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
+ else if(FILT==='has photo')list=list.filter(c=>c.photos&&c.photos.length);
+ else if(FILT==='rookies')list=list.filter(c=>c.is_rookie);
+ else if(FILT==='autos')list=list.filter(c=>c.is_auto);
+ else if(FILT==='relics')list=list.filter(c=>c.is_relic);
+ else if(FILT==='duplicates')list=list.filter(c=>DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1);
+ if(SEGFILTER)list=list.filter(c=>seg(c)===SEGFILTER);
+ if(q){const t=q.split(/\s+/);list=list.filter(c=>{const s=((c.player||'')+' '+(c.set_name||'')+' '+(c.variation||'')+' '+(c.year||'')+' '+(c.ref||'')).toLowerCase();return t.every(w=>s.includes(w));});}
+ list.sort((a,b)=>(b.current_value||0)-(a.current_value||0));
+ document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
+ const el=document.getElementById('results');
+ el.innerHTML=list.slice(0,400).map(c=>{
+   const u=primary(c);const dup=DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1;
+   const n=DUPE[c.dupe_key].filter(x=>x.status!=='sold').length;
+   return `<div class="tile" onclick='openCard("${c.id}")'>
+     <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div>
+     <div class="m"><div class="pl">${c.player||c.ref}${dup?`<span class="badge">x${n}</span>`:''}</div>
+     <div class="st">${c.set_name||''}</div>
+     <div class="pr">${money(c.current_value)} ${c.value_source?`<small>${c.value_source.includes('comp')?'comp':'ask'}</small>`:''}</div></div></div>`;
+ }).join('')||'<div class="spin">No cards match.</div>';
+}
+function openCard(id){
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ const front=(c.photos||[]).find(p=>p.side==='front'),back=(c.photos||[]).find(p=>p.side==='back');
+ const dupN=DUPE[c.dupe_key].filter(x=>x.status!=='sold').length;
+ const tags=[];if(c.is_rookie)tags.push('Rookie');if(c.is_auto)tags.push('Auto');if(c.is_relic)tags.push('Relic');if(c.grade&&!/raw/i.test(c.grade))tags.push(c.grade);
+ let h=`<div class="sheet" onclick="if(event.target===this)closeCard()"><div class="sheetC">
+   <span class="x" onclick="closeCard()">&times;</span>
+   <div style="font-size:11px;color:var(--mut)">${c.ref}</div>
+   <h2 style="margin:2px 0 2px;font-size:19px">${c.player||c.ref}</h2>
+   <div style="color:var(--mut);font-size:13px">${c.set_name||''} ${c.card_number?'#'+c.card_number:''}</div>
+   ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
+   ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
+   <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
+   <div class="dval">${money(c.current_value)} <small>${c.value_source?(c.value_source.includes('comp')?'live comp':'ask tier'):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
+   <div style="margin-top:10px">
+     <div class="krow"><span class="k">Variation</span><span class="val">${c.variation||'--'}</span></div>
+     <div class="krow"><span class="k">Grade</span><span class="val">${c.grade||'Raw'}</span></div>
+     <div class="krow"><span class="k">Cost basis</span><span class="val">${money(c.cost_basis)}</span></div>
+     <div class="krow"><span class="k">Status</span><span class="val">${c.status}</span></div>
+     ${c.serial?`<div class="krow"><span class="k">Serial</span><span class="val">${c.serial}</span></div>`:''}
+     ${c.notes?`<div class="krow"><span class="k">Notes</span><span class="val" style="max-width:65%;font-weight:400;color:var(--mut)">${c.notes}</span></div>`:''}
+   </div></div></div>`;
+ document.getElementById('sheet').innerHTML=h;document.body.style.overflow='hidden';
+}
+function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
+function show(v){document.getElementById('dash').classList.toggle('hide',v!=='dash');document.getElementById('search').classList.toggle('hide',v!=='search');
+ document.getElementById('nav-dash').classList.toggle('on',v==='dash');document.getElementById('nav-search').classList.toggle('on',v==='search');window.scrollTo(0,0);}
+function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
+function navSearch(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function openSeg(name){SEGFILTER=name;FILT='all';setChip('all');show('search');runSearch();}
+function openAll(mode){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
+function clearSeg(){SEGFILTER=null;runSearch();}
+document.getElementById('q').addEventListener('input',runSearch);
+load();
+</script>
+</body></html>
