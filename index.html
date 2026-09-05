@@ -103,6 +103,32 @@ h2{font-size:15px;margin:22px 0 8px}
 .qcard .qm{font-size:11px;color:var(--mut);margin-top:2px}
 .qcard .qp{font-weight:700;white-space:nowrap}
 .stat-note{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px;color:var(--mut);margin:8px 0}
+/* lots */
+.lotrow{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.lotrow .ln{font-weight:700;font-size:15px}
+.lotrow .lm{color:var(--mut);font-size:12px;margin-top:2px}
+.lotrow .lv{text-align:right;font-weight:800;white-space:nowrap}
+.lotrow .lv small{display:block;color:var(--mut);font-size:11px;font-weight:600}
+.newlot{width:100%;border:1px dashed var(--line);background:var(--card);color:var(--accent);border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px}
+.lottot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.lottot .tc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px;text-align:center}
+.lottot .tc .n{font-size:16px;font-weight:800}
+.lottot .tc .l{color:var(--mut);font-size:10.5px;margin-top:1px}
+.lotact{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.lotact button{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.lotact button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.litem{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.litem img{width:42px;height:42px;object-fit:cover;border-radius:8px;background:var(--track);flex:none}
+.litem .lt{flex:1;min-width:0;font-size:12.5px;line-height:1.3;cursor:pointer}
+.litem .lt .s{color:var(--mut);font-size:11px}
+.litem .lp{font-weight:700;white-space:nowrap;font-size:13px}
+.litem .rm{border:none;background:none;color:var(--accent);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.buildbar{position:fixed;left:0;right:0;bottom:56px;background:var(--accent);color:#fff;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;z-index:12;font-size:13px;font-weight:600}
+.buildbar button{background:#fff;color:var(--accent);border:none;border-radius:8px;padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.tile.inlot{outline:3px solid var(--accent);outline-offset:-3px}
+.tile .lotchk{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.tile{position:relative}
+.addlotbtn{width:100%;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
 .krow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
 .krow .k{color:var(--mut)} .krow .val{text-align:right;font-weight:600}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
@@ -129,12 +155,15 @@ nav button .ic{font-size:18px;line-height:1}
     <div class="grid" id="results"></div>
   </div>
   <div id="review" class="hide"></div>
+  <div id="lots" class="hide"></div>
 </div>
+<div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
 <div id="settings"></div>
 <nav>
   <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Dashboard</button>
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Search</button>
+  <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
   <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
 </nav>
 <script>
@@ -166,7 +195,7 @@ async function load(){
  try{
   CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
   DUPE={};CARDS.forEach(c=>{(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
-  renderDash(); buildChips();
+  renderDash(); buildChips(); loadLots();
   document.getElementById('asof').textContent='as of '+new Date().toLocaleDateString();
  }catch(e){
   document.getElementById('dash').innerHTML='<div class="spin">Could not load ('+e.message+'). Pull to refresh.</div>';
@@ -222,10 +251,14 @@ function runSearch(){
  });
  document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
  const el=document.getElementById('results');
+ const inSet=BUILDLOT?(LOTMEM[BUILDLOT]||new Set()):null;
  el.innerHTML=list.slice(0,400).map(c=>{
    const u=primary(c);const dup=DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1;
    const n=DUPE[c.dupe_key].filter(x=>x.status!=='sold').length;
-   return `<div class="tile" onclick='openCard("${c.id}")'>
+   const inlot=inSet&&inSet.has(c.id);
+   const click=BUILDLOT?`toggleLotCard("${c.id}")`:`openCard("${c.id}")`;
+   return `<div class="tile${inlot?' inlot':''}" onclick='${click}'>
+     ${BUILDLOT?`<div class="lotchk" style="${inlot?'':'display:none'}">&#10003;</div>`:''}
      <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div>
      <div class="m"><div class="pl">${c.player||c.ref}${dup?`<span class="badge">x${n}</span>`:''}</div>
      <div class="st">${c.set_name||''}</div>
@@ -249,6 +282,7 @@ function openCard(id){
    <div id="cvrange"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
+   <button class="addlotbtn" onclick="addToLotMenu('${c.id}')">+ Add to a lot</button>
    <div id="cvchart" class="cvchart"></div>
    <div id="cvmkt" class="mkt"></div>
    <div style="margin-top:10px">
@@ -428,8 +462,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){document.getElementById('dash').classList.toggle('hide',v!=='dash');document.getElementById('search').classList.toggle('hide',v!=='search');document.getElementById('review').classList.toggle('hide',v!=='review');
- document.getElementById('nav-dash').classList.toggle('on',v==='dash');document.getElementById('nav-search').classList.toggle('on',v==='search');document.getElementById('nav-review').classList.toggle('on',v==='review');window.scrollTo(0,0);}
+function show(v){['dash','search','review','lots'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
+ ['dash','search','review','lots'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
 let QUEUE=null;
 async function renderReview(){
  const el=document.getElementById('review');
@@ -446,6 +480,117 @@ async function renderReview(){
   if(!QUEUE) QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
   document.getElementById('revq').innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img loading="lazy" src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
  }catch(e){document.getElementById('revq').innerHTML='<div class="stat-note">Could not load queue.</div>';}
+}
+/* ================= LOTS ================= */
+const FN_LOT=SB+"/functions/v1/lot-ops", LOT_SECRET='cv_ingest_7Kq2mZ';
+let LOTS=[], LOTMEM={}, BUILDLOT=null, OPENLOT=null;
+async function lotOp(payload){
+ const r=await fetch(FN_LOT,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(payload)});
+ return await r.json();
+}
+async function loadLots(){
+ try{
+  LOTS=await fetchJSON(SB+"/rest/v1/lots?select=id,name,status,notes,suggested_price,created_at&order=created_at.desc",2)||[];
+  const items=await fetchJSON(SB+"/rest/v1/lot_items?select=lot_id,card_id&limit=5000",2)||[];
+  LOTMEM={}; LOTS.forEach(l=>LOTMEM[l.id]=new Set());
+  items.forEach(it=>{(LOTMEM[it.lot_id]=LOTMEM[it.lot_id]||new Set()).add(it.card_id);});
+ }catch(e){LOTS=[];LOTMEM={};}
+}
+function lotTotals(id){
+ const set=LOTMEM[id]||new Set(); let val=0,cost=0,n=0;
+ CARDS.forEach(c=>{if(set.has(c.id)){n++;val+=(+c.current_value||0);cost+=(+c.cost_basis||0);}});
+ return {n,val,cost};
+}
+async function renderLots(){
+ const el=document.getElementById('lots');
+ el.innerHTML='<h2 style="margin:16px 0 8px">Lots</h2><div class="spin">Loading…</div>';
+ await loadLots();
+ let h='<h2 style="margin:16px 0 8px">Lots</h2>';
+ h+='<button class="newlot" onclick="newLot()">+ New lot</button>';
+ if(!LOTS.length) h+='<div class="stat-note">No lots yet. Make one, then add cards from Search or a card’s page.</div>';
+ LOTS.forEach(l=>{const t=lotTotals(l.id);
+   h+=`<div class="lotrow" onclick="openLot('${l.id}')"><div><div class="ln">${l.name||'Untitled lot'}</div><div class="lm">${t.n} card${t.n===1?'':'s'}${l.status?' &middot; '+l.status:''}</div></div><div class="lv">${money(t.val)}<small>${t.cost?('cost '+money(t.cost)):'value'}</small></div></div>`;
+ });
+ el.innerHTML=h;
+}
+async function newLot(){
+ const name=prompt('Name this lot (e.g. "Show 9/6")');
+ if(name===null)return;
+ const res=await lotOp({op:'create_lot',name:name||'New lot'});
+ if(res&&res.ok){await loadLots();renderLots();openLot(res.id);}
+ else alert('Could not create lot');
+}
+function openLot(id){
+ OPENLOT=id; const l=LOTS.find(x=>x.id===id); if(!l){renderLots();return;}
+ const set=LOTMEM[id]||new Set();
+ const cards=CARDS.filter(c=>set.has(c.id)).sort((a,b)=>(b.current_value||0)-(a.current_value||0));
+ const t=lotTotals(id); const pnl=t.cost?t.val-t.cost:null;
+ const el=document.getElementById('lots');
+ let h=`<div style="display:flex;align-items:center;gap:8px;margin:16px 0 4px"><button class="cpbtn" onclick="show('lots');renderLots()">&lsaquo; Lots</button><h2 style="margin:0;flex:1">${l.name||'Lot'}</h2></div>`;
+ h+=`<div class="lottot"><div class="tc"><div class="n">${t.n}</div><div class="l">cards</div></div><div class="tc"><div class="n">${money(t.val)}</div><div class="l">value</div></div><div class="tc"><div class="n" style="color:${pnl==null?'var(--ink)':(pnl>=0?'var(--green)':'var(--accent)')}">${t.cost?money(t.cost):'--'}</div><div class="l">cost</div></div></div>`;
+ h+=`<div class="lotact"><button class="primary" onclick="startBuild('${id}')">+ Add cards</button><button onclick="copyLotPost('${id}')">Copy lot post</button><button onclick="renameLot('${id}')">Rename</button><button onclick="deleteLot('${id}')">Delete</button></div>`;
+ if(!cards.length) h+='<div class="stat-note">No cards yet. Tap “+ Add cards” and tap cards to add them.</div>';
+ cards.forEach(c=>{const u=primary(c);
+   h+=`<div class="litem"><img loading="lazy" src="${u||''}" onerror="this.style.visibility='hidden'"><div class="lt" onclick='openCard("${c.id}")'>${c.player||c.ref}<div class="s">${c.set_name||''} ${c.card_number?'#'+c.card_number:''} &middot; <span style="color:${srcColor(c)}">${money(c.current_value)}</span></div></div><button class="rm" title="remove" onclick="removeFromLot('${id}','${c.id}')">&times;</button></div>`;
+ });
+ el.innerHTML=h; window.scrollTo(0,0);
+}
+async function renameLot(id){const l=LOTS.find(x=>x.id===id);const name=prompt('Rename lot',l?l.name:'');if(name===null)return;await lotOp({op:'rename_lot',lot_id:id,name});await loadLots();openLot(id);}
+async function deleteLot(id){if(!confirm('Delete this lot? (cards stay in your inventory)'))return;await lotOp({op:'delete_lot',lot_id:id});await loadLots();show('lots');renderLots();}
+async function removeFromLot(lotId,cardId){(LOTMEM[lotId]||new Set()).delete(cardId);await lotOp({op:'remove_item',lot_id:lotId,card_id:cardId});openLot(lotId);}
+async function addToLotId(lotId,cardId){(LOTMEM[lotId]=LOTMEM[lotId]||new Set()).add(cardId);await lotOp({op:'add_item',lot_id:lotId,card_id:cardId});}
+/* builder mode: browse Search, tap toggles membership */
+function startBuild(id){BUILDLOT=id;show('search');navSearchKeep();updateBuildBar();}
+function navSearchKeep(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function updateBuildBar(){
+ const bar=document.getElementById('buildbar');
+ if(!BUILDLOT){bar.classList.add('hide');return;}
+ const l=LOTS.find(x=>x.id===BUILDLOT);const t=lotTotals(BUILDLOT);
+ bar.className='buildbar';
+ bar.innerHTML=`<span>Adding to “${l?l.name:'lot'}” &middot; ${t.n} card${t.n===1?'':'s'} &middot; ${money(t.val)}</span><button onclick="finishBuild()">Done</button>`;
+}
+function finishBuild(){const id=BUILDLOT;BUILDLOT=null;document.getElementById('buildbar').classList.add('hide');show('lots');if(id)openLot(id);else renderLots();}
+async function toggleLotCard(cardId){
+ if(!BUILDLOT)return;
+ const set=LOTMEM[BUILDLOT]=LOTMEM[BUILDLOT]||new Set();
+ if(set.has(cardId)){set.delete(cardId);await lotOp({op:'remove_item',lot_id:BUILDLOT,card_id:cardId});}
+ else{set.add(cardId);await lotOp({op:'add_item',lot_id:BUILDLOT,card_id:cardId});}
+ runSearch();updateBuildBar();
+}
+async function addToLotMenu(cardId){
+ if(!LOTS.length) await loadLots();
+ const box=document.getElementById('settings');
+ const rows=LOTS.map(l=>{const inl=(LOTMEM[l.id]||new Set()).has(cardId);return `<div class="lotrow" onclick="toggleCardInLot('${l.id}','${cardId}',this)"><div><div class="ln">${l.name||'Lot'}</div><div class="lm">${lotTotals(l.id).n} cards</div></div><div class="lv" style="color:${inl?'var(--green)':'var(--mut)'}">${inl?'&#10003; in lot':'add'}</div></div>`;}).join('');
+ box.innerHTML=`<div class="sheet" onclick="if(event.target===this)closeSettings()"><div class="sheetC" style="max-width:480px">
+   <span class="x" onclick="closeSettings()">&times;</span>
+   <h2 style="margin:2px 0 10px;font-size:18px">Add to a lot</h2>
+   ${rows||'<div class="stat-note">No lots yet.</div>'}
+   <button class="newlot" style="margin-top:10px" onclick="newLotFor('${cardId}')">+ New lot</button>
+ </div></div>`;
+}
+async function toggleCardInLot(lotId,cardId,elrow){
+ const inl=(LOTMEM[lotId]||new Set()).has(cardId);
+ if(inl){await removeFromLotSilent(lotId,cardId);}else{await addToLotId(lotId,cardId);}
+ addToLotMenu(cardId);
+}
+async function removeFromLotSilent(lotId,cardId){(LOTMEM[lotId]||new Set()).delete(cardId);await lotOp({op:'remove_item',lot_id:lotId,card_id:cardId});}
+async function newLotFor(cardId){const name=prompt('Name this lot (e.g. "Show 9/6")');if(name===null)return;const res=await lotOp({op:'create_lot',name:name||'New lot'});if(res&&res.ok){await loadLots();await addToLotId(res.id,cardId);addToLotMenu(cardId);}}
+function copyLotPost(id){
+ const l=LOTS.find(x=>x.id===id);const set=LOTMEM[id]||new Set();
+ const cards=CARDS.filter(c=>set.has(c.id)).sort((a,b)=>(b.current_value||0)-(a.current_value||0));
+ const t=lotTotals(id);const tm=terms();
+ let L=[(l&&l.name?l.name:'Card lot')+' — '+cards.length+' cards'];
+ L.push('');
+ cards.forEach((c,i)=>{L.push((i+1)+'. '+cardLine(c)+(c.current_value?(' — $'+Math.round(c.current_value)):''));});
+ L.push('');
+ L.push('Value if bought separately: ~$'+Math.round(t.val).toLocaleString());
+ L.push('Bundle price: $'+(l&&l.suggested_price?l.suggested_price:'[your price]'));
+ L.push('');
+ if(tm.pay)L.push(tm.pay); if(tm.ship)L.push(tm.ship); if(tm.claim)L.push(tm.claim);
+ if(tm.closer)L.push('','— '+tm.closer);
+ const txt=L.join('\n');
+ const done=()=>alert('Lot post copied to clipboard');
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,done);else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}
 }
 function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
 function navSearch(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
