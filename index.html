@@ -291,9 +291,16 @@ function cardLine(c){
  else if(c.year)p.push(c.year);
  if(c.card_number)p.push('#'+String(c.card_number).replace(/^#/,''));
  if(c.variation&&!/^base$/i.test(c.variation))p.push(c.variation);
- if(c.serial)p.push(/^\//.test(c.serial)?c.serial:c.serial);
- if(c.grade&&!/raw/i.test(c.grade))p.push(c.grade); else p.push('Raw');
+ if(c.serial)p.push(c.serial);
+ const gg=cleanGrade(c.grade);
+ p.push(gg||'Raw');
  return p.join(' ').replace(/\s+/g,' ').trim();
+}
+function cleanGrade(g){
+ if(!g||/^raw$/i.test(g.trim()))return null;
+ const m=String(g).match(/\b(PSA|BGS|BVG|SGC|CGC|CSG|BAS|HGA)\s*\.?\s*(10|[1-9](?:\.5)?)\b/i);
+ if(m)return m[1].toUpperCase()+' '+m[2];
+ return /raw|ungraded/i.test(g)?null:g.split(/[-(]/)[0].trim();
 }
 function askPrice(c,stats){
  if(stats&&stats.high) return Math.round(stats.high);
@@ -353,7 +360,7 @@ function ebayList(id,btn){
  const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
  const stats=c._stats;const price=askPrice(c,stats)||'';
  const title=cardLine(c).slice(0,80);
- const specifics=[['Player/Subject',c.player||''],['Year',c.year||''],['Set',c.set_name||''],['Card Number',c.card_number||''],['Parallel/Variety',c.variation||''],['Grade',(c.grade&&!/raw/i.test(c.grade))?c.grade:'Ungraded'],['Serial',c.serial||''],['Features',[c.is_rookie?'Rookie':'',c.is_auto?'Autograph':'',c.is_relic?'Relic':''].filter(Boolean).join(', ')]].filter(x=>x[1]);
+ const specifics=[['Player/Subject',c.player||''],['Year',c.year||''],['Set',c.set_name||''],['Card Number',c.card_number||''],['Parallel/Variety',c.variation||''],['Grade',cleanGrade(c.grade)||'Ungraded'],['Serial',c.serial||''],['Features',[c.is_rookie?'Rookie':'',c.is_auto?'Autograph':'',c.is_relic?'Relic':''].filter(Boolean).join(', ')]].filter(x=>x[1]);
  const t=terms();
  const desc=[title,'',stats&&stats.n?`Recent sold comps: ${stats.n} sales, ${money(stats.low)} to ${money(stats.high)} (median ${money(stats.med)}).`:'',(c.grade&&!/raw/i.test(c.grade))?('Graded '+c.grade+'.'):'Raw, ungraded.','',t.pay,t.ship,'','Ships securely in a sleeve, toploader and bubble mailer (or box for higher-value cards).'].filter(Boolean).join('\n');
  const pkg=`TITLE (≤80 chars):\n${title}\n\nSTART/BIN PRICE: $${price}\n\nITEM SPECIFICS:\n${specifics.map(s=>'  '+s[0]+': '+s[1]).join('\n')}\n\nDESCRIPTION:\n${desc}`;
