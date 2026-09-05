@@ -62,6 +62,19 @@ h2{font-size:15px;margin:22px 0 8px}
 .charthd{display:flex;justify-content:space-between;font-size:12px;margin:2px 0}
 .cvsvg{width:100%;height:64px;display:block;margin:4px 0}
 .chartnote{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px;color:var(--mut)}
+.mkt h3{font-size:13.5px;margin:16px 0 4px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mkt h3 small{color:var(--mut);font-weight:500;font-size:11px;text-align:right}
+.mitem{display:flex;gap:9px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.mitem:last-child{border-bottom:none}
+.mitem img{width:40px;height:40px;object-fit:cover;border-radius:6px;background:var(--track);flex:none}
+.mitem .ni{width:40px;height:40px;flex:none;border-radius:6px;background:var(--track)}
+.mitem .mt{flex:1;min-width:0;font-size:12px;line-height:1.3}
+.mitem .mt a{color:var(--ink);text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mitem .mt .md{color:var(--mut);font-size:10.5px;margin-top:2px}
+.mitem .mp{font-weight:700;font-size:13px;white-space:nowrap}
+.mitem.unm{opacity:.48}
+.mkt .more{color:var(--blue);font-size:12px;cursor:pointer;padding:9px 0 2px;font-weight:600}
+.mkt .none{color:var(--mut);font-size:12px;padding:6px 0}
 .krow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
 .krow .k{color:var(--mut)} .krow .val{text-align:right;font-weight:600}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
@@ -203,6 +216,7 @@ function openCard(id){
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
    <div id="cvchart" class="cvchart"></div>
+   <div id="cvmkt" class="mkt"></div>
    <div style="margin-top:10px">
      <div class="krow"><span class="k">Variation</span><span class="val">${c.variation||'--'}</span></div>
      <div class="krow"><span class="k">Grade</span><span class="val">${c.grade||'Raw'}</span></div>
@@ -212,7 +226,38 @@ function openCard(id){
      ${c.notes?`<div class="krow"><span class="k">Notes</span><span class="val" style="max-width:65%;font-weight:400;color:var(--mut)">${c.notes}</span></div>`:''}
    </div></div></div>`;
  document.getElementById('sheet').innerHTML=h;document.body.style.overflow='hidden';
- loadChart(c.id);
+ loadChart(c.id); loadMarket(c.id);
+}
+let MKT={sold:[],active:[],exp:{sold:false,active:false}};
+function mitem(r){
+ const dt=r.item_date?new Date(r.item_date).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+ return `<div class="mitem${r.matched?'':' unm'}">${r.image?`<img loading="lazy" src="${r.image}">`:'<div class="ni"></div>'}<div class="mt"><a href="${r.url||'#'}" target="_blank" rel="noopener">${r.title||''}</a><div class="md">${dt}${r.matched?'':(dt?' &middot; ':'')+'other variant'}</div></div><div class="mp">${money(r.price)}</div></div>`;
+}
+function renderMkt(){
+ const el=document.getElementById('cvmkt');if(!el)return;
+ if(!MKT.sold.length&&!MKT.active.length){el.innerHTML='';return;}
+ function sec(title,arr,kind,sub){
+  if(!arr.length)return `<div class="mkt"><h3><span>${title}</span></h3><div class="none">None found on the last pull.</div></div>`;
+  const exp=MKT.exp[kind],show=exp?arr:arr.slice(0,8);
+  return `<div class="mkt"><h3><span>${title}</span><small>${sub}</small></h3>${show.map(mitem).join('')}${arr.length>8?`<div class="more" onclick="MKT.exp.${kind}=!MKT.exp.${kind};renderMkt()">${exp?'show less':'show all '+arr.length}</div>`:''}</div>`;
+ }
+ const msold=MKT.sold.filter(r=>r.matched&&r.price);
+ const s=msold.map(x=>+x.price).sort((a,b)=>a-b);
+ const med=s.length?(s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2):null;
+ const soldSub=med!=null?`${msold.length} matched &middot; median ${money(med)}`:`${MKT.sold.length} found`;
+ const actSub=`${MKT.active.filter(r=>r.matched).length} matched of ${MKT.active.length}`;
+ el.innerHTML=sec('Recent sales',MKT.sold,'sold',soldSub)+sec('Active listings',MKT.active,'active',actSub);
+}
+async function loadMarket(id){
+ MKT={sold:[],active:[],exp:{sold:false,active:false}};
+ const el=document.getElementById('cvmkt');if(el)el.innerHTML='';
+ try{
+  const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched&limit=200",2);
+  if(!rows||!rows.length)return;
+  MKT.sold=rows.filter(r=>r.kind==='sold').sort((a,b)=>(b.matched-a.matched)||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
+  MKT.active=rows.filter(r=>r.kind==='active').sort((a,b)=>(b.matched-a.matched)||((a.price||0)-(b.price||0)));
+  renderMkt();
+ }catch(e){}
 }
 async function loadChart(id){
  try{
