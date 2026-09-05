@@ -163,7 +163,11 @@ function runSearch(){
  else if(FILT==='duplicates')list=list.filter(c=>DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1);
  if(SEGFILTER)list=list.filter(c=>seg(c)===SEGFILTER);
  if(q){const t=q.split(/\s+/);list=list.filter(c=>{const s=((c.player||'')+' '+(c.set_name||'')+' '+(c.variation||'')+' '+(c.year||'')+' '+(c.ref||'')).toLowerCase();return t.every(w=>s.includes(w));});}
- list.sort((a,b)=>(b.current_value||0)-(a.current_value||0));
+ const neutral=!q&&FILT==='all'&&!SEGFILTER;
+ list.sort((a,b)=>{
+   if(neutral){const pa=(a.photos&&a.photos.length)?1:0,pb=(b.photos&&b.photos.length)?1:0;if(pa!==pb)return pb-pa;}
+   return (b.current_value||0)-(a.current_value||0);
+ });
  document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
  const el=document.getElementById('results');
  el.innerHTML=list.slice(0,400).map(c=>{
