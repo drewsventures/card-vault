@@ -75,6 +75,34 @@ h2{font-size:15px;margin:22px 0 8px}
 .mitem.unm{opacity:.48}
 .mkt .more{color:var(--blue);font-size:12px;cursor:pointer;padding:9px 0 2px;font-weight:600}
 .mkt .none{color:var(--mut);font-size:12px;padding:6px 0}
+/* sell tools + pnl */
+.pnlbox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 2px}
+.pnlc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.pnlc .l{color:var(--mut);font-size:11px}
+.pnlc .n{font-size:16px;font-weight:800;margin-top:2px}
+.rangebox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0}
+.rangebox .rl{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+.rangebox .rv{display:flex;justify-content:space-between;align-items:baseline;margin-top:2px}
+.rangebox .rv b{font-size:20px;letter-spacing:-.5px}
+.rangebox .rmid{font-size:12px;color:var(--mut)}
+.selltools{margin:14px 0 4px}
+.sellhd{font-size:14px;font-weight:700;margin:14px 0 8px}
+.selltxt{margin-bottom:10px}
+.sthd{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut);margin-bottom:4px}
+.sta{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 11px;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;resize:vertical;min-height:96px}
+.cpbtn{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:8px;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.cpbtn.ok{background:var(--green);color:#fff;border-color:var(--green)}
+.ebaybtn{width:100%;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+.ebaybtn.ok{background:var(--green)}
+.gear{background:none;border:none;color:var(--mut);font-size:18px;cursor:pointer;padding:2px 8px;line-height:1}
+.revbadge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--accent);color:#fff;margin-left:5px;vertical-align:middle}
+.qcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:9px;display:flex;gap:10px;align-items:flex-start}
+.qcard img{width:46px;height:46px;object-fit:cover;border-radius:8px;background:var(--track);flex:none}
+.qcard .qt{flex:1;min-width:0;font-size:12.5px;line-height:1.3}
+.qcard .qt a{color:var(--blue);text-decoration:none;font-size:11px}
+.qcard .qm{font-size:11px;color:var(--mut);margin-top:2px}
+.qcard .qp{font-weight:700;white-space:nowrap}
+.stat-note{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px;color:var(--mut);margin:8px 0}
 .krow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
 .krow .k{color:var(--mut)} .krow .val{text-align:right;font-weight:600}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
@@ -91,7 +119,7 @@ nav button .ic{font-size:18px;line-height:1}
 .segbanner b{color:var(--accent);cursor:pointer;margin-left:8px;font-weight:700}
 </style>
 </head><body>
-<header><div><h1>Card Vault</h1></div><div class="as" id="asof"></div></header>
+<header><div><h1>Card Vault</h1></div><div style="display:flex;align-items:center;gap:6px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div></header>
 <div class="wrap">
   <div id="dash"><div class="spin">Loading your collection...</div></div>
   <div id="search" class="hide">
@@ -100,11 +128,14 @@ nav button .ic{font-size:18px;line-height:1}
     <div class="count" id="scount"></div>
     <div class="grid" id="results"></div>
   </div>
+  <div id="review" class="hide"></div>
 </div>
 <div id="sheet"></div>
+<div id="settings"></div>
 <nav>
   <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Dashboard</button>
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Search</button>
+  <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
 </nav>
 <script>
 const SB="https://kcmrmswazprkizbzewpm.supabase.co";
@@ -215,6 +246,9 @@ function openCard(id){
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
+   <div id="cvrange"></div>
+   <div id="cvpnl"></div>
+   <div id="cvsell" class="selltools"></div>
    <div id="cvchart" class="cvchart"></div>
    <div id="cvmkt" class="mkt"></div>
    <div style="margin-top:10px">
@@ -226,7 +260,106 @@ function openCard(id){
      ${c.notes?`<div class="krow"><span class="k">Notes</span><span class="val" style="max-width:65%;font-weight:400;color:var(--mut)">${c.notes}</span></div>`:''}
    </div></div></div>`;
  document.getElementById('sheet').innerHTML=h;document.body.style.overflow='hidden';
+ window.CUR=c; renderPnl(c); renderSell(c,null);
  loadChart(c.id); loadMarket(c.id);
+}
+/* ---- sale terms (editable, saved locally) ---- */
+const DEFAULT_TERMS={pay:'PayPal G&S add 3%, or Venmo/Zelle.',ship:'Ship anywhere, US or International.',claim:'Claim takes it. Offers welcome.',closer:''};
+function terms(){try{return Object.assign({},DEFAULT_TERMS,JSON.parse(localStorage.getItem('cv_terms')||'{}'));}catch(e){return {...DEFAULT_TERMS};}}
+function saveTerms(t){try{localStorage.setItem('cv_terms',JSON.stringify(t));}catch(e){}}
+function openSettings(){
+ const t=terms();
+ document.getElementById('settings').innerHTML=`<div class="sheet" onclick="if(event.target===this)closeSettings()"><div class="sheetC" style="max-width:480px">
+  <span class="x" onclick="closeSettings()">&times;</span>
+  <h2 style="margin:2px 0 10px;font-size:18px">Sale settings</h2>
+  <div class="stat-note">These fill the Claim &amp; Direct sale text on every card. Saved on this device.</div>
+  <div class="selltxt"><div class="sthd">Payment terms</div><textarea id="set_pay" class="sta" style="min-height:52px">${t.pay}</textarea></div>
+  <div class="selltxt"><div class="sthd">Shipping terms</div><textarea id="set_ship" class="sta" style="min-height:52px">${t.ship}</textarea></div>
+  <div class="selltxt"><div class="sthd">Claim/close line</div><textarea id="set_claim" class="sta" style="min-height:52px">${t.claim}</textarea></div>
+  <div class="selltxt"><div class="sthd">Sign-off (optional, e.g. MTFBWY)</div><textarea id="set_closer" class="sta" style="min-height:40px">${t.closer||''}</textarea></div>
+  <button class="ebaybtn" style="background:var(--green)" onclick="applySettings()">Save</button>
+ </div></div>`;
+}
+function applySettings(){saveTerms({pay:val('set_pay'),ship:val('set_ship'),claim:val('set_claim'),closer:val('set_closer')});closeSettings();if(window.CUR)renderSell(window.CUR,window.CUR._stats||null);}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function closeSettings(){document.getElementById('settings').innerHTML='';}
+/* ---- card descriptor + sell text ---- */
+function cardLine(c){
+ let p=[];
+ if(c.player)p.push(c.player);
+ if(c.set_name)p.push(c.set_name);
+ else if(c.year)p.push(c.year);
+ if(c.card_number)p.push('#'+String(c.card_number).replace(/^#/,''));
+ if(c.variation&&!/^base$/i.test(c.variation))p.push(c.variation);
+ if(c.serial)p.push(/^\//.test(c.serial)?c.serial:c.serial);
+ if(c.grade&&!/raw/i.test(c.grade))p.push(c.grade); else p.push('Raw');
+ return p.join(' ').replace(/\s+/g,' ').trim();
+}
+function askPrice(c,stats){
+ if(stats&&stats.high) return Math.round(stats.high);
+ if(c.current_value) return Math.round(c.current_value*1.1);
+ return null;
+}
+function genClaim(c,stats){
+ const t=terms();const price=askPrice(c,stats);
+ let L=['F/S  '+cardLine(c)];
+ L.push(price?('$'+price.toLocaleString()):'$[price]');
+ L.push('');
+ if(t.pay)L.push(t.pay);
+ if(t.ship)L.push(t.ship);
+ if(t.claim)L.push(t.claim);
+ if(t.closer)L.push('','— '+t.closer);
+ return L.join('\n');
+}
+function genDirect(c,stats){
+ const t=terms();const price=askPrice(c,stats);
+ let s=cardLine(c)+' — $'+(price?price.toLocaleString():'[price]')+'. ';
+ s+=(t.pay||'')+' '+(t.ship||'');
+ return s.replace(/\s+/g,' ').trim();
+}
+function renderSell(c,stats){
+ const el=document.getElementById('cvsell');if(!el)return;
+ c._stats=stats;
+ el.innerHTML=`<div class="sellhd">Sell this card</div>
+  <div class="selltxt"><div class="sthd"><span>Claim sale post</span><button class="cpbtn" onclick="cp(this,'ta_claim')">copy</button></div><textarea id="ta_claim" class="sta">${genClaim(c,stats)}</textarea></div>
+  <div class="selltxt"><div class="sthd"><span>Direct sale comment</span><button class="cpbtn" onclick="cp(this,'ta_direct')">copy</button></div><textarea id="ta_direct" class="sta" style="min-height:66px">${genDirect(c,stats)}</textarea></div>
+  <button class="ebaybtn" onclick="ebayList('${c.id}',this)">Draft eBay listing &raquo;</button>`;
+}
+function cp(btn,taid){
+ const ta=document.getElementById(taid);if(!ta)return;
+ const txt=ta.value;
+ const done=()=>{btn.textContent='copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},1500);};
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,()=>{ta.select();document.execCommand('copy');done();});}
+ else{ta.select();document.execCommand('copy');done();}
+}
+function renderPnl(c){
+ const el=document.getElementById('cvpnl');if(!el)return;
+ if(c.cost_basis==null){el.innerHTML='';return;}
+ const pnl=(c.current_value!=null)?(c.current_value-c.cost_basis):null;
+ const pct=(pnl!=null&&c.cost_basis)?Math.round(pnl/c.cost_basis*100):null;
+ const col=pnl==null?'var(--mut)':(pnl>=0?'var(--green)':'var(--accent)');
+ el.innerHTML=`<div class="pnlbox">
+   <div class="pnlc"><div class="l">Paid</div><div class="n">${money(c.cost_basis)}</div></div>
+   <div class="pnlc"><div class="l">Unrealized P/L</div><div class="n" style="color:${col}">${pnl==null?'--':(pnl>=0?'+':'')+money(pnl)}${pct!=null?` <span style="font-size:11px">(${pct>=0?'+':''}${pct}%)</span>`:''}</div></div>
+  </div>`;
+}
+function renderRange(stats){
+ const el=document.getElementById('cvrange');if(!el)return;
+ if(!stats||!stats.n){el.innerHTML='';return;}
+ el.innerHTML=`<div class="rangebox"><div class="rl"><span>Sell range (sold comps)</span><span>${stats.n} comps</span></div>
+   <div class="rv"><b style="color:var(--green)">${money(stats.low)}</b><span class="rmid">median ${money(stats.med)}</span><b style="color:var(--accent)">${money(stats.high)}</b></div></div>`;
+}
+function ebayList(id,btn){
+ const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
+ const stats=c._stats;const price=askPrice(c,stats)||'';
+ const title=cardLine(c).slice(0,80);
+ const specifics=[['Player/Subject',c.player||''],['Year',c.year||''],['Set',c.set_name||''],['Card Number',c.card_number||''],['Parallel/Variety',c.variation||''],['Grade',(c.grade&&!/raw/i.test(c.grade))?c.grade:'Ungraded'],['Serial',c.serial||''],['Features',[c.is_rookie?'Rookie':'',c.is_auto?'Autograph':'',c.is_relic?'Relic':''].filter(Boolean).join(', ')]].filter(x=>x[1]);
+ const t=terms();
+ const desc=[title,'',stats&&stats.n?`Recent sold comps: ${stats.n} sales, ${money(stats.low)} to ${money(stats.high)} (median ${money(stats.med)}).`:'',(c.grade&&!/raw/i.test(c.grade))?('Graded '+c.grade+'.'):'Raw, ungraded.','',t.pay,t.ship,'','Ships securely in a sleeve, toploader and bubble mailer (or box for higher-value cards).'].filter(Boolean).join('\n');
+ const pkg=`TITLE (≤80 chars):\n${title}\n\nSTART/BIN PRICE: $${price}\n\nITEM SPECIFICS:\n${specifics.map(s=>'  '+s[0]+': '+s[1]).join('\n')}\n\nDESCRIPTION:\n${desc}`;
+ const done=()=>{if(btn){btn.textContent='package copied — opening eBay…';btn.classList.add('ok');}};
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(pkg).then(done,done); else done();
+ setTimeout(()=>{window.open('https://www.ebay.com/sl/sell?sr=wn','_blank');},700);
 }
 let MKT={sold:[],active:[],exp:{sold:false,active:false}};
 function mitem(r){
@@ -257,7 +390,16 @@ async function loadMarket(id){
   MKT.sold=rows.filter(r=>r.kind==='sold').sort((a,b)=>(b.matched-a.matched)||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
   MKT.active=rows.filter(r=>r.kind==='active').sort((a,b)=>(b.matched-a.matched)||((a.price||0)-(b.price||0)));
   renderMkt();
+  const stats=soldStats(MKT.sold);
+  renderRange(stats);
+  if(window.CUR&&window.CUR.id===id) renderSell(window.CUR,stats);
  }catch(e){}
+}
+function pctile(sorted,p){if(!sorted.length)return null;const i=(sorted.length-1)*p;const lo=Math.floor(i),hi=Math.ceil(i);return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
+function soldStats(sold){
+ const v=sold.filter(r=>r.matched&&r.price).map(r=>+r.price).sort((a,b)=>a-b);
+ if(!v.length)return null;
+ return {n:v.length,low:Math.round(pctile(v,0.25)),med:Math.round(pctile(v,0.5)),high:Math.round(pctile(v,0.90))};
 }
 async function loadChart(id){
  try{
@@ -279,8 +421,25 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){document.getElementById('dash').classList.toggle('hide',v!=='dash');document.getElementById('search').classList.toggle('hide',v!=='search');
- document.getElementById('nav-dash').classList.toggle('on',v==='dash');document.getElementById('nav-search').classList.toggle('on',v==='search');window.scrollTo(0,0);}
+function show(v){document.getElementById('dash').classList.toggle('hide',v!=='dash');document.getElementById('search').classList.toggle('hide',v!=='search');document.getElementById('review').classList.toggle('hide',v!=='review');
+ document.getElementById('nav-dash').classList.toggle('on',v==='dash');document.getElementById('nav-search').classList.toggle('on',v==='search');document.getElementById('nav-review').classList.toggle('on',v==='review');window.scrollTo(0,0);}
+let QUEUE=null;
+async function renderReview(){
+ const el=document.getElementById('review');
+ const revCards=CARDS.filter(c=>c.needs_review);
+ el.innerHTML=`<h2 style="margin:16px 0 4px">Review</h2>
+  <div class="stat-note">Auto-added or auto-priced from your eBay purchases. Tap a card to check it; edit anything that looks off. Queued purchases below need you to confirm or add.</div>
+  <h2>Cards to verify (${revCards.length})</h2><div class="grid" id="revgrid"></div>
+  <h2>Queued eBay purchases</h2><div id="revq"><div class="spin">Loading queue…</div></div>`;
+ document.getElementById('revgrid').innerHTML=revCards.slice(0,300).map(c=>{
+   const u=primary(c);
+   return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div><div class="m"><div class="pl">${c.player||c.ref}<span class="revbadge">check</span></div><div class="st">${c.set_name||''}</div><div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;
+ }).join('')||'<div class="spin">Nothing to verify.</div>';
+ try{
+  if(!QUEUE) QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
+  document.getElementById('revq').innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img loading="lazy" src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
+ }catch(e){document.getElementById('revq').innerHTML='<div class="stat-note">Could not load queue.</div>';}
+}
 function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
 function navSearch(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function openSeg(name){SEGFILTER=name;FILT='all';setChip('all');show('search');runSearch();}
