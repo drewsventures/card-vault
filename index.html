@@ -161,6 +161,12 @@ nav button .ic{font-size:18px;line-height:1}
 .mrow{display:flex;gap:8px}.mrow .fld{flex:1;min-width:0}
 .ferr{color:var(--accent);font-size:12px;margin:6px 0 0;min-height:14px}
 .addpbtn{width:100%;background:var(--chip);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px;font-size:14px;font-weight:650;cursor:pointer;margin:8px 0 4px}
+.listbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.listlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;text-decoration:none;padding:6px 11px;border-radius:9px;border:1px solid var(--line)}
+.listlink.live{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
+.listlink.draft{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.listedit{font-size:12px;font-weight:600;color:var(--mut);background:none;border:1px dashed var(--line);border-radius:9px;padding:6px 10px;cursor:pointer}
+.listdot{color:var(--green);font-size:10px;margin-left:5px;vertical-align:middle}
 </style>
 </head><body>
 <header><div><h1>Card Vault</h1></div><div style="display:flex;align-items:center;gap:6px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div></header>
@@ -254,14 +260,15 @@ function renderDash(){
 }
 let FILT='all';
 function buildChips(){
- const c=['all','own','graded','has photo','rookies','autos','relics','duplicates'];
+ const c=['all','listed','own','graded','has photo','rookies','autos','relics','duplicates'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
 }
 function setFilt(f,el){FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
 function runSearch(){
  const q=document.getElementById('q').value.toLowerCase().trim();
  let list=CARDS.filter(c=>c.status!=='sold');
- if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
+ if(FILT==='listed')list=list.filter(c=>c.is_listed||c.listing_url);
+ else if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
  else if(FILT==='has photo')list=list.filter(c=>c.photos&&c.photos.length);
  else if(FILT==='rookies')list=list.filter(c=>c.is_rookie);
  else if(FILT==='autos')list=list.filter(c=>c.is_auto);
@@ -285,7 +292,7 @@ function runSearch(){
    return `<div class="tile${inlot?' inlot':''}" onclick='${click}'>
      ${BUILDLOT?`<div class="lotchk" style="${inlot?'':'display:none'}">&#10003;</div>`:''}
      <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div>
-     <div class="m"><div class="pl">${c.player||c.ref}${dup?`<span class="badge">x${n}</span>`:''}</div>
+     <div class="m"><div class="pl">${c.player||c.ref}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
      <div class="st">${c.set_name||''}</div>
      <div class="pr">${money(c.current_value)} ${c.value_source?`<small style="color:${srcColor(c)}">${srcLabel(c)}</small>`:''}</div></div></div>`;
  }).join('')||'<div class="spin">No cards match.</div>';
@@ -305,6 +312,7 @@ function openCard(id){
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
    ${c.status==='sold'?soldBlock(c):''}
+   ${c.status!=='sold'?listingBlock(c):''}
    <div id="cvrange"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
@@ -605,6 +613,29 @@ async function submitPurchase(){
  const r=await lotOp({op:'add_purchase',player:player,set_name:fval('p_set'),year:fval('p_year'),card_number:fval('p_num'),variation:fval('p_var'),cost_basis:fval('p_cost'),current_value:fval('p_val'),acquired_via:document.getElementById('p_src').value,acquired_date:fval('p_date'),notes:fval('p_notes')});
  if(r&&r.ok){await refreshData();closeModal();renderDash();openCard(r.id);}
  else{go.disabled=false;go.textContent='Add card';err.textContent='Error: '+((r&&r.error)||'failed');}
+}
+function listingBlock(c){
+ var parts=[];
+ if(c.listing_url)parts.push(`<a class="listlink live" href="${esc(c.listing_url)}" target="_blank" rel="noopener">&#9679; Listed &mdash; view listing &#8599;</a>`);
+ if(c.draft_url)parts.push(`<a class="listlink draft" href="${esc(c.draft_url)}" target="_blank" rel="noopener">Draft &#8599;</a>`);
+ parts.push(`<button class="listedit" onclick="editListing('${c.id}')">${(c.listing_url||c.draft_url)?'Edit links':'+ Add listing / draft link'}</button>`);
+ return `<div class="listbox">${parts.join('')}</div>`;
+}
+function editListing(id){
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ modal(`<h2 style="font-size:18px;margin:2px 24px 12px 0">Listing links<br><span style="font-size:13px;color:var(--mut);font-weight:500">${esc(c.player||c.ref)}</span></h2>
+  <div class="fld"><label>Live listing URL (eBay, etc.)</label><input id="l_url" value="${esc(c.listing_url||'')}" placeholder="https://www.ebay.com/itm/..."></div>
+  <div class="fld"><label>Draft URL (optional)</label><input id="l_draft" value="${esc(c.draft_url||'')}" placeholder="https://www.ebay.com/sl/prelist/..."></div>
+  <div class="stat-note">Adding a live listing URL flags the card as Listed. Clear it when the card sells or the listing ends.</div>
+  <div class="ferr" id="l_err"></div>
+  <button class="addlotbtn" id="l_go" onclick="submitListing('${id}')">Save</button>`);
+}
+async function submitListing(id){
+ const go=document.getElementById('l_go');go.disabled=true;go.textContent='Saving…';
+ const url=fval('l_url'),draft=fval('l_draft');
+ const r=await lotOp({op:'set_card',card_id:id,listing_url:url||'',draft_url:draft||'',is_listed:!!url});
+ if(r&&r.ok){await refreshData();closeModal();closeCard();openCard(id);}
+ else{go.disabled=false;go.textContent='Save';document.getElementById('l_err').textContent='Error: '+((r&&r.error)||'failed');}
 }
 let QUEUE=null;
 async function renderReview(){
