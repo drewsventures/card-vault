@@ -321,6 +321,7 @@ function openCard(id){
    <div id="cvsell" class="selltools"></div>
    <button class="addlotbtn" onclick="addToLotMenu('${c.id}')">+ Add to a lot</button>
    <button class="addpbtn" onclick="${c.status==='sold'?`editSale('${c.id}')`:`sellCard('${c.id}')`}">${c.status==='sold'?'Edit sale / move back':'Mark as sold'}</button>
+   <div id="cvtrend" class="cvchart"></div>
    <div id="cvchart" class="cvchart"></div>
    <div id="cvmkt" class="mkt"></div>
    <div style="margin-top:10px">
@@ -469,10 +470,29 @@ async function loadMarket(id){
   MKT.sold=rows.filter(r=>r.kind==='sold').sort((a,b)=>(b.matched-a.matched)||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
   MKT.active=rows.filter(r=>r.kind==='active').sort((a,b)=>(b.matched-a.matched)||((a.price||0)-(b.price||0)));
   renderMkt();
+  renderSalesTrend(MKT.sold);
   const stats=soldStats(MKT.sold);
   renderRange(stats);
   if(window.CUR&&window.CUR.id===id) renderSell(window.CUR,stats);
  }catch(e){}
+}
+function renderSalesTrend(sold){
+ const el=document.getElementById('cvtrend');if(!el)return;
+ const pts=(sold||[]).filter(r=>r.matched&&r.price&&r.item_date).map(r=>({d:r.item_date,t:new Date(r.item_date).getTime(),p:+r.price})).filter(r=>!isNaN(r.t)).sort((a,b)=>a.t-b.t);
+ if(pts.length<2){el.innerHTML=pts.length?`<div class="chartnote">Latest matched sale ${money(pts[0].p)} on ${pts[0].d}. Trend chart fills in as more dated sales come in.</div>`:'';return;}
+ const t0=pts[0].t,t1=pts[pts.length-1].t,tr=(t1-t0)||1;
+ const ps=pts.map(x=>x.p),pmax=Math.max(...ps),pmin=Math.min(...ps),pr=(pmax-pmin)||1;
+ const W=320,H=92,PX=6,PB=14,PT=6;
+ const X=t=>PX+(t-t0)/tr*(W-2*PX), Y=p=>PT+(1-(p-pmin)/pr)*(H-PT-PB);
+ let n=pts.length,sx=0,sy=0,sxy=0,sxx=0;
+ pts.forEach(x=>{const xi=(x.t-t0)/tr;sx+=xi;sy+=x.p;sxy+=xi*x.p;sxx+=xi*xi;});
+ const b=(n*sxy-sx*sy)/((n*sxx-sx*sx)||1),a=(sy-b*sx)/n;
+ const up=b>=0,col=up?'var(--green)':'var(--accent)';
+ const dots=pts.map(x=>`<circle cx="${X(x.t).toFixed(1)}" cy="${Y(x.p).toFixed(1)}" r="2.6" fill="${col}" opacity="0.7"/>`).join('');
+ const latest=pts[pts.length-1];
+ el.innerHTML=`<div class="chartwrap"><div class="charthd">Sales trend <span style="color:${col};font-weight:700">${up?'&#9650;':'&#9660;'} ${pts.length} dated sales</span></div>
+  <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="cvsvg" style="height:92px"><line x1="${X(t0).toFixed(1)}" y1="${Y(a).toFixed(1)}" x2="${X(t1).toFixed(1)}" y2="${Y(a+b).toFixed(1)}" stroke="${col}" stroke-width="2"/>${dots}</svg>
+  <div class="charthd" style="color:var(--mut)"><span>${pts[0].d} ${money(pts[0].p)}</span><span>latest ${latest.d} ${money(latest.p)}</span></div></div>`;
 }
 function pctile(sorted,p){if(!sorted.length)return null;const i=(sorted.length-1)*p;const lo=Math.floor(i),hi=Math.ceil(i);return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
 function soldStats(sold){
