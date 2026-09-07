@@ -167,6 +167,7 @@ nav button .ic{font-size:18px;line-height:1}
 .listlink.draft{color:var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}
 .listedit{font-size:12px;font-weight:600;color:var(--mut);background:none;border:1px dashed var(--line);border-radius:9px;padding:6px 10px;cursor:pointer}
 .listdot{color:var(--green);font-size:10px;margin-left:5px;vertical-align:middle}
+.showback{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;margin:14px 0 2px;display:inline-block}
 </style>
 </head><body>
 <header><div><h1>Card Vault</h1></div><div style="display:flex;align-items:center;gap:6px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div></header>
@@ -181,6 +182,7 @@ nav button .ic{font-size:18px;line-height:1}
   <div id="review" class="hide"></div>
   <div id="lots" class="hide"></div>
   <div id="sold" class="hide"></div>
+  <div id="shows" class="hide"></div>
 </div>
 <div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
@@ -192,6 +194,7 @@ nav button .ic{font-size:18px;line-height:1}
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
   <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
   <button id="nav-sold" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
+  <button id="nav-shows" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#127942;</span>Shows</button>
 </nav>
 <script>
 const SB="https://kcmrmswazprkizbzewpm.supabase.co";
@@ -497,8 +500,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){['dash','search','review','lots','sold'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
- ['dash','search','review','lots','sold'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
+function show(v){['dash','search','review','lots','sold','shows'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
+ ['dash','search','review','lots','sold','shows'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
 /* ================= SOLD + BUY/SELL ================= */
 function num(v){if(v==null||v==='')return null;const n=+v;return isNaN(n)?null:n;}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -636,6 +639,71 @@ async function submitListing(id){
  const r=await lotOp({op:'set_card',card_id:id,listing_url:url||'',draft_url:draft||'',is_listed:!!url});
  if(r&&r.ok){await refreshData();closeModal();closeCard();openCard(id);}
  else{go.disabled=false;go.textContent='Save';document.getElementById('l_err').textContent='Error: '+((r&&r.error)||'failed');}
+}
+/* ================= SHOWS ================= */
+let SHOWSEL=null;
+function showEvents(){
+ const ev={};
+ CARDS.forEach(c=>{
+  if(c.acq_event){(ev[c.acq_event]=ev[c.acq_event]||{buys:[],sells:[]}).buys.push(c);}
+  if(c.sale_event){(ev[c.sale_event]=ev[c.sale_event]||{buys:[],sells:[]}).sells.push(c);}
+ });
+ return ev;
+}
+function evStats(d){
+ let spent=0,proceeds=0,realized=0,realN=0;
+ d.buys.forEach(c=>{spent+=(+c.cost_basis||0);});
+ d.sells.forEach(c=>{proceeds+=(+c.sale_price||0);const rl=realizedPL(c);if(rl!=null){realized+=rl;realN++;}});
+ return {spent,proceeds,net:proceeds-spent,realized,realN};
+}
+function renderShows(){
+ const el=document.getElementById('shows');
+ if(SHOWSEL){return openShow(SHOWSEL);}
+ const ev=showEvents();
+ const names=Object.keys(ev).sort();
+ let h=`<h2 style="margin:16px 0 4px">Shows</h2><div class="stat-note">Each show groups the cards you bought and sold there. Tap one for the full recap and cash position.</div>`;
+ if(!names.length){h+=`<div class="spin">No shows tagged yet.</div>`;el.innerHTML=h;return;}
+ h+=`<div class="panel" style="margin-top:10px;padding:2px 12px">`;
+ names.forEach(n=>{const s=evStats(ev[n]);
+  h+=`<div class="soldrow" onclick='openShow(${JSON.stringify(n)})'>
+   <div class="sinfo"><div class="pl">${esc(n)}</div>
+    <div class="st">${ev[n].sells.length} sold &middot; ${ev[n].buys.length} bought</div></div>
+   <div class="sprice" style="color:${s.net>=0?'var(--green)':'var(--accent)'}">${s.net>=0?'+':'-'}${money(Math.abs(s.net))}<div class="sub">net cash</div></div>
+  </div>`;});
+ h+=`</div>`;
+ el.innerHTML=h;
+}
+function openShow(name){
+ SHOWSEL=name;
+ const d=showEvents()[name]||{buys:[],sells:[]}; const s=evStats(d);
+ let h=`<div class="showback" onclick="SHOWSEL=null;renderShows()">&#8592; All shows</div>
+  <h2 style="margin:4px 0 4px">${esc(name)}</h2>
+  <div class="kpis" style="margin-top:8px">
+   <div class="kpi"><div class="n" style="color:${s.net>=0?'var(--green)':'var(--accent)'}">${s.net>=0?'+':'-'}${money(Math.abs(s.net))}</div><div class="l">Net cash</div></div>
+   <div class="kpi"><div class="n">${money(s.proceeds)}</div><div class="l">Sold (${d.sells.length})</div></div>
+   <div class="kpi"><div class="n">${money(s.spent)}</div><div class="l">Bought (${d.buys.length})</div></div>
+   <div class="kpi"><div class="n" style="color:${s.realized>=0?'var(--green)':'var(--accent)'}">${s.realized>=0?'+':'-'}${money(Math.abs(s.realized))}</div><div class="l">Realized P/L</div><div class="d" style="color:var(--mut)">${s.realN} w/ cost</div></div>
+  </div>`;
+ h+=`<h2 style="margin:16px 0 4px">Sold (${d.sells.length}) &middot; ${money(s.proceeds)}</h2><div class="panel" style="padding:2px 12px">`;
+ if(!d.sells.length)h+=`<div class="spin">No sells tagged to this show.</div>`;
+ d.sells.slice().sort((a,b)=>(+b.sale_price||0)-(+a.sale_price||0)).forEach(c=>{const rl=realizedPL(c);
+  h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
+   <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
+   <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div>
+    <div class="sdec">${rl!=null?`<span style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))} realized</span>`:'<span style="color:var(--mut)">no cost basis</span>'}</div></div>
+   <div class="sprice">${money(c.sale_price)}<div class="sub">sold</div></div></div>`;});
+ h+=`</div>`;
+ h+=`<h2 style="margin:16px 0 4px">Bought (${d.buys.length}) &middot; ${money(s.spent)}</h2><div class="panel" style="padding:2px 12px">`;
+ if(!d.buys.length)h+=`<div class="spin">No buys tagged to this show.</div>`;
+ d.buys.slice().sort((a,b)=>(+b.cost_basis||0)-(+a.cost_basis||0)).forEach(c=>{const mk=c.current_value;
+  h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
+   <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
+   <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}${c.serial?' &middot; '+esc(c.serial):''}</div>
+    <div class="sdec">${mk!=null?`<span style="color:var(--mut)">comp ${money(mk)}</span>`:'<span style="color:var(--mut)">not comped yet</span>'}</div></div>
+   <div class="sprice">${money(c.cost_basis)}<div class="sub">paid</div></div></div>`;});
+ h+=`</div>`;
+ document.getElementById('shows').innerHTML=h;
+ window.scrollTo(0,0);
 }
 let QUEUE=null;
 async function renderReview(){
