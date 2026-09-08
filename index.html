@@ -335,6 +335,7 @@ function openCard(id){
    <h2 style="margin:2px 0 2px;font-size:19px">${c.player||c.ref}</h2>
    <div style="color:var(--mut);font-size:13px">${c.set_name||''} ${c.card_number?'#'+c.card_number:''}</div>
    ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
+   ${serialBadgeHTML(c)}
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
@@ -382,6 +383,15 @@ function applySettings(){saveTerms({pay:val('set_pay'),ship:val('set_ship'),clai
 function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
 function closeSettings(){document.getElementById('settings').innerHTML='';}
 /* ---- card descriptor + sell text ---- */
+function serialFacts(c){
+ const out=[];
+ if(c.serial_flag==='alpha')out.push({tag:'ALPHA '+(c.serial||'#1'),hook:'Alpha '+(c.serial||'')+' (the #1 card off the entire print run, the most coveted serial in the set).'});
+ if(c.serial_flag==='perfect')out.push({tag:'PERFECT '+(c.serial||''),hook:'Perfect serial '+(c.serial||'')+' (the final card in the run, a recognized chase serial).'});
+ if(c.jersey_match)out.push({tag:'JERSEY MATCH'+(c.jersey_number?' #'+c.jersey_number:''),hook:'Jersey-number match'+(c.jersey_number?' (serial matches his #'+c.jersey_number+')':'')+', a coveted 1-of-1 within the parallel.'});
+ return out;
+}
+function serialBadgeHTML(c){const f=serialFacts(c);if(!f.length)return '';return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">'+f.map(x=>{const col=x.tag[0]==='A'?'#b8860b':(x.tag[0]==='P'?'#7a3fb8':'#0a7d33');return '<span style="background:'+col+';color:#fff;font-size:11px;font-weight:800;letter-spacing:.03em;padding:3px 8px;border-radius:7px">&#9733; '+x.tag+'</span>';}).join('')+'</div>';}
+function serialHookText(c){const f=serialFacts(c);return f.length?f.map(x=>x.hook).join(' '):'';}
 function cardLine(c){
  let p=[];
  if(c.player)p.push(c.player);
@@ -409,6 +419,7 @@ function genClaim(c,stats){
  const t=terms();const price=askPrice(c,stats);
  let L=['F/S  '+cardLine(c)];
  L.push(price?('$'+price.toLocaleString()):'$[price]');
+ const hook=serialHookText(c);if(hook){L.push('');L.push(hook);}
  L.push('');
  if(t.pay)L.push(t.pay);
  if(t.ship)L.push(t.ship);
@@ -419,6 +430,7 @@ function genClaim(c,stats){
 function genDirect(c,stats){
  const t=terms();const price=askPrice(c,stats);
  let s=cardLine(c)+' — $'+(price?price.toLocaleString():'[price]')+'. ';
+ const hook=serialHookText(c);if(hook)s+=hook+' ';
  s+=(t.pay||'')+' '+(t.ship||'');
  return s.replace(/\s+/g,' ').trim();
 }
@@ -460,7 +472,7 @@ function ebayList(id,btn){
  const title=cardLine(c).slice(0,80);
  const specifics=[['Player/Subject',c.player||''],['Year',c.year||''],['Set',c.set_name||''],['Card Number',c.card_number||''],['Parallel/Variety',c.variation||''],['Grade',cleanGrade(c.grade)||'Ungraded'],['Serial',c.serial||''],['Features',[c.is_rookie?'Rookie':'',c.is_auto?'Autograph':'',c.is_relic?'Relic':''].filter(Boolean).join(', ')]].filter(x=>x[1]);
  const t=terms();
- const desc=[title,'',stats&&stats.n?`Recent sold comps: ${stats.n} sales, ${money(stats.low)} to ${money(stats.high)} (median ${money(stats.med)}).`:'',(c.grade&&!/raw/i.test(c.grade))?('Graded '+c.grade+'.'):'Raw, ungraded.','',t.pay,t.ship,'','Ships securely in a sleeve, toploader and bubble mailer (or box for higher-value cards).'].filter(Boolean).join('\n');
+ const desc=[title,'',serialHookText(c)||'',stats&&stats.n?`Recent sold comps: ${stats.n} sales, ${money(stats.low)} to ${money(stats.high)} (median ${money(stats.med)}).`:'',(c.grade&&!/raw/i.test(c.grade))?('Graded '+c.grade+'.'):'Raw, ungraded.','',t.pay,t.ship,'','Ships securely in a sleeve, toploader and bubble mailer (or box for higher-value cards).'].filter(Boolean).join('\n');
  const pkg=`TITLE (≤80 chars):\n${title}\n\nSTART/BIN PRICE: $${price}\n\nITEM SPECIFICS:\n${specifics.map(s=>'  '+s[0]+': '+s[1]).join('\n')}\n\nDESCRIPTION:\n${desc}`;
  const done=()=>{if(btn){btn.textContent='package copied — opening eBay…';btn.classList.add('ok');}};
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(pkg).then(done,done); else done();
