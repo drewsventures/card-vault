@@ -467,24 +467,39 @@ function ebayList(id,btn){
  setTimeout(()=>{window.open('https://www.ebay.com/sl/sell?sr=wn','_blank');},700);
 }
 let MKT={sold:[],active:[],exp:{sold:false,active:false}};
+/* ---- comp matching + grade bucketing (same / different / raw) ---- */
+function lnameOf(p){if(!p)return'';let w=(p+'').toLowerCase().replace(/[^a-z0-9\s'-]/g,' ').trim().split(/\s+/);const stop=['jr','sr','ii','iii','psa','sgc','bgs','cgc','rc','hof'];while(w.length>1&&stop.includes(w[w.length-1]))w.pop();return w[w.length-1]||'';}
+function itemGrade(t){const m=String(t).match(/\b(PSA|BGS|BVG|SGC|CGC|CSG|BAS|HGA|GMA|TAG|RCG)\s*\.?\s*(10|[1-9](?:\.5)?)\b/i);if(m)return{g:true,gr:m[1].toUpperCase(),n:m[2]};if(/\b(psa|bgs|sgc|cgc|graded|gem\s*mint)\b/i.test(t))return{g:true,gr:'',n:''};return{g:false};}
+function cardGI(c){const cg=cleanGrade(c.grade);if(!cg)return{g:false};const m=cg.match(/\b(PSA|BGS|BVG|SGC|CGC|CSG|BAS|HGA)\s*(10|[1-9](?:\.5)?)/i);return m?{g:true,gr:m[1].toUpperCase(),n:m[2]}:{g:true,gr:'',n:''};}
+function isReprintT(t){return /\b(reprint|re-print|rp|custom|aceo|novelty|proxy|fantasy)\b/i.test(t);}
+function autoCard(c){return !!c.is_auto||/auto|signed|autograph/i.test((c.grade||'')+' '+(c.variation||''));}
+function autoItem(t){return /\b(auto|autographed|autograph|signed|on[\s-]?card)\b/i.test(t);}
+function bucketOf(t,c){const ci=cardGI(c),ii=itemGrade(t);let b;if(ci.g){if(!ii.g)b='raw';else if(ii.n&&ci.n&&ii.n===ci.n&&(!ii.gr||!ci.gr||ii.gr===ci.gr))b='same';else b='different';}else{b=ii.g?'different':'same';}if(b==='same'&&autoCard(c)!==autoItem(t))b='different';return b;}
+function bmed(arr){const s=arr.map(x=>+x.price).filter(x=>x).sort((a,b)=>a-b);return s.length?(s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2):null;}
 function mitem(r){
  const dt=r.item_date?new Date(r.item_date).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
- return `<div class="mitem${r.matched?'':' unm'}">${r.image?`<img loading="lazy" src="${r.image}">`:'<div class="ni"></div>'}<div class="mt"><a href="${r.url||'#'}" target="_blank" rel="noopener">${r.title||''}</a><div class="md">${dt}${r.matched?'':(dt?' &middot; ':'')+'other variant'}</div></div><div class="mp">${money(r.price)}</div></div>`;
+ return `<div class="mitem">${r.image?`<img loading="lazy" src="${r.image}">`:'<div class="ni"></div>'}<div class="mt"><a href="${r.url||'#'}" target="_blank" rel="noopener">${r.title||''}</a><div class="md">${dt}</div></div><div class="mp">${money(r.price)}</div></div>`;
 }
-function renderMkt(){
- const el=document.getElementById('cvmkt');if(!el)return;
+function renderMkt(c){
+ const el=document.getElementById('cvmkt');if(!el)return;c=c||window.CUR||{};
  if(!MKT.sold.length&&!MKT.active.length){el.innerHTML='';return;}
- function sec(title,arr,kind,sub){
-  if(!arr.length)return `<div class="mkt"><h3><span>${title}</span></h3><div class="none">None found on the last pull.</div></div>`;
-  const exp=MKT.exp[kind],show=exp?arr:arr.slice(0,8);
-  return `<div class="mkt"><h3><span>${title}</span><small>${sub}</small></h3>${show.map(mitem).join('')}${arr.length>8?`<div class="more" onclick="MKT.exp.${kind}=!MKT.exp.${kind};renderMkt()">${exp?'show less':'show all '+arr.length}</div>`:''}</div>`;
+ const ci=cardGI(c);
+ const lbl={same:ci.g?('Same grade ('+(cleanGrade(c.grade)||'')+')'):'Raw — same as yours',different:ci.g?'Other grades':'Graded',raw:'Raw / ungraded'};
+ const bh='font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 3px;text-transform:uppercase;letter-spacing:.04em';
+ function grp(arr,kind){
+  const hd=kind==='sold'?'Recent sales':'Active listings';
+  if(!arr.length)return `<div class="mkt"><h3><span>${hd}</span></h3><div class="none">None of this card found on the last pull.</div></div>`;
+  const exp=MKT.exp[kind];const caps={same:exp?999:6,different:exp?999:3,raw:exp?999:3};
+  let out=`<div class="mkt"><h3><span>${hd}</span><small>${arr.length} found</small></h3>`;
+  for(const bk of ['same','different','raw']){const items=arr.filter(r=>r._bkt===bk);if(!items.length)continue;const m=bmed(items);
+   out+=`<div style="${bh}">${lbl[bk]} &middot; ${items.length}${m!=null?' &middot; median '+money(m):''}</div>`;
+   items.slice(0,caps[bk]).forEach(r=>out+=mitem(r));
+   if(items.length>caps[bk])out+=`<div class="md" style="color:var(--mut);font-size:11px;margin:2px 0 4px">+${items.length-caps[bk]} more ${bk}</div>`;
+  }
+  if(arr.length>12)out+=`<div class="more" onclick="MKT.exp.${kind}=!MKT.exp.${kind};renderMkt(window.CUR)">${exp?'show less':'show all '+arr.length}</div>`;
+  return out+'</div>';
  }
- const msold=MKT.sold.filter(r=>r.matched&&r.price);
- const s=msold.map(x=>+x.price).sort((a,b)=>a-b);
- const med=s.length?(s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2):null;
- const soldSub=med!=null?`${msold.length} matched &middot; median ${money(med)}`:`${MKT.sold.length} found`;
- const actSub=`${MKT.active.filter(r=>r.matched).length} matched of ${MKT.active.length}`;
- el.innerHTML=sec('Recent sales',MKT.sold,'sold',soldSub)+sec('Active listings',MKT.active,'active',actSub);
+ el.innerHTML=grp(MKT.sold,'sold')+grp(MKT.active,'active');
 }
 async function loadMarket(id){
  MKT={sold:[],active:[],exp:{sold:false,active:false}};
@@ -492,9 +507,12 @@ async function loadMarket(id){
  try{
   const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched&limit=200",2);
   if(!rows||!rows.length)return;
-  MKT.sold=rows.filter(r=>r.kind==='sold').sort((a,b)=>(b.matched-a.matched)||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
-  MKT.active=rows.filter(r=>r.kind==='active').sort((a,b)=>(b.matched-a.matched)||((a.price||0)-(b.price||0)));
-  renderMkt();
+  const c=window.CUR||{};const ln=lnameOf(c.player);
+  const keep=rows.filter(r=>{const t=(r.title||'').toLowerCase();if(!t||!r.price)return false;if(isReprintT(t))return false;if(ln&&!t.includes(ln))return false;return true;}).map(r=>{r._bkt=bucketOf(r.title||'',c);return r;});
+  const ord={same:0,different:1,raw:2};
+  MKT.sold=keep.filter(r=>r.kind==='sold').sort((a,b)=>(ord[a._bkt]-ord[b._bkt])||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
+  MKT.active=keep.filter(r=>r.kind==='active').sort((a,b)=>(ord[a._bkt]-ord[b._bkt])||((a.price||0)-(b.price||0)));
+  renderMkt(c);
   renderSalesTrend(MKT.sold);
   const stats=soldStats(MKT.sold);
   renderRange(stats);
@@ -503,7 +521,7 @@ async function loadMarket(id){
 }
 function renderSalesTrend(sold){
  const el=document.getElementById('cvtrend');if(!el)return;
- const pts=(sold||[]).filter(r=>r.matched&&r.price&&r.item_date).map(r=>({d:r.item_date,t:new Date(r.item_date).getTime(),p:+r.price})).filter(r=>!isNaN(r.t)).sort((a,b)=>a.t-b.t);
+ const pts=(sold||[]).filter(r=>r._bkt==='same'&&r.price&&r.item_date).map(r=>({d:r.item_date,t:new Date(r.item_date).getTime(),p:+r.price})).filter(r=>!isNaN(r.t)).sort((a,b)=>a.t-b.t);
  if(pts.length<2){el.innerHTML=pts.length?`<div class="chartnote">Latest matched sale ${money(pts[0].p)} on ${pts[0].d}. Trend chart fills in as more dated sales come in.</div>`:'';return;}
  const t0=pts[0].t,t1=pts[pts.length-1].t,tr=(t1-t0)||1;
  const ps=pts.map(x=>x.p),pmax=Math.max(...ps),pmin=Math.min(...ps),pr=(pmax-pmin)||1;
@@ -521,7 +539,7 @@ function renderSalesTrend(sold){
 }
 function pctile(sorted,p){if(!sorted.length)return null;const i=(sorted.length-1)*p;const lo=Math.floor(i),hi=Math.ceil(i);return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);}
 function soldStats(sold){
- const v=sold.filter(r=>r.matched&&r.price).map(r=>+r.price).sort((a,b)=>a-b);
+ const v=sold.filter(r=>r._bkt==='same'&&r.price).map(r=>+r.price).sort((a,b)=>a-b);
  if(!v.length)return null;
  return {n:v.length,low:Math.round(pctile(v,0.25)),med:Math.round(pctile(v,0.5)),high:Math.round(pctile(v,0.90))};
 }
