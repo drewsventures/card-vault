@@ -184,6 +184,7 @@ nav button .ic{font-size:18px;line-height:1}
   <div id="sold" class="hide"></div>
   <div id="shows" class="hide"></div>
   <div id="sealed" class="hide"></div>
+  <div id="sets" class="hide"></div>
 </div>
 <div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
@@ -197,6 +198,7 @@ nav button .ic{font-size:18px;line-height:1}
   <button id="nav-sold" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
   <button id="nav-shows" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#127942;</span>Shows</button>
   <button id="nav-sealed" onclick="show('sealed');renderSealed()"><span class="ic">&#128230;</span>Sealed</button>
+  <button id="nav-sets" onclick="show('sets');renderSets()"><span class="ic">&#128218;</span>Sets</button>
 </nav>
 <script>
 const SB="https://kcmrmswazprkizbzewpm.supabase.co";
@@ -234,7 +236,9 @@ async function load(){
  }
 }
 function renderDash(){
- const own=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed');
+ const own=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed'&&c.item_type!=='set');
+ const setsOwn=CARDS.filter(c=>c.status!=='sold'&&c.item_type==='set');
+ const setsVal=setsOwn.reduce((s,c)=>s+(+c.current_value||0),0);
  const sealedOwn=CARDS.filter(c=>c.status!=='sold'&&c.item_type==='sealed');
  const sealedVal=sealedOwn.reduce((s,c)=>s+(+c.current_value||0),0);
  const val=own.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -254,6 +258,7 @@ function renderDash(){
   <div class="kpi" onclick="openDupes()"><div class="n">${dupeGroups}</div><div class="l">Duplicate groups &rsaquo;</div><div class="d" style="color:var(--mut)">cards you own 2+ of</div></div>
   <div class="kpi" onclick="show('sold');renderSold()"><div class="n" style="color:${realizedTotal>=0?'var(--green)':'var(--accent)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</div><div class="l">Realized P/L &rsaquo;</div><div class="d" style="color:var(--mut)">${soldCards.length} sold</div></div>
   ${sealedOwn.length?`<div class="kpi" onclick="show('sealed');renderSealed()"><div class="n">${sealedOwn.length}</div><div class="l">Sealed items &rsaquo;</div><div class="d" style="color:var(--mut)">${sealedVal?money(sealedVal)+' val':'packs/boxes'}</div></div>`:''}
+  ${setsOwn.length?`<div class="kpi" onclick="show('sets');renderSets()"><div class="n">${setsOwn.length}</div><div class="l">Complete sets &rsaquo;</div><div class="d" style="color:var(--mut)">${setsVal?money(setsVal)+' val':'sets'}</div></div>`:''}
  </div>`;
  h+=`<button class="addpbtn" onclick="addPurchase()">+ Add a purchase</button>`;
  h+=`<div class="dupe">Value shown is your latest comped/ask number per card. Only your Maine lot sits on live sold comps so far; tap Search to dig in. <b>${dupeGroups} groups</b> have duplicates worth reviewing.</div>`;
@@ -274,7 +279,7 @@ function buildChips(){
 function setFilt(f,el){FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
 function runSearch(){
  const q=document.getElementById('q').value.toLowerCase().trim();
- let list=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed');
+ let list=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed'&&c.item_type!=='set');
  if(FILT==='listed')list=list.filter(c=>c.is_listed||c.listing_url);
  else if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
  else if(FILT==='has photo')list=list.filter(c=>c.photos&&c.photos.length);
@@ -580,8 +585,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){['dash','search','review','lots','sold','shows','sealed'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
- ['dash','search','review','lots','sold','shows','sealed'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
+function show(v){['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
+ ['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -596,6 +601,21 @@ function renderSealed(){
      <div class="st">${esc(c.variation||c.set_name||'')}</div>
      <div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;}).join('')+`</div>`;
  document.getElementById('sealed').innerHTML=h;
+}
+function renderSets(){
+ const items=CARDS.filter(c=>c.item_type==='set'&&c.status!=='sold');
+ const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
+ const cost=items.reduce((s,c)=>s+(+c.cost_basis||0),0);
+ let h=`<h2 style="margin:16px 0 4px">Complete sets</h2>`;
+ h+=`<div class="dupe">Full sets, valued as a complete set. ${items.length} set${items.length===1?'':'s'}${val?`, ${money(val)} value`:''}${cost?`, ${money(cost)} cost`:''}.</div>`;
+ if(!items.length){document.getElementById('sets').innerHTML=h+'<div class="spin">No sets yet.</div>';return;}
+ items.sort((a,b)=>(b.current_value||0)-(a.current_value||0));
+ h+=`<div class="grid">`+items.map(c=>{const u=primary(c);const cnt=c.card_count?`${c.card_count} cards`:'set';return `<div class="tile" onclick='openCard("${c.id}")'>
+     <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
+     <div class="m"><div class="pl">${esc(c.player||c.ref)}${c.needs_review?`<span class="badge">review</span>`:''}</div>
+     <div class="st">${esc(c.set_name||'')} &middot; ${cnt}</div>
+     <div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;}).join('')+`</div>`;
+ document.getElementById('sets').innerHTML=h;
 }
 /* ================= SOLD + BUY/SELL ================= */
 function num(v){if(v==null||v==='')return null;const n=+v;return isNaN(n)?null:n;}
