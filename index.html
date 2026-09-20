@@ -377,27 +377,58 @@ function liveCompsBlock(c){
 function compUpdateBlock(c){
  return `<button id="compbtn" class="addlotbtn" style="border-color:rgba(201,168,102,.45);color:var(--gold);font-weight:700" onclick="requestComp('${c.id}')">&#8635; Update comp now</button><div id="compstat" style="display:none"></div>`;
 }
-function setCompStatus(msg,cls){const el=document.getElementById('compstat');if(!el)return;el.style.display='block';el.className='stat-note'+(cls==='ok'?'':'');el.innerHTML=(cls==='ok'?'&#10003; ':'')+msg;if(cls==='ok')el.style.color='var(--green)';else el.style.color='';}
+function setCompStatus(msg,cls){const el=document.getElementById('compstat');if(!el)return;el.style.display='block';el.className='stat-note';el.innerHTML=(cls==='ok'?'&#10003; ':'')+msg;el.style.color=(cls==='ok'?'var(--green)':(cls==='err'?'var(--accent)':''));}
+/* closeCard() leaves window.CUR set, so CUR alone can't tell us the sheet is open.
+   Require both: sheet still rendered AND still showing this card. */
+function compOnScreen(cardId){const sh=document.getElementById('sheet');return !!(sh&&sh.innerHTML&&window.CUR&&window.CUR.id===cardId);}
+function compBtnReset(){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}}
+/* The runner polls from a background eBay tab, where browsers throttle setInterval
+   hard (15s can degrade to minutes). Observed pickup has run ~10 min, so we wait
+   well past that rather than calling it a failure at 4. */
+const COMP_DEADLINE_MS=20*60*1000;
+let COMPWATCH=0;
 async function requestComp(id){
  const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
  const btn=document.getElementById('compbtn');if(btn){btn.disabled=true;btn.textContent='Requesting…';}
- try{await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({card_id:id,ref:c.ref})});}catch(e){}
- if(btn){btn.textContent='Queued · pulling…';}
- setCompStatus('Requested. The comp runner is pulling live eBay sold + Card Ladder for this exact card and will write back the value, comps and date. Keep the runner tab open on your Mac.');
- pollComp(id,c.value_date,0);
-}
-async function pollComp(id,prevDate,tries){
- if(tries>48){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}
-  setCompStatus('Still queued after 4 min. If the runner tab isn’t armed, this card stays in the queue and updates the moment it runs. Nothing lost.');return;}
- await new Promise(r=>setTimeout(r,5000));
+ let reqId=null;
  try{
-  const rows=await fetchJSON(SB+'/rest/v1/comp_requests?card_id=eq.'+id+'&order=requested_at.desc&limit=1',1);
+  const r=await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({card_id:id,ref:c.ref})});
+  if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,120));
+  const rows=await r.json();reqId=rows&&rows[0]&&rows[0].id;
+  if(!reqId)throw new Error('queued but no request id returned');
+ }catch(e){
+  compBtnReset();
+  setCompStatus('Could not queue this request ('+String(e.message||e).slice(0,120)+'). Nothing was sent to the runner — tap again to retry.','err');
+  return;
+ }
+ if(btn)btn.textContent='Queued · waiting for runner…';
+ setCompStatus('Queued. The runner picks this up from your eBay tab and writes back value, comps and date. A backgrounded tab is throttled by the browser, so pickup can take ~10 min; foreground that tab to make it near-instant.');
+ const token=++COMPWATCH;
+ pollComp(reqId,id,token,Date.now());
+}
+async function pollComp(reqId,cardId,token,startedAt){
+ const elapsed=Date.now()-startedAt;
+ if(elapsed>COMP_DEADLINE_MS){
+  if(compOnScreen(cardId)){compBtnReset();
+   setCompStatus('Still queued after '+Math.round(elapsed/60000)+' min. The request is safely in the queue and will be picked up whenever the runner next polls — nothing is lost. Foreground the eBay tab to speed it up.');}
+  return;}
+ await new Promise(r=>setTimeout(r,elapsed<60000?5000:10000));
+ if(token!==COMPWATCH)return; /* superseded by a newer request */
+ try{
+  const rows=await fetchJSON(SB+'/rest/v1/comp_requests?id=eq.'+reqId+'&select=status,result',1);
   const r=rows&&rows[0];
-  if(r&&r.status==='done'){await refreshData();setCompStatus('Updated from live comps just now.','ok');openCard(id);return;}
-  if(r&&r.status==='error'){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Try again or check the runner tab.');return;}
+  if(r&&r.status==='done'){
+   const onScreen=compOnScreen(cardId);
+   await refreshData();
+   /* Never yank the user off whatever they navigated to while waiting, and never
+      write this card's result into a different card's sheet. */
+   if(onScreen){openCard(cardId);setCompStatus(r.result||'Updated from live comps.','ok');}
+   return;}
+  if(r&&r.status==='error'){if(compOnScreen(cardId)){compBtnReset();setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Tap to try again.','err');}return;}
  }catch(e){}
- setCompStatus('Pulling live comps… '+((tries+1)*5)+'s');
- pollComp(id,prevDate,tries+1);
+ const mins=Math.floor(elapsed/60000);
+ if(compOnScreen(cardId))setCompStatus('Waiting for the runner… '+(mins?mins+'m':Math.round(elapsed/1000)+'s'));
+ pollComp(reqId,cardId,token,startedAt);
 }
 function openCard(id){
  const c=CARDS.find(x=>x.id===id);if(!c)return;
