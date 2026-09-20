@@ -268,7 +268,7 @@ async function load(){
  try{
   CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
   await mergeCost();
-  DUPE={};CARDS.forEach(c=>{(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
+  DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
   renderDash(); buildChips(); loadLots();
   document.getElementById('asof').textContent='as of '+new Date().toLocaleDateString();
  }catch(e){
@@ -666,7 +666,7 @@ function realizedPL(c){return (c.cost_basis!=null&&c.sale_price!=null)?(saleNet(
 async function refreshData(){
  CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
  await mergeCost();
- DUPE={};CARDS.forEach(c=>{(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
+ DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
 }
 function modal(html){document.getElementById('modal').innerHTML=`<div class="sheet" onclick="if(event.target===this)closeModal()"><div class="sheetC" style="max-width:480px"><span class="x" onclick="closeModal()">&times;</span>${html}</div></div>`;document.body.style.overflow='hidden';}
 function closeModal(){document.getElementById('modal').innerHTML='';document.body.style.overflow='';}
