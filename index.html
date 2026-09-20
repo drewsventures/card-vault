@@ -374,6 +374,31 @@ function liveCompsBlock(c){
    <a href="${clU}" target="_blank" rel="noopener" style="${bs};background:var(--card,#fff);color:var(--fg,#111)">Card Ladder</a>
  </div>`;
 }
+function compUpdateBlock(c){
+ return `<button id="compbtn" class="addlotbtn" style="border-color:rgba(201,168,102,.45);color:var(--gold);font-weight:700" onclick="requestComp('${c.id}')">&#8635; Update comp now</button><div id="compstat" style="display:none"></div>`;
+}
+function setCompStatus(msg,cls){const el=document.getElementById('compstat');if(!el)return;el.style.display='block';el.className='stat-note'+(cls==='ok'?'':'');el.innerHTML=(cls==='ok'?'&#10003; ':'')+msg;if(cls==='ok')el.style.color='var(--green)';else el.style.color='';}
+async function requestComp(id){
+ const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
+ const btn=document.getElementById('compbtn');if(btn){btn.disabled=true;btn.textContent='Requesting…';}
+ try{await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({card_id:id,ref:c.ref})});}catch(e){}
+ if(btn){btn.textContent='Queued · pulling…';}
+ setCompStatus('Requested. The comp runner is pulling live eBay sold + Card Ladder for this exact card and will write back the value, comps and date. Keep the runner tab open on your Mac.');
+ pollComp(id,c.value_date,0);
+}
+async function pollComp(id,prevDate,tries){
+ if(tries>48){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}
+  setCompStatus('Still queued after 4 min. If the runner tab isn’t armed, this card stays in the queue and updates the moment it runs. Nothing lost.');return;}
+ await new Promise(r=>setTimeout(r,5000));
+ try{
+  const rows=await fetchJSON(SB+'/rest/v1/comp_requests?card_id=eq.'+id+'&order=requested_at.desc&limit=1',1);
+  const r=rows&&rows[0];
+  if(r&&r.status==='done'){await refreshData();setCompStatus('Updated from live comps just now.','ok');openCard(id);return;}
+  if(r&&r.status==='error'){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Try again or check the runner tab.');return;}
+ }catch(e){}
+ setCompStatus('Pulling live comps… '+((tries+1)*5)+'s');
+ pollComp(id,prevDate,tries+1);
+}
 function openCard(id){
  const c=CARDS.find(x=>x.id===id);if(!c)return;
  const front=(c.photos||[]).find(p=>p.side==='front'),back=(c.photos||[]).find(p=>p.side==='back');
@@ -390,6 +415,7 @@ function openCard(id){
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)}${vtagFor(c)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
    ${liveCompsBlock(c)}
+   ${compUpdateBlock(c)}
    ${c.status==='sold'?soldBlock(c):''}
    ${c.status!=='sold'?listingBlock(c):''}
    <div id="cvrange"></div>
@@ -514,7 +540,8 @@ function renderRange(stats){
  const el=document.getElementById('cvrange');if(!el)return;
  if(!stats||!stats.n){el.innerHTML='';return;}
  el.innerHTML=`<div class="rangebox"><div class="rl"><span>Sell range (sold comps)</span><span>${stats.n} comps</span></div>
-   <div class="rv"><b style="color:var(--green)">${money(stats.low)}</b><span class="rmid">median ${money(stats.med)}</span><b style="color:var(--accent)">${money(stats.high)}</b></div></div>`;
+   <div class="rv"><b style="color:var(--green)">${money(stats.low)}</b><span class="rmid">median ${money(stats.med)}</span><b style="color:var(--accent)">${money(stats.high)}</b></div>
+   <div class="rl" style="margin-top:6px"><span>low 25% · median · high 90%</span><span>${MKT.pulled?('comps pulled '+MKT.pulled):''}</span></div></div>`;
 }
 function ebayList(id,btn){
  const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
@@ -567,8 +594,9 @@ async function loadMarket(id){
  MKT={sold:[],active:[],exp:{sold:false,active:false}};
  const el=document.getElementById('cvmkt');if(el)el.innerHTML='';
  try{
-  const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched&limit=200",2);
+  const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched,pulled_at&limit=200",2);
   if(!rows||!rows.length)return;
+  MKT.pulled=rows.reduce((m,r)=>{const d=(r.pulled_at||'').slice(0,10);return d>m?d:m;},'');
   const c=window.CUR||{};const ln=lnameOf(c.player);
   const keep=rows.filter(r=>{const t=(r.title||'').toLowerCase();if(!t||!r.price)return false;if(isReprintT(t))return false;if(ln&&!t.includes(ln))return false;return true;}).map(r=>{r._bkt=bucketOf(r.title||'',c);return r;});
   const ord={same:0,different:1,raw:2};
