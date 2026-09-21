@@ -837,6 +837,9 @@ function addPurchase(){
  const today=new Date().toISOString().slice(0,10);
  modal(`<h2 style="font-size:18px;margin:2px 24px 12px 0">Add a purchase</h2>
   <div class="fld"><label>Player / card</label><input id="p_player" placeholder="e.g. Victor Wembanyama"></div>
+  <div class="mrow"><div class="fld"><label>Category</label><select id="p_dom" onchange="onDomChange()"><option value="">— Unclassified —</option><option value="sports">Sports</option><option value="culture">Culture / Entertainment</option></select></div>
+  <div class="fld"><label>Type</label><select id="p_lgcat"><option value="">Pick a category first</option></select></div></div>
+  <div class="stat-note" style="margin:-4px 0 8px">Set a category and type to auto-assign the right ID (e.g. BKB-####). Leave blank to file as EB-#### and classify later.</div>
   <div class="mrow"><div class="fld"><label>Set</label><input id="p_set" placeholder="2023 Prizm"></div>
   <div class="fld"><label>Year</label><input id="p_year" placeholder="2023"></div></div>
   <div class="mrow"><div class="fld"><label>Card #</label><input id="p_num" placeholder="136"></div>
@@ -849,11 +852,24 @@ function addPurchase(){
   <div class="ferr" id="p_err"></div>
   <button class="addlotbtn" id="p_go" onclick="submitPurchase()">Add card</button>`);
 }
+function onDomChange(){
+ var d=document.getElementById('p_dom').value; var s=document.getElementById('p_lgcat');
+ var opts='<option value="">— none —</option>';
+ if(d==='sports'){
+  [['baseball','Baseball'],['basketball','Basketball'],['football','Football'],['hockey','Hockey'],['soccer','Soccer'],['tennis','Tennis'],['golf','Golf'],['boxing','Boxing'],['mma','MMA'],['wrestling','Wrestling'],['racing','Racing'],['other','Other / multi-sport']].forEach(function(x){opts+='<option value="'+x[0]+'">'+x[1]+'</option>';});
+ }else if(d==='culture'){
+  [['film_tv','Film & TV'],['comics','Comics'],['music','Music'],['games','Gaming'],['history_politics','History / Politics'],['novelty','Novelty']].forEach(function(x){opts+='<option value="'+x[0]+'">'+x[1]+'</option>';});
+ }else{opts='<option value="">Pick a category first</option>';}
+ s.innerHTML=opts;
+}
 async function submitPurchase(){
  const err=document.getElementById('p_err');const player=fval('p_player');
  if(!player){err.textContent='Add at least a player/card name.';return;}
  const go=document.getElementById('p_go');go.disabled=true;go.textContent='Adding…';
- const r=await lotOp({op:'add_purchase',player:player,set_name:fval('p_set'),year:fval('p_year'),card_number:fval('p_num'),variation:fval('p_var'),cost_basis:fval('p_cost'),current_value:fval('p_val'),acquired_via:document.getElementById('p_src').value,acquired_date:fval('p_date'),notes:fval('p_notes')});
+ const dom=document.getElementById('p_dom').value, lgcat=document.getElementById('p_lgcat').value;
+ const payload={op:'add_purchase',player:player,set_name:fval('p_set'),year:fval('p_year'),card_number:fval('p_num'),variation:fval('p_var'),cost_basis:fval('p_cost'),current_value:fval('p_val'),acquired_via:document.getElementById('p_src').value,acquired_date:fval('p_date'),notes:fval('p_notes')};
+ if(dom){payload.tax_domain=dom; if(dom==='sports'&&lgcat)payload.tax_league=lgcat; if(dom==='culture'&&lgcat)payload.tax_category=lgcat;}
+ const r=await lotOp(payload);
  if(r&&r.ok){await refreshData();closeModal();renderDash();openCard(r.id);}
  else{go.disabled=false;go.textContent='Add card';err.textContent='Error: '+((r&&r.error)||'failed');}
 }
