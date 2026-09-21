@@ -7,21 +7,30 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
- --bg:#0c0c0f;--bg2:#101014;--card:#161619;--card2:#1c1c22;--elev:#22222a;
- --ink:#f4f1e9;--ink2:#cdc9be;--mut:#8f8d86;--faint:#5f5e5a;--line:#26262d;--line2:#33333d;
- --gold:#c9a866;--gold2:#e3c78d;--goldsoft:rgba(201,168,102,.13);
- --green:#5fc98a;--accent:#e0736b;--blue:#7ea6ff;--purple:#b98ce0;
- --chip:#1c1c22;--track:#26262d;--nav:#0e0e12;
+ --bg:#f4f1ea;--bg2:#fffdf8;--card:#ffffff;--card2:#f4f1e9;--elev:#efebe1;
+ --ink:#201d16;--ink2:#4d473c;--mut:#8a8377;--faint:#aca596;--line:#e7e2d6;--line2:#dcd5c6;
+ --gold:#a67c2e;--gold2:#c19542;--goldsoft:rgba(166,124,46,.10);
+ --green:#1e9a54;--accent:#cf4436;--blue:#2f6ad6;--purple:#7a49c9;
+ --chip:#f1ede4;--track:#e7e2d6;--nav:#fffdf8;
  --disp:'Fraunces',Georgia,serif;--ui:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
- color-scheme:dark;
+ color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:radial-gradient(900px 420px at 88% -8%,rgba(201,168,102,.06),transparent 60%),radial-gradient(700px 360px at -8% 0%,rgba(126,166,255,.045),transparent 55%),var(--bg);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;padding-bottom:74px;font-feature-settings:"tnum" 0}
+body{margin:0;background:radial-gradient(1000px 460px at 90% -10%,rgba(166,124,46,.06),transparent 60%),radial-gradient(760px 380px at -8% 0%,rgba(47,106,214,.04),transparent 55%),var(--bg);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;padding-bottom:74px;font-feature-settings:"tnum" 0}
 .mono{font-family:var(--mono)}
 .wrap{max-width:900px;margin:0 auto;padding:14px 15px 40px}
-header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
-header h1{font-family:var(--disp);font-weight:600;font-size:21px;margin:0;letter-spacing:-.01em}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg2) 92%,transparent);backdrop-filter:blur(14px);padding:12px 16px 11px;border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1}
+header h1{font-family:var(--disp);font-weight:600;font-size:21px;margin:0;letter-spacing:-.01em;white-space:nowrap;flex:none}
+.owner{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.owner b{color:var(--gold);font-weight:600}
 header .as{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.hsearchwrap{margin-top:10px;position:relative}
+.hsearchwrap input{width:100%;border:1px solid var(--line2);background:var(--card);color:var(--ink);border-radius:12px;padding:11px 14px 11px 38px;font-size:15px;font-family:inherit;box-shadow:0 1px 2px rgba(60,50,25,.03)}
+.hsearchwrap input::placeholder{color:var(--faint)}
+.hsearchwrap input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--goldsoft)}
+.hsearchwrap .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:15px;pointer-events:none}
 .hide{display:none!important}
 /* kpis */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -51,12 +60,12 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:12px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;position:relative;transition:transform .14s,border-color .14s,box-shadow .14s}
 .tile:active{transform:scale(.99)}
-@media(hover:hover){.tile:hover{transform:translateY(-3px);border-color:rgba(201,168,102,.45);box-shadow:0 12px 32px rgba(0,0,0,.5)}}
-.tile .ph{aspect-ratio:3/4.1;background:#08080a;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+@media(hover:hover){.tile:hover{transform:translateY(-3px);border-color:rgba(166,124,46,.5);box-shadow:0 10px 26px rgba(60,50,25,.14)}}
+.tile .ph{aspect-ratio:3/4.1;background:var(--card2);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .tile .ph img{width:100%;height:100%;object-fit:cover}
 .tile .ph .no{color:var(--faint);font-size:11px;text-align:center;padding:8px;font-family:var(--mono)}
-.idchip{position:absolute;top:8px;left:8px;z-index:2;background:rgba(8,8,10,.72);backdrop-filter:blur(6px);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;border-radius:7px;padding:3px 7px;border:1px solid rgba(255,255,255,.09);cursor:copy}
-.idchip:active{background:var(--gold);color:#1a1305}
+.idchip{position:absolute;top:8px;left:8px;z-index:2;background:rgba(28,24,16,.78);backdrop-filter:blur(6px);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;border-radius:7px;padding:3px 7px;border:1px solid rgba(255,255,255,.14);cursor:copy}
+.idchip:active{background:var(--gold);color:#fff}
 .tile .m{padding:9px 10px 11px}
 .tile .pl{font-weight:600;font-size:12.5px;line-height:1.25}
 .tile .st{color:var(--mut);font-size:11px;margin-top:2px;line-height:1.2}
@@ -69,7 +78,7 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .vtag.rev{background:rgba(224,115,107,.15);color:var(--accent);border:1px solid rgba(224,115,107,.3)}
 .badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--gold);color:#1a1305;margin-left:5px;vertical-align:middle}
 /* detail */
-.sheet{position:fixed;inset:0;background:rgba(5,5,7,.72);backdrop-filter:blur(4px);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{position:fixed;inset:0;background:rgba(30,26,18,.42);backdrop-filter:blur(4px);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheetC{background:var(--bg2);width:100%;max-width:560px;max-height:93vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px 44px;border:1px solid var(--line2);border-bottom:none}
 .sheetC .x{position:sticky;top:0;z-index:30;display:block;width:40px;height:40px;margin:-4px -4px 2px auto;font-size:24px;color:var(--ink2);background:var(--elev);border:1px solid var(--line2);border-radius:50%;text-align:center;line-height:38px;cursor:pointer}
 .idbig{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -194,12 +203,17 @@ nav button .ic{font-size:17px;line-height:1}
 .showback{font-size:13px;color:var(--gold);font-weight:600;cursor:pointer;margin:14px 0 2px;display:inline-block}
 </style>
 </head><body>
-<header><div><h1>Card Vault</h1></div><div style="display:flex;align-items:center;gap:6px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div></header>
+<header>
+ <div class="hrow">
+  <div class="brand"><h1>Card Vault</h1><span class="owner">Drew Austin&nbsp;·&nbsp;<b id="hsum">—</b></span></div>
+  <div style="display:flex;align-items:center;gap:4px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div>
+ </div>
+ <div class="hsearchwrap"><span class="si">&#9906;</span><input id="q" placeholder="Search name, set, year, or ID…" autocomplete="off" oninput="onSearchInput()" onfocus="onSearchFocus()"></div>
+</header>
 <div class="wrap">
   <div id="dash"><div class="spin">Loading your collection...</div></div>
   <div id="search" class="hide">
-    <div class="searchbar"><input id="q" placeholder="Search player, set, year..." autocomplete="off"></div>
-    <div class="chips" id="chips"></div>
+    <div class="chips" id="chips" style="margin-top:12px"></div>
     <div class="count" id="scount"></div>
     <div class="grid" id="results"></div>
   </div>
@@ -337,6 +351,7 @@ function renderDash(){
    h+=`<div class="srow" onclick='openCard("${c.id}")' style="cursor:pointer"><span class="nm">${esc(c.player||c.ref)}<br><span style="color:var(--mut);font-size:11px">${esc(c.set_name||'')}</span></span><span class="v">${money(c.current_value)}</span></div>`;});
  h+=`</div>`;
  document.getElementById('dash').innerHTML=h;
+ const hs=document.getElementById('hsum');if(hs)hs.textContent=own.length.toLocaleString()+' cards · '+money(val);
 }
 let FILT='all';
 let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
@@ -1064,6 +1079,8 @@ function openSeg(name){VALONLY=false;SEGFILTER=name;FILT='all';setChip('all');sh
 function openAll(mode){VALONLY=(mode==='value');SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
 function clearSeg(){VALONLY=false;SEGFILTER=null;runSearch();}
+function onSearchInput(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');}runSearch();}
+function onSearchFocus(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}}
 document.getElementById('q').addEventListener('input',runSearch);
 load();
 </script>
