@@ -477,6 +477,7 @@ function openCard(id){
    <div id="cvrange"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
+   <button class="addlotbtn" onclick="editCard('${c.id}')">Edit details</button>
    <button class="addlotbtn" onclick="addToLotMenu('${c.id}')">+ Add to a lot</button>
    <button class="addpbtn" onclick="${c.status==='sold'?`editSale('${c.id}')`:`sellCard('${c.id}')`}">${c.status==='sold'?'Edit sale / move back':'Mark as sold'}</button>
    <div id="cvtrend" class="cvchart"></div>
@@ -852,16 +853,15 @@ function addPurchase(){
   <div class="ferr" id="p_err"></div>
   <button class="addlotbtn" id="p_go" onclick="submitPurchase()">Add card</button>`);
 }
-function onDomChange(){
- var d=document.getElementById('p_dom').value; var s=document.getElementById('p_lgcat');
- var opts='<option value="">— none —</option>';
- if(d==='sports'){
-  [['baseball','Baseball'],['basketball','Basketball'],['football','Football'],['hockey','Hockey'],['soccer','Soccer'],['tennis','Tennis'],['golf','Golf'],['boxing','Boxing'],['mma','MMA'],['wrestling','Wrestling'],['racing','Racing'],['other','Other / multi-sport']].forEach(function(x){opts+='<option value="'+x[0]+'">'+x[1]+'</option>';});
- }else if(d==='culture'){
-  [['film_tv','Film & TV'],['comics','Comics'],['music','Music'],['games','Gaming'],['history_politics','History / Politics'],['novelty','Novelty']].forEach(function(x){opts+='<option value="'+x[0]+'">'+x[1]+'</option>';});
- }else{opts='<option value="">Pick a category first</option>';}
- s.innerHTML=opts;
+const SPORTS_TYPES=[['baseball','Baseball'],['basketball','Basketball'],['football','Football'],['hockey','Hockey'],['soccer','Soccer'],['tennis','Tennis'],['golf','Golf'],['boxing','Boxing'],['mma','MMA'],['wrestling','Wrestling'],['racing','Racing'],['other','Other / multi-sport']];
+const CULTURE_TYPES=[['film_tv','Film & TV'],['comics','Comics'],['music','Music'],['games','Gaming'],['history_politics','History / Politics'],['novelty','Novelty']];
+function typeOptionsHTML(dom,sel){
+ var list=dom==='sports'?SPORTS_TYPES:dom==='culture'?CULTURE_TYPES:null;
+ if(!list)return '<option value="">Pick a category first</option>';
+ return '<option value="">— none —</option>'+list.map(function(x){return '<option value="'+x[0]+'"'+(sel===x[0]?' selected':'')+'>'+x[1]+'</option>';}).join('');
 }
+function onDomChange(){document.getElementById('p_lgcat').innerHTML=typeOptionsHTML(document.getElementById('p_dom').value,null);}
+function onEditDomChange(){document.getElementById('e_lgcat').innerHTML=typeOptionsHTML(document.getElementById('e_dom').value,null);}
 async function submitPurchase(){
  const err=document.getElementById('p_err');const player=fval('p_player');
  if(!player){err.textContent='Add at least a player/card name.';return;}
@@ -895,6 +895,67 @@ async function submitListing(id){
  const r=await lotOp({op:'set_card',card_id:id,listing_url:url||'',draft_url:draft||'',is_listed:!!url});
  if(r&&r.ok){await refreshData();closeModal();closeCard();openCard(id);}
  else{go.disabled=false;go.textContent='Save';document.getElementById('l_err').textContent='Error: '+((r&&r.error)||'failed');}
+}
+/* ---- edit any card field, saved to the DB ---- */
+function editCard(id){
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ const dom=c.tax_domain||'';
+ const typeSel=dom==='sports'?(c.tax_league||''):dom==='culture'?(c.tax_category||''):'';
+ modal(`<h2 style="font-size:18px;margin:2px 24px 12px 0">Edit card<br><span style="font-size:13px;color:var(--mut);font-weight:500">${esc(c.ref||'')}</span></h2>
+  <div class="fld"><label>Player / card</label><input id="e_player" value="${esc(c.player||'')}"></div>
+  <div class="mrow"><div class="fld"><label>Set</label><input id="e_set" value="${esc(c.set_name||'')}"></div>
+  <div class="fld"><label>Year</label><input id="e_year" value="${esc(c.year||'')}"></div></div>
+  <div class="mrow"><div class="fld"><label>Card #</label><input id="e_num" value="${esc(c.card_number||'')}"></div>
+  <div class="fld"><label>Variation</label><input id="e_var" value="${esc(c.variation||'')}"></div></div>
+  <div class="mrow"><div class="fld"><label>Category</label><select id="e_dom" onchange="onEditDomChange()">
+     <option value=""${dom===''?' selected':''}>— Unclassified —</option>
+     <option value="sports"${dom==='sports'?' selected':''}>Sports</option>
+     <option value="culture"${dom==='culture'?' selected':''}>Culture / Entertainment</option></select></div>
+  <div class="fld"><label>Type</label><select id="e_lgcat">${typeOptionsHTML(dom,typeSel)}</select></div></div>
+  <div class="mrow"><div class="fld"><label>Artist</label><input id="e_artist" value="${esc(c.artist||'')}"></div>
+  <div class="fld"><label>Team</label><input id="e_team" value="${esc(c.team||'')}"></div></div>
+  <div class="mrow"><div class="fld"><label>Serial</label><input id="e_serial" value="${esc(c.serial||'')}" placeholder="e.g. 01/70"></div>
+  <div class="fld"><label>Grade</label><input id="e_grade" value="${esc(c.grade||'')}" placeholder="Raw / PSA 10"></div></div>
+  <div class="mrow"><div class="fld"><label>Cost basis ($)</label><input id="e_cost" type="number" inputmode="decimal" value="${c.cost_basis!=null?c.cost_basis:''}"></div>
+  <div class="fld"><label>Est. value ($)</label><input id="e_val" type="number" inputmode="decimal" value="${c.current_value!=null?c.current_value:''}"></div></div>
+  <div class="fld"><label>Flags</label><div style="display:flex;gap:16px;font-size:13px;align-items:center">
+     <label style="font-weight:500;display:flex;gap:5px;align-items:center"><input type="checkbox" id="e_rook"${c.is_rookie?' checked':''}> Rookie</label>
+     <label style="font-weight:500;display:flex;gap:5px;align-items:center"><input type="checkbox" id="e_auto"${c.is_auto?' checked':''}> Auto</label>
+     <label style="font-weight:500;display:flex;gap:5px;align-items:center"><input type="checkbox" id="e_relic"${c.is_relic?' checked':''}> Relic</label></div></div>
+  <div class="fld"><label>Notes</label><textarea id="e_notes" rows="3" style="width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--ink);box-sizing:border-box">${esc(c.notes||'')}</textarea></div>
+  <div class="stat-note" style="margin:-2px 0 8px">Changing Category/Type updates how the card is grouped. It won't renumber a card that already has a final ID (e.g. BKB-0147), so your printed labels stay valid. Editing the value marks it an owner estimate.</div>
+  <div class="ferr" id="e_err"></div>
+  <button class="addlotbtn" id="e_go" onclick="submitEditCard('${id}')">Save changes</button>`);
+}
+async function submitEditCard(id){
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ const err=document.getElementById('e_err'),go=document.getElementById('e_go');
+ const gv=x=>{const el=document.getElementById(x);return el?(el.value||'').trim():'';};
+ const cb=x=>{const el=document.getElementById(x);return !!(el&&el.checked);};
+ const patch={op:'set_card',card_id:id};
+ const setText=(k,v)=>{const cur=(c[k]==null?'':String(c[k]));if(v!==cur)patch[k]=v;};
+ setText('player',gv('e_player'));setText('set_name',gv('e_set'));setText('year',gv('e_year'));
+ setText('card_number',gv('e_num'));setText('variation',gv('e_var'));
+ setText('artist',gv('e_artist'));setText('team',gv('e_team'));
+ setText('serial',gv('e_serial'));setText('grade',gv('e_grade'));setText('notes',gv('e_notes'));
+ const dom=gv('e_dom'),type=gv('e_lgcat');
+ const curDom=c.tax_domain||'',curLeague=c.tax_league||'',curCat=c.tax_category||'';
+ if(dom!==curDom)patch.tax_domain=dom;
+ if(dom==='sports'){if(type!==curLeague)patch.tax_league=type;if(curCat!=='')patch.tax_category='';}
+ else if(dom==='culture'){if(type!==curCat)patch.tax_category=type;if(curLeague!=='')patch.tax_league='';}
+ else{if(curLeague!=='')patch.tax_league='';if(curCat!=='')patch.tax_category='';}
+ const cost=gv('e_cost'),curCost=(c.cost_basis==null?'':String(c.cost_basis));if(cost!==curCost)patch.cost_basis=cost;
+ const val=gv('e_val'),curVal=(c.current_value==null?'':String(c.current_value));
+ if(val!==curVal){patch.current_value=val;patch.value_source='owner-estimate';patch.value_date=new Date().toISOString().slice(0,10);}
+ if(cb('e_rook')!==!!c.is_rookie)patch.is_rookie=cb('e_rook');
+ if(cb('e_auto')!==!!c.is_auto)patch.is_auto=cb('e_auto');
+ if(cb('e_relic')!==!!c.is_relic)patch.is_relic=cb('e_relic');
+ const keys=Object.keys(patch).filter(k=>k!=='op'&&k!=='card_id');
+ if(!keys.length){closeModal();return;}
+ go.disabled=true;go.textContent='Saving…';
+ const r=await lotOp(patch);
+ if(r&&r.ok){await refreshData();closeModal();closeCard();openCard(id);}
+ else{go.disabled=false;go.textContent='Save changes';err.textContent='Error: '+((r&&r.error)||'failed');}
 }
 /* ================= SHOWS ================= */
 let SHOWSEL=null;
