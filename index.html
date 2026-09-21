@@ -232,15 +232,37 @@ const money=v=>v==null?'--':'$'+Number(v).toLocaleString(undefined,{maximumFract
 const SRCMAP={'ebay-sold':['eBay sold','var(--green)'],'ebay-thin':['eBay (thin)','var(--gold)'],'ebay-broad':['eBay (est)','var(--gold)'],'cardladder-auto':['Card Ladder','var(--blue)'],'cardladder-comp':['Card Ladder','var(--blue)'],'ebay-none':['needs review','var(--mut)'],'sketch-pending':['sketch','var(--mut)'],'ask-tier':['ask tier','var(--mut)'],'owner-estimate':['owner est','var(--gold)'],'cost-only':['paid (cost)','var(--mut)']};
 function srcLabel(c){const s=SRCMAP[c.value_source];return s?s[0]:(c.value_source||'unpriced');}
 function srcColor(c){const s=SRCMAP[c.value_source];return s?s[1]:'var(--mut)';}
-function seg(c){const cat=(c.category||''),ref=c.ref||'';
- if(c.sport)return c.sport;
- if(cat.includes('Project 70')||ref.startsWith('P70'))return 'Topps Project 70';
- if(cat.startsWith('SW')||/^(SW|SWA|SWSK|SWPP|SPSK)/.test(ref)){if(cat.includes('Auto'))return 'Star Wars - autos';if(cat.includes('Sketch'))return 'Star Wars - sketch 1/1';return 'Star Wars - relic/parallel/art';}
- if(cat.includes('Entertainment'))return 'Entertainment';
- if(cat.includes('Sealed'))return 'Sealed wax';
- if(cat.includes('Pokemon'))return 'Pokemon';
- if(/Sports|Basketball|Graded|Raw Sports/.test(cat))return 'Sports (other)';
- return 'Other';}
+/* ---- Taxonomy-driven segmentation (v6): domain > league/category, P70 + Star Wars pinned ---- */
+const LEAGUE_LABEL={baseball:'Baseball',basketball:'Basketball',football:'Football',wrestling:'Wrestling',mma:'MMA',golf:'Golf',boxing:'Boxing',hockey:'Hockey',racing:'Racing',soccer:'Soccer',tennis:'Tennis'};
+const CAT_LABEL={film_tv:'Film & TV',music:'Music',comics:'Comics',games:'Games',history_politics:'History & Politics',novelty:'Novelty'};
+const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+function seg(c){
+ const ref=c.ref||'';
+ // pinned collections — taxonomy is the source of truth
+ if(c.tax_set_line==='project_70')return 'Project 70';
+ if(c.tax_franchise==='star_wars')return 'Star Wars';
+ // new taxonomy (domain-driven)
+ if(c.tax_domain==='sports')return LEAGUE_LABEL[c.tax_league]||(c.tax_league?cap(c.tax_league):'Sports (other)');
+ if(c.tax_domain==='culture')return CAT_LABEL[c.tax_category]||(c.tax_category?cap(c.tax_category):'Culture (other)');
+ // legacy fallback for the ~113 not yet migrated (ref-prefix pins only here)
+ if(ref.startsWith('P70')||ref.startsWith('TIE'))return 'Project 70';
+ if(/^(SWSK|SWA|SWPP|SPSK|SW-)/.test(ref))return 'Star Wars';
+ if(c.item_type==='sealed')return 'Sealed wax';
+ if(c.sport)return cap(String(c.sport));
+ const cat=(c.category||'');
+ if(/Entertainment/i.test(cat))return 'Film & TV';
+ if(/Pokemon/i.test(cat))return 'Games';
+ if(/Sports|Basketball|Graded|Raw Sports/i.test(cat))return 'Sports (other)';
+ return 'Unclassified';
+}
+const SPORTS_SEGS=['Baseball','Basketball','Football','Wrestling','MMA','Golf','Boxing','Hockey','Racing','Soccer','Tennis','Sports (other)'];
+const CULTURE_SEGS=['Film & TV','Music','Comics','Games','History & Politics','Novelty','Culture (other)'];
+function segDomain(s){
+ if(s==='Project 70'||s==='Star Wars')return 'Pinned collections';
+ if(SPORTS_SEGS.includes(s))return 'Sports';
+ if(CULTURE_SEGS.includes(s))return 'Culture';
+ return 'Other';
+}
 function primary(c){if(!c.photos||!c.photos.length)return null;const f=c.photos.find(p=>p.is_primary)||c.photos.find(p=>p.side==='front')||c.photos[0];return f?f.url:null;}
 async function fetchJSON(u,tries){
  for(let i=0;i<(tries||3);i++){
@@ -276,16 +298,16 @@ async function load(){
  }
 }
 function renderDash(){
- const own=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed'&&c.item_type!=='set');
- const setsOwn=CARDS.filter(c=>c.status!=='sold'&&c.item_type==='set');
+ const own=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type!=='sealed'&&c.item_type!=='set');
+ const setsOwn=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type==='set');
  const setsVal=setsOwn.reduce((s,c)=>s+(+c.current_value||0),0);
- const sealedOwn=CARDS.filter(c=>c.status!=='sold'&&c.item_type==='sealed');
+ const sealedOwn=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type==='sealed');
  const sealedVal=sealedOwn.reduce((s,c)=>s+(+c.current_value||0),0);
  const val=own.reduce((s,c)=>s+(+c.current_value||0),0);
  const cost=own.reduce((s,c)=>s+(+c.cost_basis||0),0);
  const valued=own.filter(c=>c.current_value!=null).length;
  const withPhoto=own.filter(c=>c.photos&&c.photos.length).length;
- const dupeGroups=Object.values(DUPE).filter(g=>g.filter(c=>c.status!=='sold').length>1).length;
+ const dupeGroups=Object.values(DUPE).filter(g=>g.filter(c=>c.status!=='sold'&&c.status!=='duplicate').length>1).length;
  const segs={};own.forEach(c=>{const s=seg(c);(segs[s]=segs[s]||{n:0,v:0}); segs[s].n++; segs[s].v+=(+c.current_value||0);});
  const segArr=Object.entries(segs).sort((a,b)=>b[1].v-a[1].v);const maxV=Math.max(...segArr.map(s=>s[1].v),1);
  const gain=val-cost;
@@ -302,53 +324,72 @@ function renderDash(){
  </div>`;
  h+=`<button class="addpbtn" onclick="addPurchase()">+ Add a purchase</button>`;
  h+=`<div class="dupe">Value shown is your latest comped/ask number per card. Only your Maine lot sits on live sold comps so far; tap Search to dig in. <b>${dupeGroups} groups</b> have duplicates worth reviewing.</div>`;
- h+=`<h2>By segment</h2><div class="panel">`;
- segArr.forEach(([n,d])=>{h+=`<div class="srow" data-seg="${n}" onclick="openSeg(this.dataset.seg)"><span class="nm">${n} &rsaquo;<br><span style="color:var(--mut);font-size:11px">${d.n} cards</span></span><span class="bar"><i style="width:${d.v/maxV*100}%"></i></span><span class="v">${d.v?money(d.v):'--'}</span></div>`;});
- h+=`</div>`;
+ h+=`<h2>Browse the collection</h2>`;
+ const DOMORDER=['Pinned collections','Sports','Culture','Other'];
+ const byDom={};segArr.forEach(([n,d])=>{const dm=segDomain(n);(byDom[dm]=byDom[dm]||[]).push([n,d]);});
+ DOMORDER.forEach(dm=>{ if(!byDom[dm])return;
+   h+=`<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:18px 4px 6px">${dm}</div><div class="panel">`;
+   byDom[dm].forEach(([n,d])=>{h+=`<div class="srow" data-seg="${n}" onclick="openSeg(this.dataset.seg)"><span class="nm">${n} &rsaquo;<br><span style="color:var(--mut);font-size:11px">${d.n} cards</span></span><span class="bar"><i style="width:${d.v/maxV*100}%"></i></span><span class="v">${d.v?money(d.v):'--'}</span></div>`;});
+   h+=`</div>`;
+ });
  h+=`<h2>Top cards by value</h2><div class="panel">`;
  own.filter(c=>c.current_value!=null).sort((a,b)=>b.current_value-a.current_value).slice(0,8).forEach(c=>{
-   h+=`<div class="srow" onclick='openCard("${c.id}")' style="cursor:pointer"><span class="nm">${c.player||c.ref}<br><span style="color:var(--mut);font-size:11px">${c.set_name||''}</span></span><span class="v">${money(c.current_value)}</span></div>`;});
+   h+=`<div class="srow" onclick='openCard("${c.id}")' style="cursor:pointer"><span class="nm">${esc(c.player||c.ref)}<br><span style="color:var(--mut);font-size:11px">${esc(c.set_name||'')}</span></span><span class="v">${money(c.current_value)}</span></div>`;});
  h+=`</div>`;
  document.getElementById('dash').innerHTML=h;
 }
 let FILT='all';
+let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
 function buildChips(){
  const c=['all','listed','own','graded','has photo','rookies','autos','relics','duplicates'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
 }
-function setFilt(f,el){FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
+function setFilt(f,el){VALONLY=false;FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
 function runSearch(){
  const q=document.getElementById('q').value.toLowerCase().trim();
- let list=CARDS.filter(c=>c.status!=='sold'&&c.item_type!=='sealed'&&c.item_type!=='set');
+ let list=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type!=='sealed'&&c.item_type!=='set');
  if(FILT==='listed')list=list.filter(c=>c.is_listed||c.listing_url);
  else if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
  else if(FILT==='has photo')list=list.filter(c=>c.photos&&c.photos.length);
  else if(FILT==='rookies')list=list.filter(c=>c.is_rookie);
  else if(FILT==='autos')list=list.filter(c=>c.is_auto);
  else if(FILT==='relics')list=list.filter(c=>c.is_relic);
- else if(FILT==='duplicates')list=list.filter(c=>DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1);
+ else if(FILT==='duplicates')list=list.filter(c=>DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length>1);
  if(SEGFILTER)list=list.filter(c=>seg(c)===SEGFILTER);
  if(q){const t=q.split(/\s+/);list=list.filter(c=>{const s=((c.player||'')+' '+(c.set_name||'')+' '+(c.variation||'')+' '+(c.year||'')+' '+(c.ref||'')).toLowerCase();return t.every(w=>s.includes(w));});}
- const neutral=!q&&FILT==='all'&&!SEGFILTER;
+ if(VALONLY)list=list.filter(c=>c.current_value!=null);
+ const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY;
  list.sort((a,b)=>{
    if(neutral){const pa=(a.photos&&a.photos.length)?1:0,pb=(b.photos&&b.photos.length)?1:0;if(pa!==pb)return pb-pa;}
    return (b.current_value||0)-(a.current_value||0);
  });
  document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
+ LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
- const inSet=BUILDLOT?(LOTMEM[BUILDLOT]||new Set()):null;
- el.innerHTML=list.slice(0,400).map(c=>{
-   const u=primary(c);const dup=DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold').length>1;
-   const n=DUPE[c.dupe_key].filter(x=>x.status!=='sold').length;
+ el.innerHTML='';
+ if(!list.length){el.innerHTML='<div class="spin">No cards match.</div>';return;}
+ renderMore();
+}
+function searchTile(c,inSet){
+   const u=primary(c);const dup=DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length>1;
+   const n=DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length;
    const inlot=inSet&&inSet.has(c.id);
    const click=BUILDLOT?`toggleLotCard("${c.id}")`:`openCard("${c.id}")`;
    return `<div class="tile${inlot?' inlot':''}" onclick='${click}'>
      ${BUILDLOT?`<div class="lotchk" style="${inlot?'':'display:none'}">&#10003;</div>`:''}
-     <div class="ph"><span class="idchip" onclick='copyId(event,"${c.ref}")' title="copy ID">${c.ref}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div>
-     <div class="m"><div class="pl">${c.player||c.ref}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
-     <div class="st">${c.set_name||''}</div>
+     <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
+     <div class="m"><div class="pl">${esc(c.player||c.ref)}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
+     <div class="st">${esc(c.set_name||'')}</div>
      <div class="pr">${money(c.current_value)}${vtagFor(c)}</div></div></div>`;
- }).join('')||'<div class="spin">No cards match.</div>';
+}
+function renderMore(){
+   const el=document.getElementById('results');
+   const inSet=BUILDLOT?(LOTMEM[BUILDLOT]||new Set()):null;
+   const b=document.getElementById('loadmore');if(b)b.remove();
+   const next=LASTLIST.slice(SHOWN,SHOWN+PAGE);
+   el.insertAdjacentHTML('beforeend', next.map(c=>searchTile(c,inSet)).join(''));
+   SHOWN+=next.length;
+   if(SHOWN<LASTLIST.length) el.insertAdjacentHTML('beforeend', `<button id="loadmore" onclick="renderMore()" style="grid-column:1/-1;margin:12px auto;padding:11px 22px;background:var(--chip);border:1px solid var(--line);color:var(--gold);border-radius:10px;font-weight:700;cursor:pointer">Load more (${(LASTLIST.length-SHOWN).toLocaleString()} more)</button>`);
 }
 function compQuery(c,withGrade){
  const p=[];
@@ -402,7 +443,7 @@ async function pollComp(id,prevDate,tries){
 function openCard(id){
  const c=CARDS.find(x=>x.id===id);if(!c)return;
  const front=(c.photos||[]).find(p=>p.side==='front'),back=(c.photos||[]).find(p=>p.side==='back');
- const dupN=DUPE[c.dupe_key].filter(x=>x.status!=='sold').length;
+ const dupN=DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length;
  const tags=[];if(c.is_rookie)tags.push('Rookie');if(c.is_auto)tags.push('Auto');if(c.is_relic)tags.push('Relic');if(c.grade&&!/raw/i.test(c.grade))tags.push(c.grade);
  let h=`<div class="sheet" onclick="if(event.target===this)closeCard()"><div class="sheetC">
    <span class="x" onclick="closeCard()">&times;</span>
@@ -417,7 +458,7 @@ function openCard(id){
    ${liveCompsBlock(c)}
    ${compUpdateBlock(c)}
    ${c.status==='sold'?soldBlock(c):''}
-   ${c.status!=='sold'?listingBlock(c):''}
+   ${c.status!=='sold'&&c.status!=='duplicate'?listingBlock(c):''}
    <div id="cvrange"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
@@ -656,7 +697,7 @@ function closeCard(){document.getElementById('sheet').innerHTML='';document.body
 function show(v){['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
  ['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
 function renderSealed(){
- const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold');
+ const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
  const cost=items.reduce((s,c)=>s+(+c.cost_basis||0),0);
  let h=`<h2 style="margin:16px 0 4px">Sealed inventory</h2>`;
@@ -671,7 +712,7 @@ function renderSealed(){
  document.getElementById('sealed').innerHTML=h;
 }
 function renderSets(){
- const items=CARDS.filter(c=>c.item_type==='set'&&c.status!=='sold');
+ const items=CARDS.filter(c=>c.item_type==='set'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
  const cost=items.reduce((s,c)=>s+(+c.cost_basis||0),0);
  let h=`<h2 style="margin:16px 0 4px">Complete sets</h2>`;
@@ -849,7 +890,7 @@ function renderShows(){
  if(!names.length){h+=`<div class="spin">No shows tagged yet.</div>`;el.innerHTML=h;return;}
  h+=`<div class="panel" style="margin-top:10px;padding:2px 12px">`;
  names.forEach(n=>{const s=evStats(ev[n]);
-  h+=`<div class="soldrow" onclick='openShow(${JSON.stringify(n)})'>
+  h+=`<div class="soldrow" data-show="${esc(n)}" onclick='openShow(this.dataset.show)'>
    <div class="sinfo"><div class="pl">${esc(n)}</div>
     <div class="st">${ev[n].sells.length} sold &middot; ${ev[n].buys.length} bought</div></div>
    <div class="sprice" style="color:${s.net>=0?'var(--green)':'var(--accent)'}">${s.net>=0?'+':'-'}${money(Math.abs(s.net))}<div class="sub">net cash</div></div>
@@ -897,9 +938,9 @@ async function renderReview(){
   <div class="stat-note">Auto-added or auto-priced from your eBay purchases. Tap a card to check it; edit anything that looks off. Queued purchases below need you to confirm or add.</div>
   <h2>Cards to verify (${revCards.length})</h2><div class="grid" id="revgrid"></div>
   <h2>Queued eBay purchases</h2><div id="revq"><div class="spin">Loading queue…</div></div>`;
- document.getElementById('revgrid').innerHTML=revCards.slice(0,300).map(c=>{
+ document.getElementById('revgrid').innerHTML=revCards.map(c=>{
    const u=primary(c);
-   return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${c.player||c.ref}</div>`}</div><div class="m"><div class="pl">${c.player||c.ref}<span class="revbadge">check</span></div><div class="st">${c.set_name||''}</div><div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;
+   return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(c.player||c.ref)}<span class="revbadge">check</span></div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;
  }).join('')||'<div class="spin">Nothing to verify.</div>';
  try{
   if(!QUEUE) QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
@@ -966,7 +1007,7 @@ async function removeFromLot(lotId,cardId){(LOTMEM[lotId]||new Set()).delete(car
 async function addToLotId(lotId,cardId){(LOTMEM[lotId]=LOTMEM[lotId]||new Set()).add(cardId);await lotOp({op:'add_item',lot_id:lotId,card_id:cardId});}
 /* builder mode: browse Search, tap toggles membership */
 function startBuild(id){BUILDLOT=id;show('search');navSearchKeep();updateBuildBar();}
-function navSearchKeep(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function navSearchKeep(){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function updateBuildBar(){
  const bar=document.getElementById('buildbar');
  if(!BUILDLOT){bar.classList.add('hide');return;}
@@ -1018,11 +1059,11 @@ function copyLotPost(id){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,done);else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}
 }
 function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
-function navSearch(){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
-function openSeg(name){SEGFILTER=name;FILT='all';setChip('all');show('search');runSearch();}
-function openAll(mode){SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function navSearch(){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function openSeg(name){VALONLY=false;SEGFILTER=name;FILT='all';setChip('all');show('search');runSearch();}
+function openAll(mode){VALONLY=(mode==='value');SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
-function clearSeg(){SEGFILTER=null;runSearch();}
+function clearSeg(){VALONLY=false;SEGFILTER=null;runSearch();}
 document.getElementById('q').addEventListener('input',runSearch);
 load();
 </script>
