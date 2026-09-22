@@ -243,9 +243,10 @@ const SB="https://kcmrmswazprkizbzewpm.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbXJtc3dhenBya2l6Ynpld3BtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NTEzMzAsImV4cCI6MjEwNDEyNzMzMH0.EuB77E8I0b6HzdK8zfDG1qlg-q_k0FUej6pYLyEFiJI";
 let CARDS=[], DUPE={}, SEGFILTER=null;
 const money=v=>v==null?'--':'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0});
-const SRCMAP={'ebay-sold':['eBay sold','var(--green)'],'ebay-thin':['eBay (thin)','var(--gold)'],'ebay-broad':['eBay (est)','var(--gold)'],'cardladder-auto':['Card Ladder','var(--blue)'],'cardladder-comp':['Card Ladder','var(--blue)'],'ebay-none':['needs review','var(--mut)'],'sketch-pending':['sketch','var(--mut)'],'ask-tier':['ask tier','var(--mut)'],'owner-estimate':['owner est','var(--gold)'],'cost-only':['paid (cost)','var(--mut)']};
-function srcLabel(c){const s=SRCMAP[c.value_source];return s?s[0]:(c.value_source||'unpriced');}
-function srcColor(c){const s=SRCMAP[c.value_source];return s?s[1]:'var(--mut)';}
+const SRCMAP={'ebay-sold':['eBay sold','var(--green)'],'ebay-thin':['eBay (thin)','var(--gold)'],'ebay-broad':['eBay (est)','var(--gold)'],'ebay-median':['eBay median','var(--green)'],'ebay+cl':['eBay + Card Ladder','var(--green)'],'cardladder-median':['Card Ladder','var(--blue)'],'cardladder-thin':['Card Ladder (thin)','var(--gold)'],'thin-both':['eBay + CL (thin)','var(--gold)'],'cardladder-auto':['Card Ladder','var(--blue)'],'cardladder-comp':['Card Ladder','var(--blue)'],'cardladder-sold':['Card Ladder sold','var(--blue)'],'ebay-1st-ed':['eBay (1st Edition)','var(--green)'],'comp-mixed-review':['mixed comps — review','var(--accent)'],'comp-uncertain':['thin / uncertain — review','var(--accent)'],'no-comps':['no comps found','var(--mut)'],'ebay-none':['needs review','var(--mut)'],'sketch-pending':['sketch','var(--mut)'],'ask-tier':['ask tier','var(--mut)'],'owner-estimate':['owner est','var(--gold)'],'cost-only':['paid (cost)','var(--mut)']};
+function srcLabel(c){let v=c.value_source;if(!v)return 'unpriced';const s=SRCMAP[v];if(s)return s[0];if(v.endsWith('-broad')){const b=SRCMAP[v.slice(0,-6)];return (b?b[0]:v.slice(0,-6))+' (est)';}return v;}
+function srcColor(c){let v=c.value_source;if(!v)return 'var(--mut)';const s=SRCMAP[v];if(s)return s[1];if(v.endsWith('-broad'))return 'var(--gold)';return 'var(--mut)';}
+function needsReviewSrc(v){return v==='comp-mixed-review'||v==='comp-uncertain'||v==='no-comps'||v==='ebay-none';}
 /* ---- Taxonomy-driven segmentation (v6): domain > league/category, P70 + Star Wars pinned ---- */
 const LEAGUE_LABEL={baseball:'Baseball',basketball:'Basketball',football:'Football',wrestling:'Wrestling',mma:'MMA',golf:'Golf',boxing:'Boxing',hockey:'Hockey',racing:'Racing',soccer:'Soccer',tennis:'Tennis'};
 const CAT_LABEL={film_tv:'Film & TV',music:'Music',comics:'Comics',games:'Games',history_politics:'History & Politics',novelty:'Novelty'};
@@ -677,22 +678,40 @@ function renderCompSummary(c){
  const ebS=MKT.sold.filter(r=>r._src==='ebay'&&same(r));
  const clS=MKT.sold.filter(r=>r._src==='cardladder'&&same(r));
  const ebA=MKT.active.filter(r=>r._src==='ebay');
+ const allS=ebS.concat(clS);
  if(!ebS.length&&!clS.length&&!ebA.length){el.innerHTML='';return;}
+ const G=4;
+ const COLS='grid-template-columns:1fr 1.5fr .9fr .4fr';
+ // overall most-recent sale across both sources
+ const topRecent=cmpRecent(allS);
+ const topSrc=topRecent?(topRecent._src==='cardladder'?'Card Ladder':'eBay'):'';
+ // high comp
+ const hi=allS.map(r=>+r.price).filter(x=>x>0).sort((a,b)=>b-a)[0];
  function row(label,arr,dot){const m=cmpMed(arr);const mr=cmpRecent(arr);
-  return `<div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
+  return `<div style="display:grid;${COLS};gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
    <span style="font-size:12px;font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};margin-right:5px"></span>${label}</span>
-   <span style="font-family:var(--mono);font-size:13px">${m!=null?money(m):'--'}</span>
-   <span style="font-size:11px;color:var(--mut)">${mr?money(mr.price)+' &middot; '+fmtD(mr.item_date):'no dated sale'}</span>
+   <span style="font-size:12px">${mr?'<b style="font-family:var(--mono)">'+money(mr.price)+'</b> <span style="color:var(--mut)">'+fmtD(mr.item_date)+'</span>':'<span style="color:var(--mut)">no dated sale</span>'}</span>
+   <span style="font-family:var(--mono);font-size:12px;color:var(--ink2)">${m!=null?money(m):'--'}</span>
    <span style="font-size:11px;color:var(--mut);text-align:right">${arr.length}</span></div>`;}
  let aRange='';const ap=ebA.map(r=>+r.price).filter(x=>x>0).sort((a,b)=>a-b);
- if(ap.length)aRange=`<div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
+ if(ap.length)aRange=`<div style="display:grid;${COLS};gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
    <span style="font-size:12px;font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-right:5px"></span>eBay active</span>
-   <span style="font-family:var(--mono);font-size:13px">${money(ap[0])}${ap.length>1?'&ndash;'+money(ap[ap.length-1]):''}</span>
-   <span style="font-size:11px;color:var(--mut)">asking now</span>
+   <span style="font-size:12px;color:var(--mut)">${money(ap[0])}${ap.length>1?' &ndash; '+money(ap[ap.length-1]):''} <span style="font-size:10px">asking</span></span>
+   <span style="font-size:11px;color:var(--mut)">--</span>
    <span style="font-size:11px;color:var(--mut);text-align:right">${ebA.length}</span></div>`;
+ // assessed method note
+ const vs=c.value_source||'';
+ let method='';
+ if(needsReviewSrc(vs)) method=`<span style="color:var(--accent);font-weight:700">Flagged for review (${srcLabel(c)})</span> — comps shown below, no auto-value set`;
+ else if(/^(cardladder|sketch|owner|cost)/.test(vs)) method=`Assessed ${money(c.current_value)} · held (${srcLabel(c)}); comps below are the live cross-check`;
+ else method=`Assessed ${money(c.current_value)} · recent-weighted (60% most-recent, 40% median) from ${srcLabel(c)}`;
+ const recentBanner=topRecent?`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 8px"><span style="font-size:12px;color:var(--mut)">Most recent sale</span><span style="font-size:15px;font-weight:800">${money(topRecent.price)} <span style="font-size:11px;font-weight:600;color:var(--mut)">${fmtD(topRecent.item_date)} · ${topSrc}</span></span></div>`:'';
  el.innerHTML=`<div class="chartwrap" style="margin:10px 0 4px">
-   <div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;font-size:10px;letter-spacing:.05em;color:var(--mut);text-transform:uppercase;font-weight:700"><span>Source</span><span>Median</span><span>Most recent</span><span style="text-align:right">#</span></div>
-   ${row('eBay sold',ebS,'#3b82c4')}${row('Card Ladder',clS,'#c9a866')}${aRange}</div>`;
+   ${recentBanner}
+   <div style="display:grid;${COLS};gap:6px;font-size:10px;letter-spacing:.05em;color:var(--mut);text-transform:uppercase;font-weight:700"><span>Source</span><span>Most recent</span><span>Median</span><span style="text-align:right">n</span></div>
+   ${row('eBay sold',ebS,'#3b82c4')}${row('Card Ladder',clS,'#c9a866')}${aRange}
+   ${hi?`<div style="border-top:1px solid var(--line);padding-top:6px;margin-top:4px;font-size:11px;color:var(--mut)">High comp seen: ${money(hi)}</div>`:''}
+   <div style="font-size:11px;color:var(--ink2);margin-top:6px">${method}</div></div>`;
 }
 function renderSalesTrend(sold){
  const el=document.getElementById('cvtrend');if(!el)return;
