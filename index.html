@@ -1267,8 +1267,8 @@ load();
 /* ================= SKETCH REVIEW ================= */
 const FN_SK=SB+"/functions/v1/sketch-ops";
 let SKQ=null, SKI=0, SKFILTER='todo', SKMODE=false, SKEDIT=false, SKCOMPS={};
-const SKTIER={T1:['Same artist + same character','var(--green)'],T2:['Same artist + character, other version','var(--green)'],T3:['Same artist, other character','var(--blue)'],T4:['Same character, other artist','var(--blue)'],T5:['Similar sketch (same set)','var(--mut)'],S:['Same subject','var(--green)'],F:['Same set / franchise','var(--mut)']};
-const SKCONF={high:'Strong match: same artist and character sold recently',medium:'Good match: same artist or same character',low:'Thin match: few close sales',none:'No close match: priced off similar sketches'};
+const SKTIER={T1:['Same artist + same character','var(--green)'],T2:['Same artist + character, other version','var(--green)'],T3:['Same artist, other character','var(--blue)'],T4:['Same character, other artist','var(--blue)'],T5:['Similar sketch (same set)','var(--mut)'],S:['Same subject + same set','var(--green)'],SA:['Same artist + same set','var(--green)'],S2:['Same subject, other set','var(--blue)'],F:['Same set, other subject','var(--mut)']};
+const SKCONF={high:'Strong: several close matches sold recently (same artist + character, or same subject + set)',medium:'Good: some close matches',low:'Thin: few close matches, lean on your judgment',none:'No close match: priced off similar sketches'};
 async function skOp(p){
  const r=await fetch(FN_SK,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(p)});
  return r.json();
