@@ -475,6 +475,7 @@ function openCard(id){
    ${c.status==='sold'?soldBlock(c):''}
    ${c.status!=='sold'&&c.status!=='duplicate'?listingBlock(c):''}
    <div id="cvrange"></div>
+   <div id="cvcomp"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
    <button class="addlotbtn" onclick="editCard('${c.id}')">Edit details</button>
@@ -651,24 +652,51 @@ async function loadMarket(id){
  MKT={sold:[],active:[],exp:{sold:false,active:false}};
  const el=document.getElementById('cvmkt');if(el)el.innerHTML='';
  try{
-  const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched,pulled_at&limit=200",2);
+  const rows=await fetchJSON(SB+"/rest/v1/card_market_items?card_id=eq."+id+"&select=kind,title,price,item_date,url,image,matched,pulled_at,source&limit=300",2);
   if(!rows||!rows.length)return;
   MKT.pulled=rows.reduce((m,r)=>{const d=(r.pulled_at||'').slice(0,10);return d>m?d:m;},'');
   const c=window.CUR||{};const ln=lnameOf(c.player);
-  const keep=rows.filter(r=>{const t=(r.title||'').toLowerCase();if(!t||!r.price)return false;if(isReprintT(t))return false;if(ln&&!t.includes(ln))return false;return true;}).map(r=>{r._bkt=bucketOf(r.title||'',c);return r;});
+  const keep=rows.filter(r=>{const t=(r.title||'').toLowerCase();if(!t||!r.price)return false;if(isReprintT(t))return false;if(ln&&!t.includes(ln))return false;return true;}).map(r=>{r._bkt=bucketOf(r.title||'',c);r._src=(r.source||'ebay');return r;});
   const ord={same:0,different:1,raw:2};
   MKT.sold=keep.filter(r=>r.kind==='sold').sort((a,b)=>(ord[a._bkt]-ord[b._bkt])||(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));
   MKT.active=keep.filter(r=>r.kind==='active').sort((a,b)=>(ord[a._bkt]-ord[b._bkt])||((a.price||0)-(b.price||0)));
   renderMkt(c);
+  renderCompSummary(c);
   renderSalesTrend(MKT.sold);
   const stats=soldStats(MKT.sold);
   renderRange(stats);
   if(window.CUR&&window.CUR.id===id) renderSell(window.CUR,stats);
  }catch(e){}
 }
+function cmpMed(arr){const s=arr.map(x=>+x.price).filter(x=>x>0).sort((a,b)=>a-b);return s.length?(s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2):null;}
+function cmpRecent(arr){const w=arr.filter(r=>r.item_date&&r.price).slice().sort((a,b)=>(''+(b.item_date||'')).localeCompare(''+(a.item_date||'')));return w[0]||null;}
+function fmtD(d){if(!d)return'';try{return new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'2-digit'});}catch(e){return d;}}
+function renderCompSummary(c){
+ const el=document.getElementById('cvcomp');if(!el)return;
+ const same=r=>r._bkt==='same';
+ const ebS=MKT.sold.filter(r=>r._src==='ebay'&&same(r));
+ const clS=MKT.sold.filter(r=>r._src==='cardladder'&&same(r));
+ const ebA=MKT.active.filter(r=>r._src==='ebay');
+ if(!ebS.length&&!clS.length&&!ebA.length){el.innerHTML='';return;}
+ function row(label,arr,dot){const m=cmpMed(arr);const mr=cmpRecent(arr);
+  return `<div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
+   <span style="font-size:12px;font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};margin-right:5px"></span>${label}</span>
+   <span style="font-family:var(--mono);font-size:13px">${m!=null?money(m):'--'}</span>
+   <span style="font-size:11px;color:var(--mut)">${mr?money(mr.price)+' &middot; '+fmtD(mr.item_date):'no dated sale'}</span>
+   <span style="font-size:11px;color:var(--mut);text-align:right">${arr.length}</span></div>`;}
+ let aRange='';const ap=ebA.map(r=>+r.price).filter(x=>x>0).sort((a,b)=>a-b);
+ if(ap.length)aRange=`<div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)">
+   <span style="font-size:12px;font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-right:5px"></span>eBay active</span>
+   <span style="font-family:var(--mono);font-size:13px">${money(ap[0])}${ap.length>1?'&ndash;'+money(ap[ap.length-1]):''}</span>
+   <span style="font-size:11px;color:var(--mut)">asking now</span>
+   <span style="font-size:11px;color:var(--mut);text-align:right">${ebA.length}</span></div>`;
+ el.innerHTML=`<div class="chartwrap" style="margin:10px 0 4px">
+   <div style="display:grid;grid-template-columns:1.1fr .8fr 1.3fr .4fr;gap:6px;font-size:10px;letter-spacing:.05em;color:var(--mut);text-transform:uppercase;font-weight:700"><span>Source</span><span>Median</span><span>Most recent</span><span style="text-align:right">#</span></div>
+   ${row('eBay sold',ebS,'#3b82c4')}${row('Card Ladder',clS,'#c9a866')}${aRange}</div>`;
+}
 function renderSalesTrend(sold){
  const el=document.getElementById('cvtrend');if(!el)return;
- const pts=(sold||[]).filter(r=>r._bkt==='same'&&r.price&&r.item_date).map(r=>({d:r.item_date,t:new Date(r.item_date).getTime(),p:+r.price})).filter(r=>!isNaN(r.t)).sort((a,b)=>a.t-b.t);
+ const pts=(sold||[]).filter(r=>r._bkt==='same'&&r.price&&r.item_date).map(r=>({d:r.item_date,t:new Date(r.item_date).getTime(),p:+r.price,s:r._src})).filter(r=>!isNaN(r.t)).sort((a,b)=>a.t-b.t);
  if(pts.length<2){el.innerHTML=pts.length?`<div class="chartnote">Latest matched sale ${money(pts[0].p)} on ${pts[0].d}. Trend chart fills in as more dated sales come in.</div>`:'';return;}
  const t0=pts[0].t,t1=pts[pts.length-1].t,tr=(t1-t0)||1;
  const ps=pts.map(x=>x.p),pmax=Math.max(...ps),pmin=Math.min(...ps),pr=(pmax-pmin)||1;
@@ -678,7 +706,7 @@ function renderSalesTrend(sold){
  pts.forEach(x=>{const xi=(x.t-t0)/tr;sx+=xi;sy+=x.p;sxy+=xi*x.p;sxx+=xi*xi;});
  const b=(n*sxy-sx*sy)/((n*sxx-sx*sx)||1),a=(sy-b*sx)/n;
  const up=b>=0,col=up?'var(--green)':'var(--accent)';
- const dots=pts.map(x=>`<circle cx="${X(x.t).toFixed(1)}" cy="${Y(x.p).toFixed(1)}" r="2.6" fill="${col}" opacity="0.7"/>`).join('');
+ const dots=pts.map(x=>`<circle cx="${X(x.t).toFixed(1)}" cy="${Y(x.p).toFixed(1)}" r="2.6" fill="${x.s==='cardladder'?'#c9a866':'#3b82c4'}" opacity="0.8"/>`).join('');
  const latest=pts[pts.length-1];
  el.innerHTML=`<div class="chartwrap"><div class="charthd">Sales trend <span style="color:${col};font-weight:700">${up?'&#9650;':'&#9660;'} ${pts.length} dated sales</span></div>
   <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="cvsvg" style="height:92px"><line x1="${X(t0).toFixed(1)}" y1="${Y(a).toFixed(1)}" x2="${X(t1).toFixed(1)}" y2="${Y(a+b).toFixed(1)}" stroke="${col}" stroke-width="2"/>${dots}</svg>
