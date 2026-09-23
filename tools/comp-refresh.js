@@ -315,10 +315,10 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
         const name = th.entity.replace(/^SW: /, 'star wars ').replace(/^Artist: /, '') + (th.kind === 'artist' ? ' sketch' : ''); P.searched++;
         const bench = th.n_sold >= 3 ? Number(th.median_sold) : (th.median_ask ? Number(th.median_ask) * 0.8 : null); if (!bench) continue;
         const CARDISH = /\b(card|cards|psa|bgs|sgc|cgc|sketch|auto|autograph|refractor|rookie|rc|prizm|topps|panini|upper deck|fleer|bowman|skybox|wotc|holo|#\s?\d+)\b/i;
-        const JUNK = /\b(blu-?ray|dvd|lego|minifig(ure)?s?|figure|funko|poster|t-?shirt|shirt|hoodie|mask|comic|tpb|hardcover|diecast|die-cast|toy|replica|plush|costume|statue|mug|keychain|book|wallet|sticker sheet)\b/i;
+        const JUNK = /\b(card trader|playing cards?|digital|code card|proxy|custom|reprint|rp|novelty|fan art|aceo|blu-?ray|dvd|lego|minifig(ure)?s?|figure|funko|poster|t-?shirt|shirt|hoodie|mask|comic|tpb|hardcover|diecast|die-cast|toy|replica|plush|costume|statue|mug|keychain|book|wallet|sticker sheet)\b/i;
         const list = (await fetchActive(name + ' card', 10, false)).filter((l) => CARDISH.test(l.title) && (th.entity === 'VHS' || !JUNK.test(l.title)));
         const known = new Set((await q('viewed_titles?select=item_id&item_id=in.(' + list.map((l) => l.item_id).join(',') + ')')).map((x) => x.item_id));
-        list.filter((l) => !known.has(l.item_id) && (l.price + (l.ship || 0)) <= bench && l.price >= bench * 0.2).slice(0, 4).forEach((l) => {
+        list.filter((l) => !known.has(l.item_id) && (l.price + (l.ship || 0)) <= bench && l.price >= Math.max(25, bench * 0.2)).slice(0, 4).forEach((l) => {
           found.push({ item_id: l.item_id, entity: th.entity, title: l.title, price: l.price + (l.ship || 0), listing_type: l.bids != null ? 'Auction' : 'Buy It Now', bids: l.bids, ends_in: l.left, image_url: l.img, url: 'https://www.ebay.com/itm/' + l.item_id, found_on: today, typical_ask: th.median_ask, typical_sold: th.median_sold, vs_typical: Math.round(((l.price + (l.ship || 0)) / bench - 1) * 100), reason: 'New listing in ' + th.entity + ', a theme you have been looking at much more lately. At or under ' + (th.n_sold >= 3 ? 'the median of ' + th.n_sold + ' auctions you watched close' : '80% of the typical ask you saw') + ' ($' + Math.round(bench).toLocaleString() + '). Different cards within a theme vary, so treat this as a lead.' }); P.theme++; });
       } catch (e) { P.log.push('B ' + String(e).slice(0, 60)); }
     }

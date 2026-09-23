@@ -311,7 +311,7 @@ nav button.on{color:var(--ink)}
 .herov .n{font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:2px}
 .herov .s{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
 .herov .s b{color:var(--ink);font-weight:700}
-.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0 4px}
 .quick button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;font:600 12px var(--ui);color:var(--ink);cursor:pointer}
 .quick button b{display:block;font-size:16px;font-weight:750;letter-spacing:-.01em}
 .sechd{display:flex;justify-content:space-between;align-items:baseline;margin:28px 0 10px}
@@ -367,6 +367,28 @@ nav button.on{color:var(--ink)}
 .wtile .meta{font-size:10.5px;color:var(--faint);margin-top:2px;font-weight:600}
 .srcdot{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;border-radius:5px;padding:1px 5px;background:var(--chip);color:var(--mut);margin-left:4px;vertical-align:middle}
 
+
+/* v9 insights */
+.entgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.entc{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px;cursor:pointer}
+@media(hover:hover){.entc:hover{border-color:var(--ink)}}
+.entc .k{font-size:10.5px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.entc .nm{font-size:15px;font-weight:750;letter-spacing:-.01em;margin:2px 0 4px}
+.entc .st{font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.entc .sub{font-size:11.5px;color:var(--mut);margin-top:4px}
+.subh{font-size:14px;font-weight:700;margin:16px 0 8px}
+.digest{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:4px 0 6px}
+.digest .dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.digest .dh b{font-size:15px}.digest .dh span{font-size:12px;color:var(--mut)}
+.mdh{font-size:14px;margin:14px 0 4px;font-weight:750}.mdp{font-size:13.5px;line-height:1.55;margin:6px 0;color:var(--ink2)}
+.mdul{margin:4px 0 8px;padding-left:18px}.mdul li{font-size:13.5px;line-height:1.5;margin:4px 0;color:var(--ink2)}
+.mixrow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.mixrow .mo{width:34px;font-size:12px;font-weight:700;color:var(--mut)}
+.mixrow .n{width:44px;text-align:right;font-size:11.5px;color:var(--mut);font-family:var(--mono)}
+.mixbar{flex:1;display:flex;height:14px;border-radius:5px;overflow:hidden;background:var(--track);gap:1px}
+.mixbar i{display:block;height:100%}
+.mixleg{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11.5px;color:var(--mut)}
+.mixleg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 </style>
 </head><body>
 <header>
@@ -392,6 +414,7 @@ nav button.on{color:var(--ink)}
   <div id="sealed" class="hide"></div>
   <div id="sets" class="hide"></div>
   <div id="watch" class="hide"></div>
+  <div id="insights" class="hide"></div>
 </div>
 <div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
@@ -400,6 +423,7 @@ nav button.on{color:var(--ink)}
 <nav>
   <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Home</button>
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Browse</button>
+  <button id="nav-insights" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
   <button id="nav-watch" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
   <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
@@ -886,8 +910,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
- ['dash','search','review','lots','sold','shows','sealed','sets','watch'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
+function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch','insights'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+ ['dash','search','review','lots','sold','shows','sealed','sets','watch','insights'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -1377,7 +1401,7 @@ function renderDash(){
  let h=`<div class="herov"><div class="l">Collection value</div><div class="n">${money(val)}</div>
   <div class="s"><span><b>${own.length.toLocaleString()}</b> cards</span><span>Cost <b>${money(cost)}</b></span><span style="color:${gain>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${gain>=0?'+':'-'}${money(Math.abs(gain))}</b> vs cost</span>
   ${mk.length>=20?`<span title="Only cards valued from live comps both then and now count as a market move">Market since ${fmtDay(since)} <b style="color:${mchg>=0?'var(--up)':'var(--dn)'}">${mchg>=0?'+':'-'}${money(Math.abs(mchg))}${mbase?` (${mchg>=0?'+':''}${(mchg/mbase*100).toFixed(1)}%)`:''}</b> on ${mk.length} comped cards</span>`:''}</div></div>
-  <div class="quick"><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="show('sold');renderSold()"><b style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b>Realized</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
+  <div class="quick"><button onclick="show('insights');renderInsights()"><b>&#10022;</b>Insights</button><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="show('sold');renderSold()"><b style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b>Realized</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
  // movers: market moves only, meaningful size
  const movers=mk.filter(([c,t])=>Math.abs(+t.pct)>=5&&(+c.current_value||0)>=10).sort((a,b)=>Math.abs(b[1].chg)-Math.abs(a[1].chg)).slice(0,12).map(x=>x[0]);
  if(movers.length){h+=`<div class="sechd"><h2>Biggest moves</h2><a onclick="SORT='move';openAll('all')">See all &rsaquo;</a></div><div class="rowscroll">${movers.map(miniTile).join('')}</div><div class="dnote">Market moves only: same comp method at both points, from a solid read (median or Card Ladder, not a single sale), and under a 60% swing. Anything else is labeled re-valued.</div>`;}
@@ -1479,6 +1503,91 @@ async function renderWatch(force){
    <div class="meta">${auction(w)?`Auction${w.bids!=null?' · '+w.bids+' bids':''}`:(w.listing_type==='bin_bo'?'Buy it now / offer':'Buy it now')}${w.ends_in?' · '+esc(w.ends_in):''}</div></div></a>`;}).join('');
  h+=`</div>${L.length>240?`<div class="dnote">Showing 240 of ${L.length.toLocaleString()}. Narrow with a category.</div>`:''}${!L.length?'<div class="spin">Nothing here yet.</div>':''}`;
  el.innerHTML=h;
+}
+
+/* ================= v9: Insights (what you look at on eBay) ================= */
+let INS=null, INSKIND='all';
+function mdLite(md){
+ const lines=String(md||'').split('\n');let h='',inL=false;
+ const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>');
+ lines.forEach(l=>{
+  if(/^\s*[-*]\s+/.test(l)){if(!inL){h+='<ul class="mdul">';inL=true;}h+='<li>'+inline(l.replace(/^\s*[-*]\s+/,''))+'</li>';return;}
+  if(inL){h+='</ul>';inL=false;}
+  if(/^###\s+/.test(l))h+='<h4 class="mdh">'+inline(l.replace(/^###\s+/,''))+'</h4>';
+  else if(/^##\s+/.test(l))h+='<h3 class="mdh">'+inline(l.replace(/^##\s+/,''))+'</h3>';
+  else if(l.trim())h+='<p class="mdp">'+inline(l)+'</p>';
+ });
+ if(inL)h+='</ul>';return h;
+}
+const ebaySearch=t=>'https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(String(t||'').slice(0,80));
+const itemLink=(id,t)=>id?'https://www.ebay.com/itm/'+id:ebaySearch(t);
+const entName=e=>String(e||'').replace(/^SW: /,'').replace(/^Artist: /,'');
+const KINDLBL={subject:'Player / character',franchise:'Franchise / team',product:'Product',artist:'Artist'};
+async function loadInsights(force){
+ if(INS&&!force)return INS;
+ const since=new Date(Date.now()-21*864e5).toISOString().slice(0,10);
+ const [meta,stats,recur,cuts,monthly,disc,dig]=await Promise.all([
+  fetchJSON(SB+"/rest/v1/v_interest_meta?select=*",2).catch(()=>[]),
+  fetchAll(SB+"/rest/v1/interest_stats?select=*&n_titles=gt.0").catch(()=>[]),
+  fetchJSON(SB+"/rest/v1/viewed_titles?select=title_key,title,item_id,image_url,category,days_seen,first_seen,last_seen,first_price,last_price,last_type,ended,final_price,on_watchlist&days_seen=gte.4&last_seen=gte."+since+"&order=days_seen.desc,last_seen.desc&limit=40",2).catch(()=>[]),
+  fetchJSON(SB+"/rest/v1/viewed_titles?select=title_key,title,item_id,image_url,days_seen,first_seen,last_seen,first_price,last_price,last_type,on_watchlist&days_seen=gte.3&last_seen=gte."+since+"&ended=is.false&first_price=gte.40&order=last_seen.desc&limit=400",2).catch(()=>[]),
+  fetchJSON(SB+"/rest/v1/v_interest_monthly?select=*&order=month",2).catch(()=>[]),
+  fetchJSON(SB+"/rest/v1/discover_items?select=*&dismissed=is.false&order=found_on.desc,vs_typical.asc&limit=60",2).catch(()=>[]),
+  fetchJSON(SB+"/rest/v1/interest_digests?select=*&order=created_at.desc&limit=1",2).catch(()=>[])]);
+ INS={meta:(meta||[])[0]||{},stats:stats||[],recur:recur||[],cuts:(cuts||[]).filter(t=>!/auction/i.test(t.last_type||'')&&+t.last_price<+t.first_price*0.9).sort((a,b)=>(b.first_price-b.last_price)-(a.first_price-a.last_price)).slice(0,16),monthly:monthly||[],disc:disc||[],digest:(dig||[])[0]||null};
+ return INS;
+}
+function insTile(t,extra){const img=t.image_url;return `<a class="tile wtile" href="${itemLink(t.item_id,t.title)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="ph">${img?`<img loading="lazy" src="${esc(img)}">`:`<div class="no">${esc(t.title)}</div>`}</div><div class="m"><div class="pl">${esc(t.title)}</div>${extra||''}</div></a>`;}
+function entCard(s){
+ const ratio=s.prior_rate>0?(s.recent_rate/s.prior_rate):null;
+ const own=s.owned_n>0?`you own ${s.owned_n}`:'you own none';
+ const px=s.n_sold>=3?`${s.n_sold} watched auctions closed at a median ${money(s.median_sold)}`:(s.median_ask?`typical ask ${money(s.median_ask)}`:'');
+ return `<div class="entc" data-e="${esc(s.entity)}" onclick="openEntity(this.dataset.e)"><div class="k">${esc(KINDLBL[s.kind]||s.kind)}</div><div class="nm">${esc(entName(s.entity))}</div>
+  <div class="st"><span class="trend ${s.status==='rising'||s.status==='new'?'up':s.status==='cooling'||s.status==='dormant'?'dn':'flat'}">${s.status==='new'?'new':s.status==='rising'?(ratio?'&#9650; '+ratio.toFixed(1)+'x':'&#9650;'):s.status==='cooling'?'&#9660; cooling':s.status==='dormant'?'dormant':'steady'}</span> ${s.recent_titles} listings in 3 wks &middot; ${s.n_titles} all-time</div>
+  <div class="sub">${own}${px?' &middot; '+px:''}</div></div>`;
+}
+async function renderInsights(force){
+ const el=document.getElementById('insights');
+ if(!INS||force)el.innerHTML='<div class="spin">Reading your eBay browsing history…</div>';
+ const I=await loadInsights(force);const m=I.meta;
+ const S=I.stats.filter(s=>s.n_titles>0);
+ const pick=(f,sort,n)=>S.filter(f).sort(sort).slice(0,n);
+ const kindF=s=>INSKIND==='all'?s.kind!=='product'||s.entity!=='Sketch card (any)':s.kind===INSKIND;
+ const hot=pick(s=>(s.status==='rising'||s.status==='new')&&kindF(s),(a,b)=>b.recent_titles-a.recent_titles,12);
+ const cool=pick(s=>s.status==='cooling'&&s.prior_titles>=15&&kindF(s),(a,b)=>b.prior_titles-a.prior_titles,10);
+ const gaps=pick(s=>s.owned_n===0&&s.n_titles>=15&&s.kind!=='artist',(a,b)=>b.n_titles-a.n_titles,10);
+ const clear=pick(s=>s.n_sold>=3&&s.median_ask&&s.median_sold,(a,b)=>b.n_sold-a.n_sold,40).map(s=>({...s,gap:(s.median_ask/s.median_sold-1)*100})).filter(s=>Math.abs(s.gap)>=15).sort((a,b)=>b.n_sold-a.n_sold).slice(0,10);
+ // monthly mix
+ const months=[...new Set(I.monthly.map(r=>r.month))].sort();const cats={};I.monthly.forEach(r=>cats[r.category]=(cats[r.category]||0)+r.titles);
+ const topCats=Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+ const PAL=['#111','#0a8a4a','#2f6ad6','#c2410c','#7a49c9','#b58a00','#0e7490','#be185d','#9ca3af'];
+ const mix=months.map(mo=>{const rows=I.monthly.filter(r=>r.month===mo);const tot=rows.reduce((s,r)=>s+r.titles,0)||1;const parts=topCats.map((c,i)=>{const r=rows.find(x=>x.category===c);return {c,i,p:r?r.titles/tot*100:0};});const other=100-parts.reduce((s,x)=>s+x.p,0);return {mo,tot,parts,other};});
+ let h=`<div class="sechd" style="margin-top:8px"><h2>Insights</h2><a onclick="renderInsights(true)">Refresh &#8635;</a></div>
+ <div class="dnote" style="margin:-4px 2px 12px">Built from every eBay listing you've looked at: ${Number(m.distinct_titles||0).toLocaleString()} listings across ${m.capture_days||0} days of recently-viewed captures since ${fmtDay(m.first_day)}. The comp runner adds each day's views automatically.</div>`;
+ if(I.digest)h+=`<div class="digest"><div class="dh"><b>${esc(I.digest.title||'Latest read')}</b><span>${fmtDay(String(I.digest.created_at).slice(0,10))}</span></div>${mdLite(I.digest.body_md)}</div>`;
+ h+=`<div class="chips" style="margin-top:14px">${[['all','All'],['subject','Players & characters'],['franchise','Franchises'],['product','Products'],['artist','Artists']].map(([k,t])=>`<div class="chip ${INSKIND===k?'on':''}" onclick="INSKIND='${k}';renderInsights()">${t}</div>`).join('')}</div>`;
+ h+=`<div class="sechd"><h2>Heating up</h2></div><div class="dnote" style="margin-top:-4px">Themes you've looked at much more in the last 3 weeks than in the 3 months before.</div><div class="entgrid">${hot.map(entCard).join('')||'<div class="dnote">Nothing new is heating up.</div>'}</div>`;
+ if(I.disc.length){const same=I.disc.filter(d=>/^Same card/.test(d.entity)),th=I.disc.filter(d=>!/^Same card/.test(d.entity));
+  h+=`<div class="sechd"><h2>Leads</h2></div><div class="dnote" style="margin-top:-4px">Found by searching eBay for the cards and themes above. Leads, not verified matches: open each one and check the grade, photos and seller.</div>`;
+  if(same.length)h+=`<h3 class="subh">Cheaper copies of cards you keep checking</h3><div class="grid">${same.slice(0,12).map(d=>insTile({title:d.title,item_id:d.item_id,image_url:d.image_url},`<div class="pr">${money(d.price)} <span class="trend up">${d.vs_typical}%</span></div><div class="was">vs ${money(d.typical_ask)} on the one you've looked at</div>`)).join('')}</div>`;
+  if(th.length)h+=`<h3 class="subh">New listings in themes you're heating up on</h3><div class="grid">${th.slice(0,16).map(d=>insTile({title:d.title,item_id:d.item_id,image_url:d.image_url},`<div class="pr">${money(d.price)}${d.listing_type==='Auction'?'<span class="vtag est">AUCTION</span>':''}</div><div class="was">${esc(entName(d.entity))} &middot; bench ${money(d.typical_sold||d.typical_ask)}</div>`)).join('')}</div>`;}
+ if(I.recur.length)h+=`<div class="sechd"><h2>You keep coming back to</h2></div><div class="dnote" style="margin-top:-4px">Listings you've opened on 4+ different days in the last 3 weeks.</div><div class="grid">${I.recur.slice(0,16).map(t=>{const d=t.first_price&&t.last_price?(t.last_price/t.first_price-1)*100:0;return insTile(t,`<div class="pr">${money(t.last_price)}${Math.abs(d)>=1?`<span class="trend ${d<0?'up':'dn'}">${d<0?'&#9660;':'&#9650;'} ${Math.abs(Math.round(d))}%</span>`:''}${t.on_watchlist?'<span class="srcdot">watched</span>':''}</div><div class="was">${t.days_seen} days &middot; since ${fmtDay(t.first_seen)}${t.ended?' &middot; ended':''}</div>`);}).join('')}</div>`;
+ if(I.cuts.length)h+=`<div class="sechd"><h2>Price cuts</h2></div><div class="dnote" style="margin-top:-4px">Fixed-price listings you've looked at more than once whose ask dropped 10%+ since you first saw them. A drop of exactly 30% is often an eBay seller sale.</div><div class="grid">${I.cuts.map(t=>insTile(t,`<div class="pr">${money(t.last_price)} <span class="trend up">&#9660; ${Math.round((1-t.last_price/t.first_price)*100)}%</span></div><div class="was">was ${money(t.first_price)} on ${fmtDay(t.first_seen)}</div>`)).join('')}</div>`;
+ if(clear.length)h+=`<div class="sechd"><h2>Asking vs clearing</h2></div><div class="dnote" style="margin-top:-4px">For themes where you've watched 3+ auctions finish: the typical asking price against what those auctions actually closed at. A big gap means Buy It Now sellers are pricing above the market, so offer low or wait for auctions.</div><div class="panel">${clear.map(s=>`<div class="srow" data-e="${esc(s.entity)}" onclick="openEntity(this.dataset.e)" style="cursor:pointer"><span class="nm">${esc(entName(s.entity))}<br><span style="color:var(--mut);font-size:11px">${s.n_sold} auctions closed</span></span><span style="font-size:12.5px;color:var(--mut)">ask ${money(s.median_ask)} &middot; closed ${money(s.median_sold)}</span><span class="trend ${s.gap>0?'dn':'up'}">${s.gap>0?'+':''}${Math.round(s.gap)}%</span></div>`).join('')}</div>`;
+ if(cool.length)h+=`<div class="sechd"><h2>Cooling off</h2></div><div class="entgrid">${cool.map(entCard).join('')}</div>`;
+ if(gaps.length)h+=`<div class="sechd"><h2>Looked at a lot, own none</h2></div><div class="dnote" style="margin-top:-4px">Either a deliberate pass or a gap worth a decision.</div><div class="entgrid">${gaps.map(entCard).join('')}</div>`;
+ if(mix.length)h+=`<div class="sechd"><h2>Where your attention goes</h2></div><div class="panel" style="padding:12px 15px">${mix.map(x=>`<div class="mixrow"><span class="mo">${new Date(x.mo+'T12:00:00').toLocaleDateString(undefined,{month:'short'})}</span><div class="mixbar">${x.parts.map(p=>p.p>0?`<i style="width:${p.p}%;background:${PAL[p.i]}" title="${esc(p.c)} ${Math.round(p.p)}%"></i>`:'').join('')}<i style="width:${Math.max(x.other,0)}%;background:${PAL[8]}" title="Other"></i></div><span class="n">${x.tot.toLocaleString()}</span></div>`).join('')}<div class="mixleg">${topCats.map((c,i)=>`<span><i style="background:${PAL[i]}"></i>${esc(c)}</span>`).join('')}<span><i style="background:${PAL[8]}"></i>Everything else</span></div></div>`;
+ el.innerHTML=h;
+}
+async function openEntity(e){
+ const s=(INS&&INS.stats.find(x=>x.entity===e))||{};
+ modal(`<div class="spin">Loading…</div>`);
+ let rows=[],sold=[];try{[rows,sold]=await Promise.all([fetchJSON(SB+"/rest/v1/viewed_title_entities?entity=eq."+encodeURIComponent(e)+"&select=viewed_titles(title,item_id,image_url,days_seen,first_seen,last_seen,first_price,last_price,final_price,final_bids,ended,on_watchlist)&limit=400",2),fetchJSON(SB+"/rest/v1/v_entity_sales?entity=eq."+encodeURIComponent(e)+"&select=title,item_id,price,bids,sold_by&order=sold_by.desc&limit=60",2)]);}catch(x){}
+ const L=rows.map(r=>r.viewed_titles).filter(Boolean).sort((a,b)=>String(b.last_seen).localeCompare(String(a.last_seen)));
+ sold=(sold||[]).map(x=>({title:x.title,item_id:x.item_id,final_price:x.price,final_bids:x.bids,last_seen:x.sold_by}));
+ modal(`<h2 style="margin:0 0 4px">${esc(entName(e))}</h2><div class="dnote" style="margin:0 0 10px">${L.length} listings viewed &middot; first ${fmtDay(s.first_seen)}, last ${fmtDay(s.last_seen)} &middot; ${s.owned_n?('you own '+s.owned_n+(s.owned_value?' worth '+money(s.owned_value):'')):'you own none'}${s.thesis?' &middot; thesis: '+esc(s.thesis):''}</div>
+  ${sold.length?`<h3 class="subh">Auctions you watched close (${sold.length})</h3><div class="panel">${sold.slice(0,25).map(t=>`<div class="srow"><span class="nm" style="font-size:12.5px"><a href="${itemLink(t.item_id,t.title)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.title)}</a><br><span style="color:var(--mut);font-size:11px">${fmtDay(t.last_seen)}${t.final_bids?' &middot; '+t.final_bids+' bids':''}</span></span><span class="v">${money(t.final_price)}</span></div>`).join('')}</div>`:''}
+  <h3 class="subh">Everything you looked at</h3><div class="panel">${L.slice(0,120).map(t=>`<div class="srow"><span class="nm" style="font-size:12.5px"><a href="${itemLink(t.item_id,t.title)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.title)}</a><br><span style="color:var(--mut);font-size:11px">${t.days_seen} day${t.days_seen>1?'s':''} &middot; last ${fmtDay(t.last_seen)}${t.on_watchlist?' &middot; watched':''}</span></span><span class="v">${money(t.last_price)}</span></div>`).join('')}</div>`);
 }
 
 document.getElementById('q').addEventListener('input',runSearch);
