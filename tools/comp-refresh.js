@@ -171,12 +171,16 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     const yrOk = !cy.length ? null : cy.includes(String(d.year));
     if (yrOk === false) return { ok: false, why: 'year ' + d.year };
     const brandT = toks(d.brand).filter((w) => !GENERIC.has(w) && !/^\d+$/.test(w));
-    const bHit = brandT.filter(has).length; if (brandT.length && !bHit) return { ok: false, why: 'brand ' + d.brand };
+    const BFILL = new Set(['picks','collection']); const bMiss = brandT.filter((w) => !has(w) && !BFILL.has(w)); const bHit = brandT.length - bMiss.length; if (bMiss.length) return { ok: false, why: 'brand ' + d.brand };
     const varT = toks(d.variety).filter((w) => !GENERIC.has(w) && !/^\d+$/.test(w));
     const vMiss = varT.filter((w) => !has(w.replace(/^\//, '')) && !has(w)); if (vMiss.length) return { ok: false, why: 'variety ' + d.variety };
     const cardPar = PARWORDS.test((c.variation || '') + ' ' + (c.player || '') + ' ' + (c.serial || '').replace(/^\d+\s*of\s*\d+$/i, ''));
     const docPar = PARWORDS.test(String(d.variety || '').toLowerCase());
-    if (cardPar && !docPar && !/signed|auto/.test(ctext)) return { ok: false, why: 'we have a parallel, asset is base' };
+    if (cardPar && !docPar && !/signed|psa dna|psa\/dna|jsa|in person/.test(ctext)) return { ok: false, why: 'we have a parallel/auto, asset is base' };
+    const VFILL = new Set(['design','retro','insert','rookie','rookies','base','pick','draft','lot','duplicate','dup','raw','card','cards','issue','prospect','prospects','edition','hit','case','year','era','sp','ssp','short','print','variation','variant','version','front','back','nba','nfl','mlb','college','signed','full','name','certified','sticker','stickers','card']);
+    const cv = toks(String(c.variation || '').replace(/\(.*?\)/g, ' ')).filter((w) => w.length > 3 && !VFILL.has(w) && !PARWORDS.test(w) && !/^\d/.test(w) && !toks(d.subject).includes(w));
+    const dtext = (String(d.name || '') + ' ' + String(d.variety || '')).toLowerCase();
+    if (cv.length && !cv.some((w) => dtext.includes(w))) return { ok: false, why: 'our variation (' + cv.join(' ') + ') not on asset' };
     const dSer = (String(d.name || '').match(/\/(\d+)\b/) || [])[1];
     if (dSer && !ctext.includes('/' + dSer) && !ctext.includes('of ' + dSer)) return { ok: false, why: 'asset is numbered /' + dSer };
     let numOk = null; const dn = String(d.cardNumber || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, '');
@@ -211,6 +215,7 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     let cards = (await get('cards?select=id,ref,player,year,set_name,variation,card_number,serial,grader,grade,current_value&status=not.in.(sold,duplicate)&order=current_value.desc.nullslast'))
       .filter((c) => !sk.has(c.id) && (!done.has(c.id) || Date.now() - Date.parse(done.get(c.id)) > maxAge));
     if (opts.refs) cards = cards.filter((c) => opts.refs.includes(c.ref));
+    if (opts.recheck) { const ids = new Set((await get('card_alt_assets?select=card_id&match=in.(' + opts.recheck + ')')).map((x) => x.card_id)); cards = (await get('cards?select=id,ref,player,year,set_name,variation,card_number,serial,grader,grade,current_value&status=not.in.(sold,duplicate)')).filter((c) => ids.has(c.id) && !sk.has(c.id)); }
     cards = cards.slice(0, opts.limit || 5000); P.total = cards.length;
     let cfg = await altCfg(); let buf = [];
     const flush = async () => { if (!buf.length) return; if (opts.dry) { P.sample = (P.sample || []).concat(buf.map((o) => ({ m: o.match, a: o.asset_name, n: (o.match_note || '').slice(0, 100), pop: o.pop_total }))); buf = []; return; } const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': SECRET }, body: JSON.stringify({ op: 'pops_ingest', results: buf }) }); const o = await r.json(); if (!o.ok) P.log.push('save: ' + JSON.stringify(o.errs || o.error).slice(0, 120)); buf = []; };
