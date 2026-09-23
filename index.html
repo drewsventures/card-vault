@@ -1293,7 +1293,7 @@ async function loadSketchQueue(force){
  const [vals,revs,meta]=await Promise.all([
   fetchJSON(SB+'/rest/v1/sketch_valuations?select=id,card_id,run_at,model_version,model_value,low,high,confidence,pools,explanation,comp_ids,recent_price,recent_date,prior_value&order=run_at.desc&limit=3000',2),
   fetchJSON(SB+'/rest/v1/value_reviews?select=card_id,action,final_value,model_value,note,reviewed_at&order=reviewed_at.desc&limit=5000',2),
-  fetchJSON(SB+'/rest/v1/sketch_cards?select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise&limit=3000',2)]);
+  fetchJSON(SB+'/rest/v1/sketch_cards?select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,signer,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise&limit=3000',2)]);
  const V={},R={},M={};
  (vals||[]).forEach(v=>{if(!V[v.card_id])V[v.card_id]=v;});
  (revs||[]).forEach(r=>{if(!(r.card_id in R))R[r.card_id]=(r.action==='reset'?null:r);});
@@ -1341,7 +1341,7 @@ function renderSketchReview(){
  facts.push(m.artist_raw&&!/illegible|tbd|unreadable|scrawl/i.test(m.artist_raw)?('by '+esc(m.artist_raw)+(m.artist_confidence&&m.artist_confidence!=='confirmed'?` <span class="q">(${esc(m.artist_confidence)})</span>`:'')):'artist not identified');
  if(m.product&&m.product!=='unknown') facts.push(esc(m.product)+(m.product_year?' '+m.product_year:''));
  if(m.parallel&&m.parallel!=='base') facts.push(esc(m.parallel.replace('_',' ')));
- if(m.format&&m.format!=='standard') facts.push(esc(m.format.replace('_',' ')));
+ if(m.format==='sketchagraph') facts.push('Sketchagraph'+(m.signer?', signed by '+esc(m.signer):'')); else if(m.format&&m.format!=='standard') facts.push(esc(m.format.replace('_',' ')));
  if(m.is_artist_proof) facts.push('Artist proof');
  if(m.grade) facts.push('Graded '+esc(m.grade));
  const rt=v&&v.pools&&v.pools.recent_tier; const rtl=rt&&SKTIER[rt]?SKTIER[rt][0]:'';
@@ -1464,12 +1464,14 @@ function skIdPanel(c){
   <div class="skid2"><div><label>Set</label><select id="skid_pr">${PR.map(p=>`<option${(m.product||'unknown')===p?' selected':''}>${p}</option>`).join('')}${PR.includes(m.product||'unknown')?'':`<option selected>${esc(m.product)}</option>`}</select></div>
    <div><label>Parallel</label><select id="skid_pa">${['base','silver_foil','gold_foil','black_foil','other_foil'].map(p=>`<option${(m.parallel||'base')===p?' selected':''}>${p}</option>`).join('')}</select></div></div>
   <label class="skchk"><input type="checkbox" id="skid_ap"${m.is_artist_proof?' checked':''}> Artist proof (AP)</label>
+  <label class="skchk"><input type="checkbox" id="skid_sg"${m.format==='sketchagraph'?' checked':''} onchange="document.getElementById('skid_sgw').style.display=this.checked?'block':'none'"> Sketchagraph (sketch + autograph of the actor)</label>
+  <div id="skid_sgw" style="display:${m.format==='sketchagraph'?'block':'none'}"><label>Signed by</label><input id="skid_sgn" value="${esc(m.signer||'')}" placeholder="e.g. Paul Hecht"></div>
   <label>Note (optional)</label><input id="skid_note" placeholder="anything I should know">
   <div class="skidb"><button class="go" onclick="skSaveId('${c.id}')">Save &amp; re-value</button><button onclick="SKID=false;renderSketchReview()">Cancel</button></div>
-  <div class="skidn">Saving updates the card name and re-runs the comps: same artist + same character first, then the same character by other artists, then the artist's other characters.</div></div>`;
+  <div class="skidn">Saving updates the card name and re-runs the comps: same artist + same character first, then the same character by other artists, then the artist's other characters. Sketchagraphs are comped only against other sketchagraphs (same signer first) and never below the plain-sketch value.</div></div>`;
 }
 async function skRefreshOne(c){
- const [sc,vals,revs]=await Promise.all([fetchJSON(SB+'/rest/v1/sketch_cards?card_id=eq.'+c.id+'&select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise',1),
+ const [sc,vals,revs]=await Promise.all([fetchJSON(SB+'/rest/v1/sketch_cards?card_id=eq.'+c.id+'&select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,signer,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise',1),
   fetchJSON(SB+'/rest/v1/sketch_valuations?card_id=eq.'+c.id+'&select=id,card_id,run_at,model_version,model_value,low,high,confidence,pools,explanation,comp_ids,recent_price,recent_date,prior_value&order=run_at.desc&limit=1',1),
   fetchJSON(SB+'/rest/v1/value_reviews?card_id=eq.'+c.id+'&select=card_id,action,final_value,model_value,note,reviewed_at&order=reviewed_at.desc&limit=1',1)]);
  if(sc&&sc[0]){ c._sk=sc[0]; const p=skParseNotes(c._sk.notes); c._flag=p.flag; c._fnote=p.note; }
@@ -1483,7 +1485,7 @@ async function skAccept(id){
 async function skSaveId(id){
  const c=CARDS.find(x=>x.id===id); if(!c) return; const g=k=>{const e=document.getElementById(k);return e?e.value.trim():'';};
  const b=document.querySelector('.skidp .go'); if(b){b.disabled=true;b.textContent='Re-valuing…';}
- const r=await skOp({op:'sketch_update',card_id:id,character:g('skid_ch'),artist:g('skid_ar'),product:g('skid_pr'),parallel:g('skid_pa'),is_artist_proof:document.getElementById('skid_ap').checked,note:g('skid_note')||null});
+ const r=await skOp({op:'sketch_update',card_id:id,character:g('skid_ch'),artist:g('skid_ar'),product:g('skid_pr'),parallel:g('skid_pa'),is_artist_proof:document.getElementById('skid_ap').checked,format:document.getElementById('skid_sg').checked?'sketchagraph':((c._sk||{}).format==='sketchagraph'?'standard':undefined),signer:document.getElementById('skid_sg').checked?(g('skid_sgn')||null):undefined,note:g('skid_note')||null});
  if(!r.ok){ if(b){b.disabled=false;b.textContent='Save & re-value';} alert('Could not save: '+(r.error||'')); return; }
  if(r.player) c.player=r.player;
  if(r.valuation){ c.current_value=r.valuation.model_value; c.value_source='sketch-model'; c.needs_review=true; }
