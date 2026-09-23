@@ -287,7 +287,10 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     if (!g && /\b(psa|bgs|sgc|cgc)\s*\d/i.test(cand)) return false; // raw vs graded
     const num = String(orig).match(/#\s?([a-z0-9-]+)/i); if (num && !new RegExp('#\\s?' + num[1].replace(/[-]/g, '\\-') + '\\b', 'i').test(cand)) return false;
     const yr = String(orig).match(/\b(19|20)\d\d\b/); if (yr && !String(cand).includes(yr[0])) return false;
-    const hit = o.filter((w) => c.has(w) || cs.includes(' ' + w + ' ')).length; return hit / Math.max(o.length, 1) >= 0.6;
+    const flag = (re) => [re.test(orig), re.test(cand)];
+    for (const re of [/\b(auto|autograph|autographed|signed|signature)\b/i, /\b1st\b|first edition/i, /\b(refractor|prizm|holo|foil)\b/i, /\b(patch|jersey|relic|memorabilia|game[- ]used|worn)\b/i, /\bwrapper\b/i, /\b(lot|set|complete)\b/i]) { const [a, b] = flag(re); if (a !== b) return false; }
+    const ser = String(orig).match(/\/\s?(\d{1,4})\b/); if (ser && !new RegExp('/\\s?' + ser[1] + '\\b').test(cand)) return false;
+    const hit = o.filter((w) => c.has(w) || cs.includes(' ' + w + ' ')).length; return hit / Math.max(o.length, 1) >= 0.8;
   }
   async function discover(opts = {}) {
     const H = { apikey: ANON, Authorization: 'Bearer ' + ANON };
@@ -296,7 +299,8 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     const P = { done: false, same: 0, theme: 0, searched: 0, log: [] }; window.__discoverProg = P; const found = [];
     // A) cheaper copies of the specific cards you keep coming back to
     const recur = await q('viewed_titles?select=title_key,title,item_id,days_seen,last_price,last_type&days_seen=gte.4&last_seen=gte.' + cutoff + '&ended=is.false&last_price=gte.50&order=days_seen.desc&limit=' + (opts.recurLimit || 20));
-    for (const t of recur.filter((x) => !/auction/i.test(x.last_type || ''))) {
+    const UNIQUE = /\b1\s?\/\s?1\b|one of one|\bsketch\b|original art|hand[- ]drawn|canvas/i; // a 1-of-1 has no other copies
+    for (const t of recur.filter((x) => !/auction/i.test(x.last_type || '') && !UNIQUE.test(x.title))) {
       try {
         const query = coreTokens(t.title).slice(0, 9).join(' '); P.searched++;
         const list = await fetchActive(query, 15, true);
@@ -310,7 +314,9 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
       try {
         const name = th.entity.replace(/^SW: /, 'star wars ').replace(/^Artist: /, '') + (th.kind === 'artist' ? ' sketch' : ''); P.searched++;
         const bench = th.n_sold >= 3 ? Number(th.median_sold) : (th.median_ask ? Number(th.median_ask) * 0.8 : null); if (!bench) continue;
-        const list = await fetchActive(name, 10, false);
+        const CARDISH = /\b(card|cards|psa|bgs|sgc|cgc|sketch|auto|autograph|refractor|rookie|rc|prizm|topps|panini|upper deck|fleer|bowman|skybox|wotc|holo|#\s?\d+)\b/i;
+        const JUNK = /\b(blu-?ray|dvd|lego|minifig(ure)?s?|figure|funko|poster|t-?shirt|shirt|hoodie|mask|comic|tpb|hardcover|diecast|die-cast|toy|replica|plush|costume|statue|mug|keychain|book|wallet|sticker sheet)\b/i;
+        const list = (await fetchActive(name + ' card', 10, false)).filter((l) => CARDISH.test(l.title) && (th.entity === 'VHS' || !JUNK.test(l.title)));
         const known = new Set((await q('viewed_titles?select=item_id&item_id=in.(' + list.map((l) => l.item_id).join(',') + ')')).map((x) => x.item_id));
         list.filter((l) => !known.has(l.item_id) && (l.price + (l.ship || 0)) <= bench && l.price >= bench * 0.2).slice(0, 4).forEach((l) => {
           found.push({ item_id: l.item_id, entity: th.entity, title: l.title, price: l.price + (l.ship || 0), listing_type: l.bids != null ? 'Auction' : 'Buy It Now', bids: l.bids, ends_in: l.left, image_url: l.img, url: 'https://www.ebay.com/itm/' + l.item_id, found_on: today, typical_ask: th.median_ask, typical_sold: th.median_sold, vs_typical: Math.round(((l.price + (l.ship || 0)) / bench - 1) * 100), reason: 'New listing in ' + th.entity + ', a theme you have been looking at much more lately. At or under ' + (th.n_sold >= 3 ? 'the median of ' + th.n_sold + ' auctions you watched close' : '80% of the typical ask you saw') + ' ($' + Math.round(bench).toLocaleString() + '). Different cards within a theme vary, so treat this as a lead.' }); P.theme++; });
