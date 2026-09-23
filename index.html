@@ -263,6 +263,7 @@ nav button .ic{font-size:17px;line-height:1}
 .skidp .skchk{display:flex;align-items:center;gap:7px;color:var(--ink2);font-size:13px}.skidp .skchk input{width:auto}
 .skid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.skidb{display:flex;gap:8px;margin-top:11px}.skidb button{border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;border:1px solid var(--line2);background:var(--card)}
 .skidb .go{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border-color:transparent}.skidn{font-size:11.5px;color:var(--mut);margin-top:8px}
+.skpull{margin:8px 0;padding:9px 11px;border-radius:9px;font-size:12.5px;background:var(--track);display:flex;gap:8px;align-items:center}.skpull.done{background:color-mix(in srgb,var(--green) 16%,transparent)}.skpull.error{background:color-mix(in srgb,#c44 16%,transparent)}.skpull .sp{width:12px;height:12px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;animation:skspin .8s linear infinite;flex:none}@keyframes skspin{to{transform:rotate(360deg)}}
 </style>
 </head><body>
 <header>
@@ -1350,7 +1351,8 @@ function renderSketchReview(){
   <div style="font-family:var(--disp);font-weight:600;font-size:19px;margin:3px 0 0;line-height:1.2">${esc(c.player||m.character_raw||c.ref)}</div>
   <div class="skfacts">${facts.map(f=>`<span>${f}</span>`).join('')}</div>
   ${c._flag?`<div class="skflag"><b>Check this:</b> ${esc(c._flag)}<div class="skfa"><button onclick="skAccept('${c.id}')">&#10003; Yes, that's right</button><button onclick="SKID='edit';renderSketchReview()">No, let me fix it</button></div></div>`:''}
-  ${SKID?skIdPanel(c):`<div class="sktools"><button onclick="SKID='edit';renderSketchReview()">&#9998; Edit details (character, artist, set)</button><button onclick="SKID='remove';renderSketchReview()">Not a sketch?</button></div>`}
+  ${SKID?skIdPanel(c):`<div class="sktools"><button onclick="SKID='edit';renderSketchReview()">&#9998; Edit details (character, artist, set)</button><button onclick="skPullNow('${c.id}')">&#8635; Pull fresh comps</button><button onclick="SKID='remove';renderSketchReview()">Not a sketch?</button></div>`}
+  ${SKPULL[c.id]?`<div class="skpull ${SKPULL[c.id].state}">${SKPULL[c.id].state==='done'||SKPULL[c.id].state==='error'?'':'<span class="sp"></span>'}${esc(SKPULL[c.id].msg)}</div>`:''}
   ${c._nophoto?`<div class="skflag"><b>No photos yet.</b> The value is based on the character only. Photograph the front and back so the artist can be read.</div>`:''}
   ${c._fnote?`<div class="sknote">${esc(c._fnote)}</div>`:''}
   <div class="skph">${front?`<a href="${front.url}" target="_blank" rel="noopener"><img src="${front.url}" alt="front"></a>`:'<div class="no">no front photo</div>'}${back?`<a href="${back.url}" target="_blank" rel="noopener"><img src="${back.url}" alt="back"></a>`:'<div class="no">no back photo</div>'}</div>
@@ -1468,7 +1470,7 @@ function skIdPanel(c){
   <div id="skid_sgw" style="display:${m.format==='sketchagraph'?'block':'none'}"><label>Signed by</label><input id="skid_sgn" value="${esc(m.signer||'')}" placeholder="e.g. Paul Hecht"></div>
   <label>Note (optional)</label><input id="skid_note" placeholder="anything I should know">
   <div class="skidb"><button class="go" onclick="skSaveId('${c.id}')">Save &amp; re-value</button><button onclick="SKID=false;renderSketchReview()">Cancel</button></div>
-  <div class="skidn">Saving updates the card name and re-runs the comps: same artist + same character first, then the same character by other artists, then the artist's other characters. Sketchagraphs are comped only against other sketchagraphs (same signer first) and never below the plain-sketch value.</div></div>`;
+  <div class="skidn">Saving updates the card name, re-values from saved sales right away, then pulls fresh eBay sales for the character and artist. Comp order: same artist + same character first, then the same character by other artists, then the artist's other characters. Sketchagraphs are comped only against other sketchagraphs (same signer first) and never below the plain-sketch value.</div></div>`;
 }
 async function skRefreshOne(c){
  const [sc,vals,revs]=await Promise.all([fetchJSON(SB+'/rest/v1/sketch_cards?card_id=eq.'+c.id+'&select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,signer,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise',1),
@@ -1489,8 +1491,31 @@ async function skSaveId(id){
  if(!r.ok){ if(b){b.disabled=false;b.textContent='Save & re-value';} alert('Could not save: '+(r.error||'')); return; }
  if(r.player) c.player=r.player;
  if(r.valuation){ c.current_value=r.valuation.model_value; c.value_source='sketch-model'; c.needs_review=true; }
+ SKPULL[id]={state:'queued',msg:(r.valuation?'Re-valued from saved sales: '+money(r.valuation.model_value)+'. ':(r.reason?r.reason+'. ':''))+'Now pulling fresh eBay sales for this character and artist…',t0:Date.now()};
  await skRefreshOne(c); SKID=false; SKEDIT=false; renderSketchReview();
- if(r.revalued===false&&r.reason) setTimeout(()=>alert(r.reason),50);
+ if(r.queued) skWatchPull(id);
+}
+// live comp pulls: the runner in the eBay tab fulfills comp_requests (result='sketch'); we poll and refresh the card
+let SKPULL={};
+async function skPullNow(id){
+ const c=CARDS.find(x=>x.id===id); if(!c) return;
+ try{ await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({card_id:id,ref:c.ref,status:'pending',result:'sketch'})}); }catch(e){ alert('Could not queue: '+e.message); return; }
+ SKPULL[id]={state:'queued',msg:'Pulling fresh eBay sales for this character and artist…',t0:Date.now()}; renderSketchReview(); skWatchPull(id);
+}
+async function skWatchPull(id){
+ for(let i=0;i<60;i++){
+  await new Promise(r=>setTimeout(r,4000));
+  let q=null; try{ q=(await fetchJSON(SB+'/rest/v1/comp_requests?card_id=eq.'+id+'&order=requested_at.desc&limit=1&select=status,result,requested_at',1))[0]; }catch(e){}
+  const P=SKPULL[id]; if(!P) return;
+  if(q&&(q.status==='done'||q.status==='error')){
+   const c=CARDS.find(x=>x.id===id); delete SKCOMPS[id];
+   SKPULL[id]={state:q.status,msg:(q.status==='done'?'Fresh comps pulled: ':'Live pull failed: ')+String(q.result||'').replace(/^sketch: /,'')};
+   if(c){ await skRefreshOne(c); if(c._skv&&!c._skr){ c.current_value=+c._skv.model_value; } }
+   if(SKMODE) renderSketchReview(); return;
+  }
+  if(q&&q.status==='pending'&&Date.now()-P.t0>20000&&P.state!=='waiting'){ SKPULL[id]={...P,state:'waiting',msg:'Queued. Waiting for the comp runner (it runs in your eBay tab). If nothing happens in a minute, ask Claude to "run the comps".'}; if(SKMODE) renderSketchReview(); }
+  if(q&&q.status==='running'&&P.state!=='running'){ SKPULL[id]={...P,state:'running',msg:'Searching eBay sold listings for this character and artist…'}; if(SKMODE) renderSketchReview(); }
+ }
 }
 async function skRemove(id){
  const c=CARDS.find(x=>x.id===id); if(!c) return;
