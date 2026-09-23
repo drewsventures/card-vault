@@ -256,6 +256,13 @@ nav button .ic{font-size:17px;line-height:1}
 .skc .cp b{font-family:var(--mono);color:var(--gold);font-size:13.5px}
 .skc .cp div{font-size:10px;color:var(--faint);font-family:var(--mono)}
 .skhow{font-size:11.5px;color:var(--mut);margin-top:10px;line-height:1.45}
+.skfa{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}.skfa button{border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid rgba(207,68,54,.35);background:#fff;color:#8e2a20}.skfa button:first-child{background:var(--green);color:#fff;border-color:transparent}
+.sktools{display:flex;gap:8px;margin:6px 0 2px;flex-wrap:wrap}.sktools button{background:none;border:1px dashed var(--line2);border-radius:10px;padding:7px 11px;font-size:12px;color:var(--ink2);cursor:pointer;font-weight:600}
+.skidp{background:var(--card2);border:1px solid var(--gold);border-radius:14px;padding:12px 13px;margin:10px 0}.skidh{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:4px}
+.skidp label{display:block;font-size:11.5px;color:var(--mut);margin:8px 0 3px}.skidp input,.skidp select{width:100%;border:1px solid var(--line2);border-radius:10px;padding:9px 10px;font:14px var(--ui);background:var(--card)}
+.skidp .skchk{display:flex;align-items:center;gap:7px;color:var(--ink2);font-size:13px}.skidp .skchk input{width:auto}
+.skid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.skidb{display:flex;gap:8px;margin-top:11px}.skidb button{border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;border:1px solid var(--line2);background:var(--card)}
+.skidb .go{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border-color:transparent}.skidn{font-size:11.5px;color:var(--mut);margin-top:8px}
 </style>
 </head><body>
 <header>
@@ -1267,7 +1274,8 @@ load();
 /* ================= SKETCH REVIEW ================= */
 const FN_SK=SB+"/functions/v1/sketch-ops";
 let SKQ=null, SKI=0, SKFILTER='todo', SKMODE=false, SKEDIT=false, SKCOMPS={};
-const SKTIER={T1:['Same artist + same character','var(--green)'],T2:['Same artist + character, other version','var(--green)'],T3:['Same artist, other character','var(--blue)'],T4:['Same character, other artist','var(--blue)'],T5:['Similar sketch (same set)','var(--mut)'],S:['Same subject + same set','var(--green)'],SA:['Same artist + same set','var(--green)'],S2:['Same subject, other set','var(--blue)'],F:['Same set, other subject','var(--mut)']};
+const SKTIER={T1:['Same artist + same character','var(--green)'],T2:['Same artist + character, other version','var(--green)'],T3:['Same artist, other character','var(--blue)'],T4:['Same character, other artist','var(--blue)'],T5:['Similar sketch (same set)','var(--mut)'],S:['Same subject + same set','var(--green)'],SA:['Same artist + same set','var(--green)'],S2:['Same subject, other set','var(--blue)'],F:['Same set, other subject','var(--mut)'],G1:['Same signer + same character (sketchagraph)','var(--green)'],G2:['Same signer + same artist (sketchagraph)','var(--green)'],G3:['Same signer, other artist (sketchagraph)','var(--blue)'],G4:['Same set sketchagraph, other signer','var(--mut)']};
+let SKID=false, SKNAMES={ch:[],ar:[]};
 const SKCONF={high:'Strong: several close matches sold recently (same artist + character, or same subject + set)',medium:'Good: some close matches',low:'Thin: few close matches, lean on your judgment',none:'No close match: priced off similar sketches'};
 async function skOp(p){
  const r=await fetch(FN_SK,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(p)});
@@ -1290,6 +1298,7 @@ async function loadSketchQueue(force){
  (vals||[]).forEach(v=>{if(!V[v.card_id])V[v.card_id]=v;});
  (revs||[]).forEach(r=>{if(!(r.card_id in R))R[r.card_id]=(r.action==='reset'?null:r);});
  (meta||[]).forEach(m=>M[m.card_id]=m);
+ try{ const [chs,ars]=await Promise.all([fetchJSON(SB+'/rest/v1/sketch_characters?select=name&order=name&limit=2000',1),fetchJSON(SB+'/rest/v1/sketch_artists?select=name&order=name&limit=3000',1)]); SKNAMES={ch:(chs||[]).map(x=>x.name),ar:(ars||[]).map(x=>x.name)}; }catch(e){}
  const own=CARDS.filter(c=>M[c.id]&&c.status!=='sold'&&c.status!=='duplicate');
  own.forEach(c=>{c._sk=M[c.id]; c._skv=V[c.id]||null; c._skr=R[c.id]||null; const p=skParseNotes(c._sk.notes); c._flag=p.flag; c._fnote=p.note; c._nophoto=!(c.photos&&c.photos.length);});
  SKQ=own.sort((a,b)=>((b._flag?2:0)+(b._nophoto?0:1))-((a._flag?2:0)+(a._nophoto?0:1)) || (+b.current_value||0)-(+a.current_value||0));
@@ -1310,8 +1319,8 @@ async function openSketchReview(cardId){
  renderSketchReview();
 }
 function closeSketchReview(){ SKMODE=false; SKEDIT=false; renderReview(); }
-function skSetFilter(f){ SKFILTER=f; SKI=0; SKEDIT=false; renderSketchReview(); }
-function skMove(d){ const L=skList(); SKI=Math.min(Math.max(0,SKI+d),Math.max(0,L.length-1)); SKEDIT=false; renderSketchReview(); window.scrollTo(0,0); }
+function skSetFilter(f){ SKID=false; SKFILTER=f; SKI=0; SKEDIT=false; renderSketchReview(); }
+function skMove(d){ SKID=false; const L=skList(); SKI=Math.min(Math.max(0,SKI+d),Math.max(0,L.length-1)); SKEDIT=false; renderSketchReview(); window.scrollTo(0,0); }
 function skFmtDate(d){ if(!d) return ''; try{ return new Date(d+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return d;} }
 function renderSketchReview(){
  const el=document.getElementById('review'); const L=skList();
@@ -1340,7 +1349,8 @@ function renderSketchReview(){
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${esc(c.ref)}</span><span class="pg" style="font-family:var(--mono);font-size:11px;color:var(--mut)">${SKI+1} / ${L.length}</span></div>
   <div style="font-family:var(--disp);font-weight:600;font-size:19px;margin:3px 0 0;line-height:1.2">${esc(c.player||m.character_raw||c.ref)}</div>
   <div class="skfacts">${facts.map(f=>`<span>${f}</span>`).join('')}</div>
-  ${c._flag?`<div class="skflag"><b>Check this:</b> ${esc(c._flag)}</div>`:''}
+  ${c._flag?`<div class="skflag"><b>Check this:</b> ${esc(c._flag)}<div class="skfa"><button onclick="skAccept('${c.id}')">&#10003; Yes, that's right</button><button onclick="SKID='edit';renderSketchReview()">No, let me fix it</button></div></div>`:''}
+  ${SKID?skIdPanel(c):`<div class="sktools"><button onclick="SKID='edit';renderSketchReview()">&#9998; Edit details (character, artist, set)</button><button onclick="SKID='remove';renderSketchReview()">Not a sketch?</button></div>`}
   ${c._nophoto?`<div class="skflag"><b>No photos yet.</b> The value is based on the character only. Photograph the front and back so the artist can be read.</div>`:''}
   ${c._fnote?`<div class="sknote">${esc(c._fnote)}</div>`:''}
   <div class="skph">${front?`<a href="${front.url}" target="_blank" rel="noopener"><img src="${front.url}" alt="front"></a>`:'<div class="no">no front photo</div>'}${back?`<a href="${back.url}" target="_blank" rel="noopener"><img src="${back.url}" alt="back"></a>`:'<div class="no">no back photo</div>'}</div>
@@ -1440,6 +1450,52 @@ document.addEventListener('keydown',function(e){
  else if(e.key==='ArrowLeft'){e.preventDefault();skMove(-1);}
  else if(e.key==='Escape'&&SKEDIT){SKEDIT=false;renderSketchReview();}
 });
+function skIdPanel(c){
+ const m=c._sk||{}; const opt=(a,v)=>a.map(x=>`<option value="${esc(x)}"${x===v?' selected':''}>`).join('');
+ if(SKID==='remove') return `<div class="skidp"><div class="skidh">Move this card out of the sketch group</div>
+  <label>What is it?</label><select id="skrm_type"><option value="printing_plate">Printing plate (1/1)</option><option value="parallel">Numbered parallel</option><option value="insert">Insert</option><option value="other">Other / base card</option></select>
+  <label>Note (optional)</label><input id="skrm_note" placeholder="e.g. 2024 Masterwork JA-10 printing plate">
+  <div class="skidb"><button class="go" onclick="skRemove('${c.id}')">Move it out</button><button onclick="SKID=false;renderSketchReview()">Cancel</button></div>
+  <div class="skidn">It leaves this queue and gets flagged for a normal comp (plates are comped against other 1/1 plates, not sketches).</div></div>`;
+ const PR=['masterwork','galaxy','chrome_galaxy','chrome','hyperspace','galactic','finest','illustrated','evolution','heritage','mandalorian','mandalorian_chrome','obi_wan','solo','tlj','anh','bounty_hunters','unknown'];
+ return `<div class="skidp"><div class="skidh">Fix what this card is</div>
+  <label>Character</label><input id="skid_ch" list="skdl_ch" value="${esc(m.character_raw||'')}"><datalist id="skdl_ch">${opt(SKNAMES.ch)}</datalist>
+  <label>Artist</label><input id="skid_ar" list="skdl_ar" value="${esc(m.artist_raw&&!/illegible|tbd|unreadable|scrawl/i.test(m.artist_raw)?m.artist_raw:'')}" placeholder="leave blank if unknown"><datalist id="skdl_ar">${opt(SKNAMES.ar)}</datalist>
+  <div class="skid2"><div><label>Set</label><select id="skid_pr">${PR.map(p=>`<option${(m.product||'unknown')===p?' selected':''}>${p}</option>`).join('')}${PR.includes(m.product||'unknown')?'':`<option selected>${esc(m.product)}</option>`}</select></div>
+   <div><label>Parallel</label><select id="skid_pa">${['base','silver_foil','gold_foil','black_foil','other_foil'].map(p=>`<option${(m.parallel||'base')===p?' selected':''}>${p}</option>`).join('')}</select></div></div>
+  <label class="skchk"><input type="checkbox" id="skid_ap"${m.is_artist_proof?' checked':''}> Artist proof (AP)</label>
+  <label>Note (optional)</label><input id="skid_note" placeholder="anything I should know">
+  <div class="skidb"><button class="go" onclick="skSaveId('${c.id}')">Save &amp; re-value</button><button onclick="SKID=false;renderSketchReview()">Cancel</button></div>
+  <div class="skidn">Saving updates the card name and re-runs the comps: same artist + same character first, then the same character by other artists, then the artist's other characters.</div></div>`;
+}
+async function skRefreshOne(c){
+ const [sc,vals,revs]=await Promise.all([fetchJSON(SB+'/rest/v1/sketch_cards?card_id=eq.'+c.id+'&select=card_id,character_raw,artist_raw,artist_confidence,product,product_year,parallel,format,is_artist_proof,quality_band,is_graded,grade,id_status,notes,subject_category,franchise',1),
+  fetchJSON(SB+'/rest/v1/sketch_valuations?card_id=eq.'+c.id+'&select=id,card_id,run_at,model_version,model_value,low,high,confidence,pools,explanation,comp_ids,recent_price,recent_date,prior_value&order=run_at.desc&limit=1',1),
+  fetchJSON(SB+'/rest/v1/value_reviews?card_id=eq.'+c.id+'&select=card_id,action,final_value,model_value,note,reviewed_at&order=reviewed_at.desc&limit=1',1)]);
+ if(sc&&sc[0]){ c._sk=sc[0]; const p=skParseNotes(c._sk.notes); c._flag=p.flag; c._fnote=p.note; }
+ c._skv=(vals&&vals[0])||c._skv; const r=revs&&revs[0]; c._skr=r&&r.action!=='reset'?r:null; delete SKCOMPS[c.id];
+}
+async function skAccept(id){
+ const c=CARDS.find(x=>x.id===id); if(!c) return;
+ const r=await skOp({op:'sketch_accept',card_id:id}); if(!r.ok){alert('Could not save: '+(r.error||''));return;}
+ if(r.player) c.player=r.player; await skRefreshOne(c); SKID=false; renderSketchReview();
+}
+async function skSaveId(id){
+ const c=CARDS.find(x=>x.id===id); if(!c) return; const g=k=>{const e=document.getElementById(k);return e?e.value.trim():'';};
+ const b=document.querySelector('.skidp .go'); if(b){b.disabled=true;b.textContent='Re-valuing…';}
+ const r=await skOp({op:'sketch_update',card_id:id,character:g('skid_ch'),artist:g('skid_ar'),product:g('skid_pr'),parallel:g('skid_pa'),is_artist_proof:document.getElementById('skid_ap').checked,note:g('skid_note')||null});
+ if(!r.ok){ if(b){b.disabled=false;b.textContent='Save & re-value';} alert('Could not save: '+(r.error||'')); return; }
+ if(r.player) c.player=r.player;
+ if(r.valuation){ c.current_value=r.valuation.model_value; c.value_source='sketch-model'; c.needs_review=true; }
+ await skRefreshOne(c); SKID=false; SKEDIT=false; renderSketchReview();
+ if(r.revalued===false&&r.reason) setTimeout(()=>alert(r.reason),50);
+}
+async function skRemove(id){
+ const c=CARDS.find(x=>x.id===id); if(!c) return;
+ const t=document.getElementById('skrm_type').value, n=document.getElementById('skrm_note').value.trim();
+ const r=await skOp({op:'sketch_remove',card_id:id,as_type:t,note:n||null}); if(!r.ok){alert('Could not save: '+(r.error||''));return;}
+ c.value_source='comp-uncertain'; c.needs_review=true; SKQ=SKQ.filter(x=>x.id!==id); SKID=false; renderSketchReview();
+}
 function sketchEntryHTML(){
  const sk=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&/^(sketch-model|sketch-confirmed|owner-estimate)$/.test(c.value_source||''));
  const todo=sk.filter(c=>c.needs_review).length;
