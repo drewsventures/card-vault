@@ -74,16 +74,16 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .vtag{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;padding:2px 5px;border-radius:5px;margin-left:5px;vertical-align:middle}
 .vtag.est{background:rgba(224,178,90,.15);color:var(--gold2);border:1px solid rgba(224,178,90,.3)}
 .vtag.comp{background:rgba(95,201,138,.15);color:var(--green);border:1px solid rgba(95,201,138,.3)}
-.vtag.sold{background:var(--gold);color:#1a1305}
+.vtag.sold{background:var(--gold);color:#fff}
 .vtag.rev{background:rgba(224,115,107,.15);color:var(--accent);border:1px solid rgba(224,115,107,.3)}
-.badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--gold);color:#1a1305;margin-left:5px;vertical-align:middle}
+.badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--gold);color:#fff;margin-left:5px;vertical-align:middle}
 /* detail */
 .sheet{position:fixed;inset:0;background:rgba(30,26,18,.42);backdrop-filter:blur(4px);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheetC{background:var(--bg2);width:100%;max-width:560px;max-height:93vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px 44px;border:1px solid var(--line2);border-bottom:none}
 .sheetC .x{position:sticky;top:0;z-index:30;display:block;width:40px;height:40px;margin:-4px -4px 2px auto;font-size:24px;color:var(--ink2);background:var(--elev);border:1px solid var(--line2);border-radius:50%;text-align:center;line-height:38px;cursor:pointer}
 .idbig{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 .copyid{border:1px solid var(--line2);background:var(--card2);color:var(--gold);border-radius:7px;font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 9px;cursor:copy}
-.copyid:active{background:var(--gold);color:#1a1305}
+.copyid:active{background:var(--gold);color:#fff}
 .dphotos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0 12px}
 .dphotos img{width:100%;border-radius:12px;border:1px solid var(--line)}
 .dphotos .no{aspect-ratio:3/4;background:var(--card);border:1px dashed var(--line2);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:12px;font-family:var(--mono)}
@@ -124,7 +124,7 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .sta{width:100%;border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:11px;padding:10px 12px;font:12.5px/1.5 var(--mono);resize:vertical;min-height:96px}
 .cpbtn{border:1px solid var(--line2);background:var(--elev);color:var(--ink);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
 .cpbtn.ok{background:rgba(95,201,138,.16);color:var(--green);border-color:transparent}
-.ebaybtn{width:100%;border:none;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+.ebaybtn{width:100%;border:none;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
 .ebaybtn.ok{background:linear-gradient(180deg,#7bd6a0,var(--green))}
 .gear{background:none;border:none;color:var(--mut);font-size:18px;cursor:pointer;padding:2px 8px;line-height:1}
 .revbadge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--accent);color:#fff;margin-left:5px;vertical-align:middle}
@@ -148,17 +148,17 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .lottot .tc .l{color:var(--mut);font-size:10.5px;margin-top:2px}
 .lotact{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
 .lotact button{border:1px solid var(--line2);background:var(--elev);color:var(--ink);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
-.lotact button.primary{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border-color:transparent}
+.lotact button.primary{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;border-color:transparent}
 .litem{display:flex;gap:11px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-bottom:8px}
 .litem img{width:42px;height:42px;object-fit:cover;border-radius:9px;background:var(--track);flex:none}
 .litem .lt{flex:1;min-width:0;font-size:12.5px;line-height:1.3;cursor:pointer}
 .litem .lt .s{color:var(--mut);font-size:11px}
 .litem .lp{font-weight:600;white-space:nowrap;font-size:13px;font-family:var(--mono);color:var(--gold)}
 .litem .rm{border:none;background:none;color:var(--accent);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
-.buildbar{position:fixed;left:0;right:0;bottom:60px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:12;font-size:13px;font-weight:700}
-.buildbar button{background:#1a1305;color:var(--gold);border:none;border-radius:9px;padding:7px 15px;font-weight:700;font-size:13px;cursor:pointer}
+.buildbar{position:fixed;left:0;right:0;bottom:60px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:12;font-size:13px;font-weight:700}
+.buildbar button{background:#fff;color:var(--gold);border:none;border-radius:9px;padding:7px 15px;font-weight:700;font-size:13px;cursor:pointer}
 .tile.inlot{outline:2.5px solid var(--gold);outline-offset:-2.5px}
-.tile .lotchk{position:absolute;top:6px;right:6px;z-index:2;background:var(--gold);color:#1a1305;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.tile .lotchk{position:absolute;top:6px;right:6px;z-index:2;background:var(--gold);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
 .addlotbtn{width:100%;border:1px solid var(--line2);background:var(--elev);color:var(--ink);border-radius:11px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-top:9px}
 .krow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
 .krow .k{color:var(--mut)} .krow .val{text-align:right;font-weight:600;font-family:var(--mono)}
@@ -205,7 +205,7 @@ nav button .ic{font-size:17px;line-height:1}
 .skentry{background:linear-gradient(135deg,rgba(166,124,46,.13),rgba(166,124,46,.04)),var(--card);border:1px solid rgba(166,124,46,.35);border-radius:16px;padding:15px 16px;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer}
 .skentry .t{font-family:var(--disp);font-weight:600;font-size:16px}
 .skentry .s{color:var(--mut);font-size:12.5px;margin-top:2px}
-.skentry button{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border:none;border-radius:11px;padding:10px 16px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
+.skentry button{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;border:none;border-radius:11px;padding:10px 16px;font-weight:700;font-size:13.5px;cursor:pointer;white-space:nowrap}
 .skhd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 6px}
 .skhd .bk{background:none;border:none;color:var(--gold);font-weight:700;font-size:14px;cursor:pointer;padding:6px 0}
 .skhd .pg{font-family:var(--mono);font-size:12px;color:var(--mut)}
@@ -242,7 +242,7 @@ nav button .ic{font-size:17px;line-height:1}
 .skedit{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
 .skedit input{flex:1;min-width:120px;font-size:20px;font-family:var(--mono);padding:11px 12px;border:1px solid var(--gold);border-radius:11px;background:var(--card)}
 .skedit textarea{width:100%;border:1px solid var(--line2);border-radius:11px;padding:9px 11px;font:13px var(--ui);background:var(--card);min-height:44px}
-.skedit button{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border:none;border-radius:11px;padding:12px 16px;font-weight:700;cursor:pointer}
+.skedit button{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;border:none;border-radius:11px;padding:12px 16px;font-weight:700;cursor:pointer}
 .skdone{background:rgba(30,154,84,.08);border:1px solid rgba(30,154,84,.3);border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .skdone button{background:none;border:1px solid var(--line2);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--ink2)}
 .skcomps h3{font-family:var(--disp);font-size:14px;margin:16px 0 4px;display:flex;justify-content:space-between;align-items:baseline}
@@ -262,8 +262,111 @@ nav button .ic{font-size:17px;line-height:1}
 .skidp label{display:block;font-size:11.5px;color:var(--mut);margin:8px 0 3px}.skidp input,.skidp select{width:100%;border:1px solid var(--line2);border-radius:10px;padding:9px 10px;font:14px var(--ui);background:var(--card)}
 .skidp .skchk{display:flex;align-items:center;gap:7px;color:var(--ink2);font-size:13px}.skidp .skchk input{width:auto}
 .skid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.skidb{display:flex;gap:8px;margin-top:11px}.skidb button{border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;border:1px solid var(--line2);background:var(--card)}
-.skidb .go{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#1a1305;border-color:transparent}.skidn{font-size:11.5px;color:var(--mut);margin-top:8px}
+.skidb .go{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;border-color:transparent}.skidn{font-size:11.5px;color:var(--mut);margin-top:8px}
 .skpull{margin:8px 0;padding:9px 11px;border-radius:9px;font-size:12.5px;background:var(--track);display:flex;gap:8px;align-items:center}.skpull.done{background:color-mix(in srgb,var(--green) 16%,transparent)}.skpull.error{background:color-mix(in srgb,#c44 16%,transparent)}.skpull .sp{width:12px;height:12px;border:2px solid var(--mut);border-top-color:transparent;border-radius:50%;animation:skspin .8s linear infinite;flex:none}@keyframes skspin{to{transform:rotate(360deg)}}
+/* ================= v8: clean, image-first theme (Alt-inspired) ================= */
+:root{
+ --bg:#f6f6f4;--bg2:#ffffff;--card:#ffffff;--card2:#efefec;--elev:#f2f2ef;
+ --ink:#111111;--ink2:#383838;--mut:#6e6e6e;--faint:#a3a3a3;--line:#ebebe8;--line2:#dfdfdb;
+ --gold:#111111;--gold2:#2a2a2a;--goldsoft:rgba(17,17,17,.06);
+ --green:#0a8a4a;--accent:#d2382b;--up:#0a8a4a;--dn:#d2382b;--upsoft:rgba(10,138,74,.1);--dnsoft:rgba(210,56,43,.1);
+ --chip:#f0f0ed;--track:#e9e9e6;--nav:#ffffff;--disp:var(--ui);
+}
+body{background:var(--bg)}
+header{background:rgba(255,255,255,.92);border-bottom:1px solid var(--line)}
+header h1{font-family:var(--ui);font-weight:800;letter-spacing:-.025em;font-size:20px}
+.owner b{color:var(--ink)}
+h2{font-family:var(--ui);font-weight:750;font-size:18px;letter-spacing:-.015em;margin:26px 0 10px}
+.kpi,.panel{border-radius:14px}
+.kpi .n,.pnlc .n,.dval,.rangebox .rv b{font-family:var(--ui);font-weight:750;letter-spacing:-.02em}
+.srow .v{color:var(--ink)}
+.srow .bar>i{background:var(--ink)}
+nav button.on{color:var(--ink)}
+#nav-sealed,#nav-sets{display:none}
+.chip{border-radius:999px;background:var(--card);color:var(--ink2);font-weight:600}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px}
+.tile{border:none;background:transparent;border-radius:12px;overflow:visible}
+@media(hover:hover){.tile:hover{transform:translateY(-2px);box-shadow:none}.tile:hover .ph{box-shadow:0 10px 24px rgba(0,0,0,.10)}}
+.tile .ph{aspect-ratio:3/4;background:#ebebe8;border-radius:12px;transition:box-shadow .15s}
+.tile .ph img{object-fit:contain;padding:7px}
+.tile .m{padding:9px 2px 2px}
+.tile .pl{font-size:13px;font-weight:650;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .st{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .pr{font-family:var(--ui);color:var(--ink);font-weight:750;font-size:15px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.idchip{background:rgba(255,255,255,.9);color:var(--ink);border:1px solid var(--line2)}
+.vtag.est{background:transparent;color:var(--faint);border:1px solid var(--line2)}
+.vtag.comp{background:transparent;color:var(--green);border:1px solid rgba(10,138,74,.35)}
+.segbanner b{color:var(--accent)}
+/* trend + pop pills */
+.trend{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;font-family:var(--ui);white-space:nowrap}
+.trend.up{color:var(--up);background:var(--upsoft)}
+.trend.dn{color:var(--dn);background:var(--dnsoft)}
+.trend.flat{color:var(--mut);background:var(--chip)}
+.trend.rv{color:var(--mut);background:var(--chip);font-weight:600}
+.poppill{font-size:10.5px;color:var(--mut);font-weight:600;white-space:nowrap}
+/* dashboard */
+.herov{padding:8px 2px 4px}
+.herov .l{font-size:12.5px;color:var(--mut);font-weight:600}
+.herov .n{font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:2px}
+.herov .s{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
+.herov .s b{color:var(--ink);font-weight:700}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
+.quick button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;font:600 12px var(--ui);color:var(--ink);cursor:pointer}
+.quick button b{display:block;font-size:16px;font-weight:750;letter-spacing:-.01em}
+.sechd{display:flex;justify-content:space-between;align-items:baseline;margin:28px 0 10px}
+.sechd h2{margin:0}
+.sechd a{font-size:13px;font-weight:650;color:var(--ink2);cursor:pointer;text-decoration:none}
+.rowscroll{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(138px,1fr);gap:14px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.rowscroll::-webkit-scrollbar{display:none}
+.cattiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.ctile{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:4/5;background:#e6e6e2;cursor:pointer}
+.ctile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.02);transition:transform .3s}
+@media(hover:hover){.ctile:hover img{transform:scale(1.07)}}
+.ctile .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 38%,rgba(0,0,0,.78))}
+.ctile .tx{position:absolute;left:12px;right:12px;bottom:11px;color:#fff}
+.ctile .tx .nm{font-size:16px;font-weight:750;letter-spacing:-.01em}
+.ctile .tx .sub{font-size:12px;opacity:.85;margin-top:1px}
+.ctile .tx .trend{margin-top:5px;background:rgba(255,255,255,.18);color:#fff}
+.ctile .noimg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:40px}
+.dnote{font-size:11.5px;color:var(--mut);margin:6px 2px 0;line-height:1.45}
+/* browse controls */
+.ctrlrow{display:flex;gap:8px;align-items:center;margin:8px 0 2px;flex-wrap:wrap}
+.ctrlrow select,.ctrlrow input{border:1px solid var(--line2);background:var(--card);border-radius:10px;padding:7px 10px;font:600 12.5px var(--ui);color:var(--ink)}
+.ctrlrow input{flex:1;min-width:140px}
+.ctrlrow input[type=checkbox]{flex:none;min-width:0;width:16px;height:16px;padding:0}
+.wlhead{display:grid;grid-template-columns:repeat(4,1fr)}
+@media(min-width:1000px){.wrap{max-width:1180px;padding:18px 28px 60px}header .hrow,.hsearchwrap{max-width:1124px;margin-left:auto;margin-right:auto}.herov .n{font-size:46px}.cattiles{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}.grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}
+.wlstat{min-width:0}
+.subjbar{display:flex;gap:6px;overflow-x:auto;padding:6px 0 2px;scrollbar-width:none}
+.subjbar::-webkit-scrollbar{display:none}
+.subj{white-space:nowrap;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer}
+.subj small{color:var(--faint);font-weight:600;margin-left:4px}
+.subj.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.subj.on small{color:rgba(255,255,255,.6)}
+/* card detail: pops + trend */
+.popbox{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin:12px 0}
+.popbox .hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--mut);margin-bottom:6px}
+.popbox .hd b{font-size:13.5px;color:var(--ink)}
+.poprow{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line)}
+.poprow:first-of-type{border-top:none}
+.poprow .g{width:40px;font-weight:750;font-size:12.5px}
+.poprow .cells{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.popc{font-size:11px;background:var(--chip);border-radius:7px;padding:2px 6px;color:var(--ink2);font-family:var(--mono)}
+.popc b{font-family:var(--ui);font-weight:700;color:var(--ink);margin-right:3px}
+.popc.mine{background:var(--ink);color:#fff}
+.popc.mine b{color:#fff}
+.trendbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:6px 0 2px}
+/* watchlist */
+.wlhead{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.wlstat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;min-width:92px}
+.wlstat b{display:block;font-size:18px;font-weight:750;letter-spacing:-.01em}
+.wlstat span{font-size:11.5px;color:var(--mut);font-weight:600}
+.wtile .ph img{object-fit:contain;padding:4px}
+.wtile .was{font-size:11px;color:var(--mut);margin-top:2px}
+.wtile .meta{font-size:10.5px;color:var(--faint);margin-top:2px;font-weight:600}
+.srcdot{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;border-radius:5px;padding:1px 5px;background:var(--chip);color:var(--mut);margin-left:4px;vertical-align:middle}
+
 </style>
 </head><body>
 <header>
@@ -277,6 +380,8 @@ nav button .ic{font-size:17px;line-height:1}
   <div id="dash"><div class="spin">Loading your collection...</div></div>
   <div id="search" class="hide">
     <div class="chips" id="chips" style="margin-top:12px"></div>
+    <div class="ctrlrow"><select id="sortsel" onchange="SORT=this.value;runSearch()"><option value="value">Highest value</option><option value="move">Biggest value change</option><option value="up">Top gainers</option><option value="down">Top decliners</option><option value="pop">Lowest graded pop</option><option value="new">Recently added</option><option value="low">Lowest value</option></select><input id="subjq" placeholder="Filter by player, character or team" oninput="renderSubjBar()" autocomplete="off"></div>
+    <div class="subjbar" id="subjbar"></div>
     <div class="count" id="scount"></div>
     <div class="grid" id="results"></div>
   </div>
@@ -286,14 +391,16 @@ nav button .ic{font-size:17px;line-height:1}
   <div id="shows" class="hide"></div>
   <div id="sealed" class="hide"></div>
   <div id="sets" class="hide"></div>
+  <div id="watch" class="hide"></div>
 </div>
 <div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
 <div id="settings"></div>
 <div id="modal"></div>
 <nav>
-  <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Dashboard</button>
-  <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Search</button>
+  <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Home</button>
+  <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Browse</button>
+  <button id="nav-watch" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
   <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
   <button id="nav-sold" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
@@ -369,58 +476,16 @@ async function load(){
   CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
   await mergeCost();
   DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
-  renderDash(); buildChips(); loadLots();
+  renderDash(); buildChips(); loadLots(); loadExtras();
   document.getElementById('asof').textContent='as of '+new Date().toLocaleDateString();
  }catch(e){
   document.getElementById('dash').innerHTML='<div class="spin">Could not load ('+e.message+'). Pull to refresh.</div>';
  }
 }
-function renderDash(){
- const own=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type!=='sealed'&&c.item_type!=='set');
- const setsOwn=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type==='set');
- const setsVal=setsOwn.reduce((s,c)=>s+(+c.current_value||0),0);
- const sealedOwn=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type==='sealed');
- const sealedVal=sealedOwn.reduce((s,c)=>s+(+c.current_value||0),0);
- const val=own.reduce((s,c)=>s+(+c.current_value||0),0);
- const cost=own.reduce((s,c)=>s+(+c.cost_basis||0),0);
- const valued=own.filter(c=>c.current_value!=null).length;
- const withPhoto=own.filter(c=>c.photos&&c.photos.length).length;
- const dupeGroups=Object.values(DUPE).filter(g=>g.filter(c=>c.status!=='sold'&&c.status!=='duplicate').length>1).length;
- const segs={};own.forEach(c=>{const s=seg(c);(segs[s]=segs[s]||{n:0,v:0}); segs[s].n++; segs[s].v+=(+c.current_value||0);});
- const segArr=Object.entries(segs).sort((a,b)=>b[1].v-a[1].v);const maxV=Math.max(...segArr.map(s=>s[1].v),1);
- const gain=val-cost;
- const soldCards=CARDS.filter(c=>c.status==='sold');
- const realizedTotal=soldCards.reduce((s,c)=>s+((c.cost_basis!=null&&c.sale_price!=null)?(saleNet(c)-(+c.cost_basis)):0),0);
- let h=`<div class="kpis">
-  <div class="kpi" onclick="openAll('value')"><div class="n">${money(val)}</div><div class="l">Collection value &rsaquo;</div><div class="d" style="color:var(--green)">across ${valued.toLocaleString()} priced</div></div>
-  <div class="kpi" onclick="openAll('all')"><div class="n">${own.length.toLocaleString()}</div><div class="l">Cards owned &rsaquo;</div><div class="d" style="color:var(--mut)">${withPhoto} with photos</div></div>
-  <div class="kpi"><div class="n">${money(cost)}</div><div class="l">Cost basis</div><div class="d" style="color:${gain>=0?'var(--green)':'var(--accent)'}">${gain>=0?'+':''}${money(gain)} vs cost</div></div>
-  <div class="kpi" onclick="openDupes()"><div class="n">${dupeGroups}</div><div class="l">Duplicate groups &rsaquo;</div><div class="d" style="color:var(--mut)">cards you own 2+ of</div></div>
-  <div class="kpi" onclick="show('sold');renderSold()"><div class="n" style="color:${realizedTotal>=0?'var(--green)':'var(--accent)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</div><div class="l">Realized P/L &rsaquo;</div><div class="d" style="color:var(--mut)">${soldCards.length} sold</div></div>
-  ${sealedOwn.length?`<div class="kpi" onclick="show('sealed');renderSealed()"><div class="n">${sealedOwn.length}</div><div class="l">Sealed items &rsaquo;</div><div class="d" style="color:var(--mut)">${sealedVal?money(sealedVal)+' val':'packs/boxes'}</div></div>`:''}
-  ${setsOwn.length?`<div class="kpi" onclick="show('sets');renderSets()"><div class="n">${setsOwn.length}</div><div class="l">Complete sets &rsaquo;</div><div class="d" style="color:var(--mut)">${setsVal?money(setsVal)+' val':'sets'}</div></div>`:''}
- </div>`;
- h+=`<button class="addpbtn" onclick="addPurchase()">+ Add a purchase</button>`;
- h+=`<div class="dupe">Value shown is your latest comped/ask number per card. Only your Maine lot sits on live sold comps so far; tap Search to dig in. <b>${dupeGroups} groups</b> have duplicates worth reviewing.</div>`;
- h+=`<h2>Browse the collection</h2>`;
- const DOMORDER=['Pinned collections','Sports','Culture','Other'];
- const byDom={};segArr.forEach(([n,d])=>{const dm=segDomain(n);(byDom[dm]=byDom[dm]||[]).push([n,d]);});
- DOMORDER.forEach(dm=>{ if(!byDom[dm])return;
-   h+=`<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:18px 4px 6px">${dm}</div><div class="panel">`;
-   byDom[dm].forEach(([n,d])=>{h+=`<div class="srow" data-seg="${n}" onclick="openSeg(this.dataset.seg)"><span class="nm">${n} &rsaquo;<br><span style="color:var(--mut);font-size:11px">${d.n} cards</span></span><span class="bar"><i style="width:${d.v/maxV*100}%"></i></span><span class="v">${d.v?money(d.v):'--'}</span></div>`;});
-   h+=`</div>`;
- });
- h+=`<h2>Top cards by value</h2><div class="panel">`;
- own.filter(c=>c.current_value!=null).sort((a,b)=>b.current_value-a.current_value).slice(0,8).forEach(c=>{
-   h+=`<div class="srow" onclick='openCard("${c.id}")' style="cursor:pointer"><span class="nm">${esc(c.player||c.ref)}<br><span style="color:var(--mut);font-size:11px">${esc(c.set_name||'')}</span></span><span class="v">${money(c.current_value)}</span></div>`;});
- h+=`</div>`;
- document.getElementById('dash').innerHTML=h;
- const hs=document.getElementById('hsum');if(hs)hs.textContent=own.length.toLocaleString()+' cards · '+money(val);
-}
 let FILT='all';
 let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
 function buildChips(){
- const c=['all','listed','own','graded','has photo','rookies','autos','relics','duplicates'];
+ const c=['all','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
 }
 function setFilt(f,el){VALONLY=false;FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
@@ -433,15 +498,14 @@ function runSearch(){
  else if(FILT==='rookies')list=list.filter(c=>c.is_rookie);
  else if(FILT==='autos')list=list.filter(c=>c.is_auto);
  else if(FILT==='relics')list=list.filter(c=>c.is_relic);
+ else if(FILT==='sketch')list=list.filter(isSketch);
  else if(FILT==='duplicates')list=list.filter(c=>DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length>1);
  if(SEGFILTER)list=list.filter(c=>seg(c)===SEGFILTER);
+ SUBJBASE=list; if(SUBJ)list=list.filter(c=>matchSubj(c,SUBJ));
  if(q){const t=q.split(/\s+/);list=list.filter(c=>{const s=((c.player||'')+' '+(c.set_name||'')+' '+(c.variation||'')+' '+(c.year||'')+' '+(c.ref||'')).toLowerCase();return t.every(w=>s.includes(w));});}
  if(VALONLY)list=list.filter(c=>c.current_value!=null);
- const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY;
- list.sort((a,b)=>{
-   if(neutral){const pa=(a.photos&&a.photos.length)?1:0,pb=(b.photos&&b.photos.length)?1:0;if(pa!==pb)return pb-pa;}
-   return (b.current_value||0)-(a.current_value||0);
- });
+ const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY&&!SUBJ;
+ sortList(list,neutral); const ss=document.getElementById('sortsel');if(ss)ss.value=SORT; renderSubjBar();
  document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
  LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
@@ -459,7 +523,7 @@ function searchTile(c,inSet){
      <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
      <div class="m"><div class="pl">${esc(c.player||c.ref)}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
      <div class="st">${esc(c.set_name||'')}</div>
-     <div class="pr">${money(c.current_value)}${vtagFor(c)}</div></div></div>`;
+     <div class="pr">${money(c.current_value)}${(SORT==='move'&&TREND[c.id]&&TREND[c.id].trend_kind==='revalued')?rvPill(c):trendPill(c,true)}${vtagFor(c)}</div>${popPill(c)?`<div>${popPill(c)}</div>`:''}</div></div>`;
 }
 function renderMore(){
    const el=document.getElementById('results');
@@ -534,6 +598,7 @@ function openCard(id){
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
    <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)}${vtagFor(c)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
+   <div id="cvtr8"></div><div id="cvpops"></div>
    ${liveCompsBlock(c)}
    ${compUpdateBlock(c)}
    ${c.status==='sold'?soldBlock(c):''}
@@ -559,7 +624,7 @@ function openCard(id){
    </div></div></div>`;
  document.getElementById('sheet').innerHTML=h;document.body.style.overflow='hidden';
  window.CUR=c; renderPnl(c); renderSell(c,null);
- loadChart(c.id); loadMarket(c.id);
+ loadChart(c.id); loadMarket(c.id); loadCardExtras(c);
 }
 /* ---- sale terms (editable, saved locally) ---- */
 const DEFAULT_TERMS={pay:'PayPal G&S add 3%, or Venmo/Zelle.',ship:'Ship anywhere, US or International.',claim:'Claim takes it. Offers welcome.',closer:''};
@@ -821,8 +886,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById(x).classList.toggle('hide',v!==x));
- ['dash','search','review','lots','sold','shows','sealed','sets'].forEach(x=>document.getElementById('nav-'+x).classList.toggle('on',v===x));window.scrollTo(0,0);}
+function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+ ['dash','search','review','lots','sold','shows','sealed','sets','watch'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -1263,13 +1328,159 @@ function copyLotPost(id){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,done);else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}
 }
 function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
-function navSearch(){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
-function openSeg(name){VALONLY=false;SEGFILTER=name;FILT='all';setChip('all');show('search');runSearch();}
-function openAll(mode){VALONLY=(mode==='value');SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function navSearch(){VALONLY=false;SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
+function openSeg(name){VALONLY=false;SEGFILTER=name;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';FILT='all';setChip('all');show('search');runSearch();}
+function openAll(mode){VALONLY=(mode==='value');if(mode==='value')SORT='value';SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
 function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
-function clearSeg(){VALONLY=false;SEGFILTER=null;runSearch();}
+function clearSeg(){VALONLY=false;SEGFILTER=null;SUBJ=null;runSearch();}
 function onSearchInput(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');}runSearch();}
 function onSearchFocus(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}}
+/* ================= v8: trends, population counts, subject filters, watchlist ================= */
+const fmtDay=d=>d?fmtD(String(d).length===10?d+"T12:00:00":d):"";
+let TREND={}, POPS={}, SKCHAR={}, SUBJ=null, SORT='value', WATCH=null, WLSORT='up', WLCAT='all', WLFIXED=true;
+async function fetchAll(u){let all=[];for(let f=0;;f+=1000){const r=await fetchJSON(u+(u.includes('?')?'&':'?')+'offset='+f+'&limit=1000',2);all=all.concat(r||[]);if(!r||r.length<1000)break;}return all;}
+async function loadExtras(){
+ const [tr,aa,sk]=await Promise.all([
+  fetchAll(SB+"/rest/v1/v_card_trend?select=card_id,value_then,then_date,pct,chg,trend_kind,source_then").catch(()=>[]),
+  fetchAll(SB+"/rest/v1/card_alt_assets?select=card_id,asset_name,match,pop_total,match_note&match=in.(exact,probable)").catch(()=>[]),
+  fetchAll(SB+"/rest/v1/sketch_cards?select=card_id,character_raw").catch(()=>[])]);
+ TREND={};tr.forEach(r=>TREND[r.card_id]=r);
+ POPS={};aa.forEach(r=>POPS[r.card_id]=r);
+ SKCHAR={};sk.forEach(r=>SKCHAR[r.card_id]=r.character_raw||'');
+ if(!document.getElementById('dash').classList.contains('hide'))renderDash();
+ if(!document.getElementById('search').classList.contains('hide'))runSearch();
+}
+const isSketch=c=>(c.id in SKCHAR)||/sketch/i.test((c.set_name||'')+' '+(c.category||'')+' '+(c.variation||''));
+function cleanSubj(s){return String(s||'').replace(/\(.*?\)/g,'').replace(/\b(PSA|BGS|SGC|CGC|BVG|GMA|Beckett|HGA|TAG|CSG)\b.*$/i,'').replace(/\b(RC|Rookie|Auto|PSA10|PSA9|x\d+)\b.*$/i,'').replace(/[·|].*$/,'').replace(/\s{2,}/g,' ').trim();}
+function subjectOf(c){const k=SKCHAR[c.id];if(k&&!/unidentified|unknown|tbd|\?/i.test(k))return cleanSubj(k);return cleanSubj(String(c.player||'').split(/\s+\/\s+/)[0]);}
+function trendPill(c,compact){
+ const t=TREND[c.id];if(!t||t.pct==null)return '';
+ if(t.trend_kind!=='market')return compact?'':`<span class="trend rv" title="The value method changed since ${t.then_date}, so this is not a market move">re-valued</span>`;
+ const p=+t.pct;if(Math.abs(p)<1)return compact?'':'<span class="trend flat">flat</span>';
+ return `<span class="trend ${p>0?'up':'dn'}" title="Market move since ${t.then_date}">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}%</span>`;
+}
+function popPill(c){const a=POPS[c.id];if(!a||!a.pop_total)return '';return `<span class="poppill" title="${esc(a.asset_name||'')} (${a.match} match via Alt)">Graded pop ${Number(a.pop_total).toLocaleString()}${a.match==='probable'?'*':''}</span>`;}
+function rvPill(c){const t=TREND[c.id];if(!t||t.pct==null)return '';const p=+t.pct;return `<span class="trend rv" title="Re-valued since ${t.then_date} (${esc(t.source_then||'')} to ${esc(c.value_source||'')}), not a market move">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}% re-comp</span>`;}
+function miniTile(c,rv){const u=primary(c);return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(subjectOf(c)||c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)}${rv?rvPill(c):trendPill(c,true)}</div></div></div>`;}
+function renderDash(){
+ const live=c=>c.status!=='sold'&&c.status!=='duplicate';
+ const own=CARDS.filter(c=>live(c)&&c.item_type!=='sealed'&&c.item_type!=='set');
+ const setsOwn=CARDS.filter(c=>live(c)&&c.item_type==='set'), sealedOwn=CARDS.filter(c=>live(c)&&c.item_type==='sealed');
+ const val=own.reduce((s,c)=>s+(+c.current_value||0),0), cost=own.reduce((s,c)=>s+(+c.cost_basis||0),0), gain=val-cost;
+ const valued=own.filter(c=>c.current_value!=null).length;
+ const soldCards=CARDS.filter(c=>c.status==='sold');
+ const realizedTotal=soldCards.reduce((s,c)=>s+((c.cost_basis!=null&&c.sale_price!=null)?(saleNet(c)-(+c.cost_basis)):0),0);
+ const dupeGroups=Object.values(DUPE).filter(g=>g.filter(live).length>1).length;
+ const mk=own.map(c=>[c,TREND[c.id]]).filter(([c,t])=>t&&t.trend_kind==='market'&&t.chg!=null);
+ const mchg=mk.reduce((s,[c,t])=>s+(+t.chg),0), mbase=mk.reduce((s,[c,t])=>s+(+t.value_then||0),0);
+ const since=mk.length?mk.map(([c,t])=>t.then_date).sort()[0]:null;
+ let h=`<div class="herov"><div class="l">Collection value</div><div class="n">${money(val)}</div>
+  <div class="s"><span><b>${own.length.toLocaleString()}</b> cards</span><span>Cost <b>${money(cost)}</b></span><span style="color:${gain>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${gain>=0?'+':'-'}${money(Math.abs(gain))}</b> vs cost</span>
+  ${mk.length>=20?`<span title="Only cards valued from live comps both then and now count as a market move">Market since ${fmtDay(since)} <b style="color:${mchg>=0?'var(--up)':'var(--dn)'}">${mchg>=0?'+':'-'}${money(Math.abs(mchg))}${mbase?` (${mchg>=0?'+':''}${(mchg/mbase*100).toFixed(1)}%)`:''}</b> on ${mk.length} comped cards</span>`:''}</div></div>
+  <div class="quick"><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="show('sold');renderSold()"><b style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b>Realized</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
+ // movers: market moves only, meaningful size
+ const movers=mk.filter(([c,t])=>Math.abs(+t.pct)>=5&&(+c.current_value||0)>=10).sort((a,b)=>Math.abs(b[1].chg)-Math.abs(a[1].chg)).slice(0,12).map(x=>x[0]);
+ if(movers.length){h+=`<div class="sechd"><h2>Biggest moves</h2><a onclick="SORT='move';openAll('all')">See all &rsaquo;</a></div><div class="rowscroll">${movers.map(miniTile).join('')}</div><div class="dnote">Market moves only: same comp method at both points, from a solid read (median or Card Ladder, not a single sale), and under a 60% swing. Anything else is labeled re-valued.</div>`;}
+ else{const rv=own.map(c=>[c,TREND[c.id]]).filter(([c,t])=>t&&t.trend_kind==='revalued'&&t.chg!=null&&Math.abs(+t.pct)>=10&&Math.max(+c.current_value||0,+t.value_then||0)>=25).sort((a,b)=>Math.abs(b[1].chg)-Math.abs(a[1].chg)).slice(0,12).map(x=>x[0]);
+  h+=`<div class="sechd"><h2>Trends</h2></div><div class="dnote" style="margin-top:-2px">No reliable market moves to show yet. Most values were re-comped in the last two weeks, so the changes below come from better comps, not the market. Real trends start showing once weekly snapshots on the same comp method build up.</div>`;
+  if(rv.length)h+=`<div class="sechd" style="margin-top:16px"><h2 style="font-size:15px">Biggest re-valuations</h2><a onclick="SORT='move';openAll('all')">See all &rsaquo;</a></div><div class="rowscroll">${rv.map(c=>miniTile(c,true)).join('')}</div>`;}
+ // categories with hero image = highest-valued photographed card
+ const segs={};own.forEach(c=>{const s=seg(c);const g=(segs[s]=segs[s]||{n:0,v:0,chg:0,base:0,hero:null});g.n++;g.v+=(+c.current_value||0);const t=TREND[c.id];if(t&&t.trend_kind==='market'&&t.chg!=null){g.chg+=+t.chg;g.base+=(+t.value_then||0);}if(primary(c)&&(!g.hero||(+c.current_value||0)>(+g.hero.current_value||0)))g.hero=c;});
+ const segArr=Object.entries(segs).sort((a,b)=>b[1].v-a[1].v);
+ h+=`<div class="sechd"><h2>Collections</h2><a onclick="openAll('all')">Browse all &rsaquo;</a></div><div class="cattiles">`;
+ segArr.forEach(([n,g])=>{const p=g.base?g.chg/g.base*100:null;
+  h+=`<div class="ctile" data-seg="${esc(n)}" onclick="openSeg(this.dataset.seg)">${g.hero?`<img loading="lazy" src="${primary(g.hero)}" alt="">`:'<div class="noimg">&#9635;</div>'}<div class="ov"></div><div class="tx"><div class="nm">${esc(n)}</div><div class="sub">${g.n.toLocaleString()} cards &middot; ${g.v?money(g.v):'--'}</div>${p!=null&&Math.abs(p)>=0.5?`<span class="trend">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p).toFixed(1)}%</span>`:''}</div></div>`;});
+ if(sealedOwn.length)h+=`<div class="ctile" onclick="show('sealed');renderSealed()"><div class="noimg">&#128230;</div><div class="ov"></div><div class="tx"><div class="nm">Sealed</div><div class="sub">${sealedOwn.length} items</div></div></div>`;
+ if(setsOwn.length)h+=`<div class="ctile" onclick="show('sets');renderSets()"><div class="noimg">&#128218;</div><div class="ov"></div><div class="tx"><div class="nm">Complete sets</div><div class="sub">${setsOwn.length} sets</div></div></div>`;
+ h+=`</div>`;
+ const top=own.filter(c=>c.current_value!=null).sort((a,b)=>b.current_value-a.current_value).slice(0,14);
+ h+=`<div class="sechd"><h2>Top cards</h2><a onclick="openAll('value')">See all &rsaquo;</a></div><div class="rowscroll">${top.map(miniTile).join('')}</div>`;
+ h+=`<button class="addpbtn" style="margin-top:22px" onclick="addPurchase()">+ Add a purchase</button>`;
+ document.getElementById('dash').innerHTML=h;
+ const hs=document.getElementById('hsum');if(hs)hs.textContent=own.length.toLocaleString()+' cards · '+money(val);
+}
+/* ---- browse: subject bar + sort ---- */
+function subjCounts(list){const m={};list.forEach(c=>{const s=subjectOf(c);if(s&&s.length>1)m[s]=(m[s]||0)+1;const t=(c.team||'').trim();if(t)m['Team: '+t]=(m['Team: '+t]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));}
+function matchSubj(c,s){if(!s)return true;if(s.startsWith('Team: '))return (c.team||'').trim()===s.slice(6);if(subjectOf(c)===s)return true;const pl=String(c.player||'').toLowerCase();return pl.includes(s.toLowerCase());}
+let SUBJBASE=[];
+function renderSubjBar(){
+ const el=document.getElementById('subjbar');if(!el)return;
+ const f=(document.getElementById('subjq')||{}).value||'';const fl=f.toLowerCase().trim();
+ let arr=subjCounts(SUBJBASE);if(fl)arr=arr.filter(([s])=>s.toLowerCase().includes(fl));
+ arr=arr.slice(0,fl?60:40);
+ el.innerHTML=(SUBJ?`<div class="subj on" onclick="SUBJ=null;runSearch()">${esc(SUBJ)} &times;</div>`:'')+arr.filter(([s])=>s!==SUBJ).map(([s,n])=>`<div class="subj" data-s="${esc(s)}" onclick="SUBJ=this.dataset.s;runSearch()">${esc(s)}<small>${n}</small></div>`).join('');
+}
+function sortList(list,neutral){
+ const tv=c=>{const t=TREND[c.id];return t&&t.trend_kind==='market'&&t.pct!=null?+t.pct:null;};
+ if(SORT==='up')return list.sort((a,b)=>(tv(b)??-1e9)-(tv(a)??-1e9));
+ if(SORT==='down')return list.sort((a,b)=>(tv(a)??1e9)-(tv(b)??1e9));
+ if(SORT==='move'){const mv=c=>{const t=TREND[c.id];return t&&t.chg!=null&&t.trend_kind!=='estimate'?Math.abs(+t.chg):0;};return list.sort((a,b)=>mv(b)-mv(a));}
+ if(SORT==='pop')return list.sort((a,b)=>((POPS[a.id]&&POPS[a.id].pop_total)??1e12)-((POPS[b.id]&&POPS[b.id].pop_total)??1e12));
+ if(SORT==='new')return list.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+ if(SORT==='low')return list.sort((a,b)=>(a.current_value??1e12)-(b.current_value??1e12));
+ return list.sort((a,b)=>{if(neutral){const pa=(a.photos&&a.photos.length)?1:0,pb=(b.photos&&b.photos.length)?1:0;if(pa!==pb)return pb-pa;}return (b.current_value||0)-(a.current_value||0);});
+}
+/* ---- card detail extras ---- */
+async function loadCardExtras(c){
+ const tEl=document.getElementById('cvtr8'), pEl=document.getElementById('cvpops');
+ if(tEl){const t=TREND[c.id];
+  if(t&&t.value_then!=null&&t.pct!=null){tEl.innerHTML=`<div class="trendbox">${trendPill(c)}<span>${t.trend_kind==='market'?'Market move':'Change'} since ${fmtDay(t.then_date)}: ${money(t.value_then)} &rarr; ${money(c.current_value)}${t.trend_kind==='market'?'':' (value method changed, not a market move)'}</span></div>`;}
+  else tEl.innerHTML='';}
+ if(!pEl)return;
+ if(isSketch(c)){pEl.innerHTML=`<div class="popbox"><div class="hd"><b>Population</b><span>1 of 1</span></div><div style="font-size:12.5px;color:var(--mut)">Hand-drawn sketch card: a single copy exists, so there is no grading population to track.</div></div>`;return;}
+ const a=POPS[c.id];
+ if(!a){pEl.innerHTML=`<div class="popbox"><div class="hd"><b>Population</b><span>not matched yet</span></div><div style="font-size:12.5px;color:var(--mut)">No confident match to this exact card (same year, set, number and parallel) on Alt yet, so no pop counts are shown rather than a guess.</div></div>`;return;}
+ pEl.innerHTML='<div class="popbox"><div class="hd"><b>Population</b><span>loading…</span></div></div>';
+ let rows=[];try{rows=await fetchJSON(SB+"/rest/v1/card_pops?card_id=eq."+c.id+"&select=grader,grade,pop,source,captured_at",2);}catch(e){}
+ const by={};rows.forEach(r=>{(by[r.grader]=by[r.grader]||[]).push(r);});
+ const myG=String(c.grader||'').toUpperCase().replace('PSA/DNA','PSA').replace('BECKETT','BGS'); const myN=((String(c.grade||'').match(/(\d+(\.\d)?)/)||[])[1]||'').replace(/\.0$/,'');
+ const order=['PSA','BGS','SGC','CGC','TAG'];
+ const gs=Object.keys(by).sort((a,b)=>(order.indexOf(a)+99)%99-(order.indexOf(b)+99)%99);
+ const when=rows[0]?fmtDay(String(rows[0].captured_at).slice(0,10)):'';
+ pEl.innerHTML=`<div class="popbox"><div class="hd"><b>Population</b><span>${Number(a.pop_total||0).toLocaleString()} graded &middot; Alt${when?' &middot; '+when:''}</span></div>
+  ${gs.length?gs.map(g=>{const L=by[g].sort((x,y)=>(+y.grade||0)-(+x.grade||0));const tot=L.reduce((s,r)=>s+r.pop,0);return `<div class="poprow"><span class="g">${g}</span><div class="cells">${L.map(r=>`<span class="popc${g===myG&&r.grade===myN?' mine':''}"><b>${r.grade==='0'?'Auth':r.grade}</b>${r.pop.toLocaleString()}</span>`).join('')}</div><span style="font-size:11px;color:var(--mut);font-weight:600">${tot.toLocaleString()}</span></div>`;}).join(''):'<div style="font-size:12.5px;color:var(--mut)">Matched, but Alt shows no graded copies yet.</div>'}
+  <div style="font-size:11px;color:var(--faint);margin-top:6px">Matched to &ldquo;${esc(a.asset_name||'')}&rdquo; (${a.match==='exact'?'exact: year, set, number and parallel all agree':'probable: no card number on our record to confirm'}). Raw copies are not counted by any grader.</div></div>`;
+}
+/* ---- eBay watchlist ---- */
+const WLSRC={'dwiki-watchlist-apr':['ID','First seen in your Dwiki watchlist log (April), matched by eBay item ID'],'dwiki-viewed-report':['title','First seen in your daily viewed-items report, matched by exact listing title'],'watchlist-scrape':['new','First captured by the watchlist sync']};
+function endsMin(s){if(!s)return 1e9;let m=0;const d=s.match(/(\d+)d/),h=s.match(/(\d+)h/),mm=s.match(/(\d+)m/);if(d)m+=+d[1]*1440;if(h)m+=+h[1]*60;if(mm)m+=+mm[1];return m||1e9;}
+async function renderWatch(force){
+ const el=document.getElementById('watch');
+ if(!WATCH||force){el.innerHTML='<div class="spin">Loading your eBay watchlist…</div>';try{WATCH=await fetchAll(SB+"/rest/v1/v_watchlist?select=item_id,title,image_url,category,first_seen,first_price,first_source,latest_price,latest_seen,prev_price,bids,ends_in,listing_type,status,pct_since_first,chg_since_first,days_tracked,n_snapshots&status=in.(watching,ended)");}catch(e){el.innerHTML='<div class="spin">Could not load the watchlist ('+esc(e.message)+').</div>';return;}}
+ const auction=w=>/auction/.test(w.listing_type||'');
+ let L=WATCH.slice();
+ const cats={};L.forEach(w=>cats[w.category||'Other']=(cats[w.category||'Other']||0)+1);
+ if(WLCAT!=='all')L=L.filter(w=>(w.category||'Other')===WLCAT);
+ const moverSort=['up','down','usd'].includes(WLSORT);
+ const hist=w=>w.pct_since_first!=null&&w.days_tracked>0;
+ if(moverSort){L=L.filter(hist);if(WLFIXED)L=L.filter(w=>!auction(w));}
+ if(WLSORT==='up')L.sort((a,b)=>b.pct_since_first-a.pct_since_first);
+ else if(WLSORT==='down')L.sort((a,b)=>a.pct_since_first-b.pct_since_first);
+ else if(WLSORT==='usd')L.sort((a,b)=>Math.abs(b.chg_since_first)-Math.abs(a.chg_since_first));
+ else if(WLSORT==='old')L.sort((a,b)=>String(a.first_seen).localeCompare(String(b.first_seen)));
+ else if(WLSORT==='price')L.sort((a,b)=>(b.latest_price||0)-(a.latest_price||0));
+ else if(WLSORT==='ending')L=L.filter(auction).sort((a,b)=>endsMin(a.ends_in)-endsMin(b.ends_in));
+ const all=WATCH.filter(w=>w.status==='watching'), tracked=all.filter(hist), fx=tracked.filter(w=>!auction(w));
+ const up=fx.filter(w=>w.pct_since_first>0).length, dn=fx.filter(w=>w.pct_since_first<0).length;
+ const last=all.map(w=>w.latest_seen).sort().pop();
+ let h=`<div class="sechd" style="margin-top:8px"><h2>eBay watchlist</h2><a onclick="renderWatch(true)">Refresh &#8635;</a></div>
+ <div class="wlhead"><div class="wlstat"><b>${all.length.toLocaleString()}</b><span>watching</span></div><div class="wlstat"><b>${tracked.length.toLocaleString()}</b><span>with a first-seen price</span></div><div class="wlstat"><b style="color:var(--up)">${up}</b><span>asks up</span></div><div class="wlstat"><b style="color:var(--dn)">${dn}</b><span>asks down</span></div></div>
+ <div class="ctrlrow"><select onchange="WLSORT=this.value;renderWatch()">${[['up','Biggest % up since first seen'],['down','Biggest % down'],['usd','Biggest $ move'],['old','Watched longest'],['price','Highest price'],['ending','Auctions ending soonest']].map(([k,t])=>`<option value="${k}"${WLSORT===k?' selected':''}>${t}</option>`).join('')}</select>
+ ${moverSort?`<label style="font-size:12.5px;font-weight:600;color:var(--ink2);display:flex;gap:5px;align-items:center"><input type="checkbox" ${WLFIXED?'checked':''} onchange="WLFIXED=this.checked;renderWatch()">Fixed-price only</label>`:''}</div>
+ <div class="chips">${[['all',WATCH.length]].concat(Object.entries(cats).sort((a,b)=>b[1]-a[1])).map(([k,n])=>`<div class="chip ${WLCAT===k?'on':''}" data-k="${esc(k)}" onclick="WLCAT=this.dataset.k;renderWatch()">${k==='all'?'All':esc(k)} <span style="opacity:.55">${n}</span></div>`).join('')}</div>
+ <div class="dnote" style="margin:4px 2px 12px">Price change is the current asking price (or current bid) against the price when you first looked at it. Auction bids climb as the auction runs, so movers default to fixed-price listings. Synced ${last?fmtDay(String(last).slice(0,10)):'--'}; the comp runner re-syncs once a day.</div>
+ <div class="grid">`;
+ h+=L.slice(0,240).map(w=>{const p=w.pct_since_first;const s=WLSRC[w.first_source]||['?',''];const hasH=hist(w);
+  return `<a class="tile wtile" href="https://www.ebay.com/itm/${w.item_id}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+   <div class="ph">${w.image_url?`<img loading="lazy" src="${esc(w.image_url)}">`:`<div class="no">${esc(w.title)}</div>`}</div>
+   <div class="m"><div class="pl">${esc(w.title)}</div>
+   <div class="pr">${money(w.latest_price)}${hasH&&Math.abs(p)>=0.5?`<span class="trend ${p>0?'up':'dn'}">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}%</span>`:''}${w.status==='ended'?'<span class="vtag rev">ENDED</span>':''}</div>
+   <div class="was">${hasH?`was ${money(w.first_price)} on ${fmtDay(w.first_seen)}`:`first seen ${fmtDay(w.first_seen)}`}<span class="srcdot" title="${esc(s[1])}">${s[0]}</span></div>
+   <div class="meta">${auction(w)?`Auction${w.bids!=null?' · '+w.bids+' bids':''}`:(w.listing_type==='bin_bo'?'Buy it now / offer':'Buy it now')}${w.ends_in?' · '+esc(w.ends_in):''}</div></div></a>`;}).join('');
+ h+=`</div>${L.length>240?`<div class="dnote">Showing 240 of ${L.length.toLocaleString()}. Narrow with a category.</div>`:''}${!L.length?'<div class="spin">Nothing here yet.</div>':''}`;
+ el.innerHTML=h;
+}
+
 document.getElementById('q').addEventListener('input',runSearch);
 load();
 /* ================= SKETCH REVIEW ================= */
