@@ -1,4 +1,4 @@
-/* Card Vault — comp-refresh runner (window.CV2)  [v7 — adds CV2.watchlistSync() (eBay watchlist -> watchlist_items) and CV2.popsSync() (Alt PSA/BGS/CGC pops -> card_pops); the armed loop runs both once a day. v5 — adds sketch live-comp pulls: comp_requests with result='sketch' are fulfilled by CV2.sketchPull()]
+/* Card Vault — comp-refresh runner (window.CV2)  [v8 — adds CV2.viewedSync() (recently viewed -> interest tracking) and CV2.discover() (opportunities from your browsing); v7 added CV2.watchlistSync() (eBay watchlist -> watchlist_items) and CV2.popsSync() (Alt PSA/BGS/CGC pops -> card_pops); the armed loop runs both once a day. v5 — adds sketch live-comp pulls: comp_requests with result='sketch' are fulfilled by CV2.sketchPull()]
  * WHERE TO RUN: inject into an eBay.com tab where Drew is LOGGED IN (same-origin cookies needed).
  * WHAT IT DOES:
  *   - refreshStale(opts): weekly/monthly batch (unchanged from v3).
@@ -227,14 +227,107 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     await flush(); P.done = true; window.__popsRunning = false; return P;
   }
 
-window.CV2={prog:{},sketchPull,sketchQueries,watchlistSync,popsSync,wlParse,wlCategory,async refreshOne(cardId){const r=await fetch(SUPA+'/rest/v1/cards?id=eq.'+cardId+'&select=id,ref,player,year,set_name,variation,card_number,serial,grade,grader,sport,is_auto,current_value,value_source',{headers:{apikey:ANON,Authorization:'Bearer '+ANON}});const c=(await r.json())[0];if(!c)return 'no card';const {items,mm,nSame}=await refreshCard(c);if(items.length)await post('ingest-market-items',{items});return {ref:c.ref,items:items.length,sameSold:nSame,median:mm};},
+  // ---------- v8: recently-viewed capture + Discover (opportunities from your own browsing) ----------
+  const tkey = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9/#&'. -]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+  const wlPost = async (body) => { const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': SECRET }, body: JSON.stringify(body) }); try { return await r.json(); } catch (e) { return { error: 'bad response ' + r.status }; } };
+  function rviParse(html) {
+    const d = new DOMParser().parseFromString(html, 'text/html'); const out = [];
+    d.querySelectorAll('.dp-rvi-desktop-tile').forEach((e) => {
+      const a = e.querySelector('a.item-tile__title') || e.querySelector('a[href*="/itm/"]'); if (!a) return;
+      const m = (a.getAttribute('href') || '').match(/\/itm\/(?:[^\/?]+\/)?(\d{9,})/); const title = (a.textContent || '').replace(/\s+/g, ' ').trim(); if (!m || !title) return;
+      const txt = (e.textContent || '').replace(/\.dp-rvi[^}]*\}/g, ' ').replace(/\s+/g, ' ');
+      const after = txt.slice(txt.indexOf(title) + title.length);
+      const pm = after.match(/\$([\d,]+\.\d{2})/); const price = pm ? Number(pm[1].replace(/,/g, '')) : null;
+      const bids = (after.match(/(\d+)\s+bids?\b/i) || [])[1];
+      const ship = /free shipping/i.test(after) ? 0 : ((after.match(/\+\s?\$([\d,]+\.\d{2})\s*(?:shipping|delivery)/i) || [])[1] || null);
+      const left = (after.match(/(\d+d\s*\d+h|\d+h\s*\d+m|\d+m\s*\d+s)\s*left/i) || [])[1] || null;
+      const ended = /\bended\b|\bsold\b/i.test(after.slice(0, 160));
+      const type = bids != null ? 'Auction' : (/best offer/i.test(after) ? 'Best Offer' : (/buy it now/i.test(after) ? 'Buy It Now' : null));
+      const img = e.querySelector('img'); out.push({ item_id: m[1], title, price, shipping: ship != null ? Number(String(ship).replace(/,/g, '')) : null, bids: bids != null ? Number(bids) : null, time_left: left, ended, listing_type: type, image_url: img ? (img.getAttribute('src') || '').replace(/\$_\d+\.JPG.*/i, '$_57.JPG') : null });
+    });
+    return out;
+  }
+  async function viewedSync() {
+    const today = new Date().toISOString().slice(0, 10);
+    const html = await (await fetch('https://www.ebay.com/mye/myebay/rvi', { credentials: 'include' })).text();
+    const items = rviParse(html);
+    if (!items.length) return { error: 'no recently-viewed tiles parsed (not logged in, or eBay changed the page)' };
+    const rows = items.map((i) => ({ title_key: tkey(i.title), seen_on: today, title: i.title, item_id: i.item_id, section: null, price: i.price, shipping: i.shipping, listing_type: i.listing_type, bids: i.bids, time_left: i.time_left, ended: i.ended, image_url: i.image_url, source: 'rvi-sync' }));
+    const seen = new Set(); const uniq = rows.filter((r) => !seen.has(r.title_key) && seen.add(r.title_key));
+    const up = await wlPost({ op: 'upsert', table: 'viewed_snapshots', rows: uniq, onConflict: 'title_key,seen_on' });
+    const rf = await wlPost({ op: 'refresh_interests' });
+    const s = { captured: uniq.length, saved: up.ok, refresh: rf.result || rf.error }; window.__viewedLast = s; return s;
+  }
+  async function fetchActive(q, sop, bin) {
+    const url = 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(q) + '&_sacat=0&_ipg=60&_sop=' + (sop || 15) + (bin ? '&LH_BIN=1' : '');
+    const html = await (await fetch(url, { credentials: 'include' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html'); const out = [];
+    for (const n of [...doc.querySelectorAll('li.s-item, li.s-card, .su-card-container')]) {
+      const tEl = n.querySelector('.s-item__title, .s-card__title, .su-styled-text.primary.default, [role=heading]');
+      const title = tEl ? tEl.textContent.replace(/Opens in a new window or tab|Opens in a new window|New Listing/gi, '').trim() : '';
+      if (!title || /Shop on eBay/i.test(title)) continue;
+      const pEl = n.querySelector('.s-item__price, .s-card__price'); const pm = (pEl ? pEl.textContent : '').match(/\$([\d,]+\.\d{2})/); if (!pm) continue;
+      if (/to \$/.test(pEl.textContent)) continue; // price ranges = multi-variation listings
+      const aEl = n.querySelector('a.s-item__link, a[href*="/itm/"]'); const id = aEl ? ((aEl.getAttribute('href') || '').match(/\/itm\/(?:[^\/?]+\/)?(\d{9,})/) || [])[1] : null; if (!id) continue;
+      const txt = (n.textContent || '').replace(/\s+/g, ' ');
+      const bids = (txt.match(/(\d+)\s+bids?\b/i) || [])[1]; const left = (txt.match(/(\d+d\s*\d+h|\d+h\s*\d+m|\d+m)\s*left/i) || [])[1] || null;
+      const ship = /free (shipping|delivery)/i.test(txt) ? 0 : Number(((txt.match(/\+\s?\$([\d,]+\.\d{2})\s*(?:shipping|delivery)/i) || [])[1] || '0').replace(/,/g, ''));
+      const iEl = n.querySelector('img'); out.push({ item_id: id, title: title.slice(0, 160), price: Number(pm[1].replace(/,/g, '')), ship, bids: bids != null ? Number(bids) : null, left, img: iEl ? (iEl.getAttribute('src') || iEl.getAttribute('data-src')) : null });
+    }
+    return out;
+  }
+  const NOISE = /\b(rare|look|hot|invest(ment)?|l@@k|wow|nice|mint condition|must see|read|see pics?|free ship(ping)?|🔥|pop \d+|low pop|beautiful|gorgeous|clean|sharp|centered|hof|mvp|goat|legend|iconic|ssp|sp)\b/gi;
+  function coreTokens(t) {
+    const s = String(t || '').toLowerCase().replace(/[^\w#/.' -]+/g, ' ').replace(NOISE, ' ');
+    return [...new Set(s.split(/\s+/).filter((w) => w && (w.length > 2 || /^#?\d+/.test(w)) && !/^(the|and|for|with|card|cards|rookie|rc)$/.test(w)))];
+  }
+  function sameCard(orig, cand) {
+    const o = coreTokens(orig), c = new Set(coreTokens(cand)); const cs = ' ' + [...c].join(' ') + ' ';
+    const g = String(orig).match(/\b(psa|bgs|sgc|cgc)\s*(\d+(\.\d)?)/i); if (g && !new RegExp('\\b' + g[1] + '\\s*' + g[2].replace('.', '\\.') + '\\b', 'i').test(cand)) return false;
+    if (!g && /\b(psa|bgs|sgc|cgc)\s*\d/i.test(cand)) return false; // raw vs graded
+    const num = String(orig).match(/#\s?([a-z0-9-]+)/i); if (num && !new RegExp('#\\s?' + num[1].replace(/[-]/g, '\\-') + '\\b', 'i').test(cand)) return false;
+    const yr = String(orig).match(/\b(19|20)\d\d\b/); if (yr && !String(cand).includes(yr[0])) return false;
+    const hit = o.filter((w) => c.has(w) || cs.includes(' ' + w + ' ')).length; return hit / Math.max(o.length, 1) >= 0.6;
+  }
+  async function discover(opts = {}) {
+    const H = { apikey: ANON, Authorization: 'Bearer ' + ANON };
+    const q = async (p) => (await fetch(SUPA + '/rest/v1/' + p, { headers: H })).json();
+    const today = new Date().toISOString().slice(0, 10); const cutoff = new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10);
+    const P = { done: false, same: 0, theme: 0, searched: 0, log: [] }; window.__discoverProg = P; const found = [];
+    // A) cheaper copies of the specific cards you keep coming back to
+    const recur = await q('viewed_titles?select=title_key,title,item_id,days_seen,last_price,last_type&days_seen=gte.4&last_seen=gte.' + cutoff + '&ended=is.false&last_price=gte.50&order=days_seen.desc&limit=' + (opts.recurLimit || 20));
+    for (const t of recur.filter((x) => !/auction/i.test(x.last_type || ''))) {
+      try {
+        const query = coreTokens(t.title).slice(0, 9).join(' '); P.searched++;
+        const list = await fetchActive(query, 15, true);
+        const hits = list.filter((l) => l.item_id !== t.item_id && tkey(l.title) !== t.title_key && sameCard(t.title, l.title) && (l.price + (l.ship || 0)) < Number(t.last_price) * 0.9).slice(0, 2);
+        hits.forEach((l) => { found.push({ item_id: l.item_id, entity: 'Same card: ' + t.title.slice(0, 80), title: l.title, price: l.price + (l.ship || 0), listing_type: 'Buy It Now', bids: null, ends_in: null, image_url: l.img, url: 'https://www.ebay.com/itm/' + l.item_id, found_on: today, typical_ask: Number(t.last_price), typical_sold: null, vs_typical: Math.round(((l.price + (l.ship || 0)) / Number(t.last_price) - 1) * 100), reason: 'Looks like the same card as a listing you have looked at on ' + t.days_seen + ' days ($' + Number(t.last_price).toLocaleString() + '), for less. Matched by title, so check the grade and photos.' }); P.same++; });
+      } catch (e) { P.log.push('A ' + String(e).slice(0, 60)); }
+    }
+    // B) fresh listings in themes you are heating up on, priced at or under what you have watched them clear for
+    const themes = await q('interest_stats?select=entity,kind,lift,recent_titles,median_sold,n_sold,median_ask&status=in.(rising,new)&recent_titles=gte.5&kind=neq.product&order=recent_titles.desc&limit=' + (opts.themeLimit || 8));
+    for (const th of themes) {
+      try {
+        const name = th.entity.replace(/^SW: /, 'star wars ').replace(/^Artist: /, '') + (th.kind === 'artist' ? ' sketch' : ''); P.searched++;
+        const bench = th.n_sold >= 3 ? Number(th.median_sold) : (th.median_ask ? Number(th.median_ask) * 0.8 : null); if (!bench) continue;
+        const list = await fetchActive(name, 10, false);
+        const known = new Set((await q('viewed_titles?select=item_id&item_id=in.(' + list.map((l) => l.item_id).join(',') + ')')).map((x) => x.item_id));
+        list.filter((l) => !known.has(l.item_id) && (l.price + (l.ship || 0)) <= bench && l.price >= bench * 0.2).slice(0, 4).forEach((l) => {
+          found.push({ item_id: l.item_id, entity: th.entity, title: l.title, price: l.price + (l.ship || 0), listing_type: l.bids != null ? 'Auction' : 'Buy It Now', bids: l.bids, ends_in: l.left, image_url: l.img, url: 'https://www.ebay.com/itm/' + l.item_id, found_on: today, typical_ask: th.median_ask, typical_sold: th.median_sold, vs_typical: Math.round(((l.price + (l.ship || 0)) / bench - 1) * 100), reason: 'New listing in ' + th.entity + ', a theme you have been looking at much more lately. At or under ' + (th.n_sold >= 3 ? 'the median of ' + th.n_sold + ' auctions you watched close' : '80% of the typical ask you saw') + ' ($' + Math.round(bench).toLocaleString() + '). Different cards within a theme vary, so treat this as a lead.' }); P.theme++; });
+      } catch (e) { P.log.push('B ' + String(e).slice(0, 60)); }
+    }
+    if (found.length) { const seen = new Set(); const rows = found.filter((f) => !seen.has(f.item_id) && seen.add(f.item_id)); const r = await wlPost({ op: 'upsert', table: 'discover_items', rows, onConflict: 'item_id' }); P.saved = r.ok; }
+    P.done = true; return P;
+  }
+
+window.CV2={prog:{},sketchPull,sketchQueries,watchlistSync,popsSync,wlParse,wlCategory,viewedSync,discover,fetchActive,rviParse,async refreshOne(cardId){const r=await fetch(SUPA+'/rest/v1/cards?id=eq.'+cardId+'&select=id,ref,player,year,set_name,variation,card_number,serial,grade,grader,sport,is_auto,current_value,value_source',{headers:{apikey:ANON,Authorization:'Bearer '+ANON}});const c=(await r.json())[0];if(!c)return 'no card';const {items,mm,nSame}=await refreshCard(c);if(items.length)await post('ingest-market-items',{items});return {ref:c.ref,items:items.length,sameSold:nSame,median:mm};},
 async refreshStale(opts){opts=opts||{};const staleDays=opts.staleDays??7;const maxCards=opts.maxCards??150;const protMin=opts.autoUpdateMaxValue??100;const maxValue=opts.maxValue??null;const cards=(await getStale(staleDays,maxCards,maxValue)).filter(c=>c.status!=='sold');const P={total:cards.length,i:0,updated:0,items:0,protectedCnt:0,nocomp:0,errs:0,done:false,log:[]};window.CV2.prog=P;const today=new Date().toISOString().slice(0,10);for(const c of cards){try{const {items,mm,nSame}=await refreshCard(c);if(items.length){const ok=await post('ingest-market-items',{items});if(ok)P.items++;}const cv=parseFloat(c.current_value)||0;const vs=(c.value_source||'');const gi=cardGI(c);const protectedCard=cv>=protMin||/cardladder|sketch/.test(vs)||(gi.g&&(gi.n==='10'||gi.n==='9.5')&&cv>=60);let action='no-comp';if(nSame>=1&&mm!=null){if(protectedCard){action='protected(items only)';P.protectedCnt++;}else{const src=nSame>=3?'ebay-median':'ebay-thin';await post('lot-ops',{op:'set_card',card_id:c.id,current_value:Math.round(mm*100)/100,value_source:src,value_date:today});action='updated $'+(Math.round(mm*100)/100)+' ('+nSame+' same)';P.updated++;}}else{if(protectedCard)P.protectedCnt++;else P.nocomp++;}P.log.push(c.ref+': '+action);}catch(e){P.errs++;P.log.push((c.ref||'?')+': ERR '+String(e).slice(0,30));}P.i++;await new Promise(r=>setTimeout(r,250));}P.done=true;return P;},
 async processQueue(){const today=new Date().toISOString().slice(0,10);try{await fetch(SUPA+'/rest/v1/comp_requests?status=eq.running&started_at=lt.'+new Date(Date.now()-240000).toISOString(),{method:'PATCH',headers:{apikey:ANON,Authorization:'Bearer '+ANON,'content-type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({status:'pending',started_at:null})});}catch(e){}window.__CVBEAT=Date.now();const r=await fetch(SUPA+'/rest/v1/comp_requests?status=eq.pending&order=requested_at.asc&limit=5',{headers:{apikey:ANON,Authorization:'Bearer '+ANON}});const reqs=await r.json();if(!reqs||!reqs.length)return 0;let n=0;for(const req of reqs){await patchReq(req.id,{status:'running',started_at:new Date().toISOString()});if(req.result==='sketch'){try{const o=await sketchPull(req.card_id);await patchReq(req.id,{status:(o.err||o.error)?'error':'done',done_at:new Date().toISOString(),result:sketchResult(o)});n++;}catch(e){await patchReq(req.id,{status:'error',done_at:new Date().toISOString(),result:'sketch: '+String(e).slice(0,80)});}continue;}try{const cr=await fetch(SUPA+'/rest/v1/cards?id=eq.'+req.card_id+'&select=id,ref,player,year,set_name,variation,card_number,serial,grade,grader,sport,is_auto,current_value,value_source,status',{headers:{apikey:ANON,Authorization:'Bearer '+ANON}});const c=(await cr.json())[0];if(!c){await patchReq(req.id,{status:'error',done_at:new Date().toISOString(),result:'card not found'});continue;}const {items,mm,nSame}=await refreshCard(c);if(items.length)await post('ingest-market-items',{items});const vs=(c.value_source||'');let result;if(/cardladder|sketch/.test(vs)){result='comps refreshed; value kept ('+vs+' — eBay under-prices these)';}else if(nSame>=1&&mm!=null){const src=nSame>=3?'ebay-median':'ebay-thin';await post('lot-ops',{op:'set_card',card_id:c.id,current_value:Math.round(mm*100)/100,value_source:src,value_date:today});result='value $'+(Math.round(mm*100)/100)+' ('+nSame+' same-grade sold), comps + date updated';}else{result='comps refreshed; no same-grade sold found, value kept';}await patchReq(req.id,{status:'done',done_at:new Date().toISOString(),result});n++;}catch(e){await patchReq(req.id,{status:'error',done_at:new Date().toISOString(),result:String(e).slice(0,80)});}}return n;},
 armQueue(opts){opts=opts||{};const iv=opts.intervalMs||12000;window.__CVARMED=true;if(window.__CVQ){clearInterval(window.__CVQ);window.__CVQ=null;}
  if(navigator.locks&&!window.__CVLOCK){window.__CVLOCK=true;navigator.locks.request('cv-comp-runner-keepalive',function(){return new Promise(function(){});}).catch(function(){});}
  if(!window.__CVVIS){window.__CVVIS=true;document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&window.__CVARMED&&window.__CVWAKE)window.__CVWAKE();});}
- if(!window.__CVLOOP){window.__CVLOOP=(async function(){while(window.__CVARMED){let n=0;try{n=await window.CV2.processQueue();}catch(e){}try{let last=0;try{last=+localStorage.getItem('cv_wl_last')||0;}catch(e){}if(!n&&Date.now()-last>20*3600000){try{localStorage.setItem('cv_wl_last',String(Date.now()));}catch(e){}await window.CV2.watchlistSync();await window.CV2.popsSync({maxAgeDays:30,limit:250});}}catch(e){}if(!n)await new Promise(function(r){window.__CVWAKE=r;setTimeout(r,iv);});}window.__CVLOOP=null;})();}
+ if(!window.__CVLOOP){window.__CVLOOP=(async function(){while(window.__CVARMED){let n=0;try{n=await window.CV2.processQueue();}catch(e){}try{let last=0;try{last=+localStorage.getItem('cv_wl_last')||0;}catch(e){}if(!n&&Date.now()-last>20*3600000){try{localStorage.setItem('cv_wl_last',String(Date.now()));}catch(e){}try{await window.CV2.watchlistSync();}catch(e){}try{await window.CV2.viewedSync();}catch(e){}try{await window.CV2.discover();}catch(e){}try{await window.CV2.popsSync({maxAgeDays:30,limit:250});}catch(e){}}}catch(e){}if(!n)await new Promise(function(r){window.__CVWAKE=r;setTimeout(r,iv);});}window.__CVLOOP=null;})();}
  return 'Card Vault comp runner ARMED (checks every '+(iv/1000)+'s, one request at a time). Leave this eBay tab open; if it sits in the background for a long time Chrome may pause it, and clicking the tab wakes it.';},
 disarmQueue(){window.__CVARMED=false;if(window.__CVWAKE)window.__CVWAKE();if(window.__CVQ){clearInterval(window.__CVQ);window.__CVQ=null;}return 'disarmed';}};
-return 'CV2 v7 installed';
+return 'CV2 v8 installed';
 })();
