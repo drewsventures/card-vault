@@ -389,6 +389,61 @@ nav button.on{color:var(--ink)}
 .mixbar i{display:block;height:100%}
 .mixleg{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11.5px;color:var(--mut)}
 .mixleg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+/* ---- v10 portfolio tracker ---- */
+#portfolio .up{color:var(--up)} #portfolio .dn{color:var(--dn)}
+.pfpanel{padding:13px 15px 12px;margin-top:12px}
+.pfh{display:flex;flex-direction:column;gap:1px;margin-bottom:6px}
+.pfh b{font-size:14px;font-weight:750;color:var(--ink)}
+.pfh span{font-size:11.5px;color:var(--mut);line-height:1.4}
+.pfchart{position:relative}
+.pfchart svg{width:100%;height:auto;display:block;overflow:visible}
+.pfgrid{stroke:var(--line);stroke-width:1}
+.pfref{stroke:var(--mut);stroke-width:1;stroke-dasharray:4 4}
+.pfax{font:600 10.5px var(--ui);fill:var(--mut)}
+.pfline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.pfarea{fill:var(--ink);opacity:.06}
+.pfdot{fill:var(--ink);stroke:var(--card);stroke-width:2}
+.pfcross{stroke:var(--mut);stroke-width:1;stroke-dasharray:3 3}
+.pfhov{fill:var(--card);stroke:var(--ink);stroke-width:2}
+.pfhit{cursor:crosshair}
+.pftip{display:none;position:absolute;top:4px;transform:translateX(-50%);background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.08);pointer-events:none;min-width:130px;z-index:3}
+.pftip b{font-weight:700;color:var(--mut);font-size:11px}
+.pftip div{font-weight:750;font-size:15px;color:var(--ink)}
+.pftip small{color:var(--ink2);font-size:11px}
+.pfdrow{display:grid;grid-template-columns:minmax(120px,1.1fr) 2fr 70px;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.pfdrow:first-of-type{border-top:none}
+.pfdl{font-size:13px;font-weight:650;display:flex;flex-direction:column}
+.pfdl small{font-size:10.5px;color:var(--mut);font-weight:500;line-height:1.3}
+.pfdtrack{position:relative;height:14px}
+.pfdmid{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--line2)}
+.pfdbar{position:absolute;top:0;height:14px;border-radius:4px}
+.pfdbar.pos{background:var(--up)} .pfdbar.neg{background:var(--dn)}
+.pfdv{text-align:right;font-weight:750;font-size:13px}
+.pftab{width:100%;border-collapse:collapse;font-size:12.5px}
+.pftab th{text-align:left;font-size:10.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:4px 6px 6px;border-bottom:1px solid var(--line)}
+.pftab td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.pftab td small{display:block;font-size:10.5px;color:var(--mut)}
+.pftab .r{text-align:right;white-space:nowrap}
+.pfshare{height:6px;background:var(--track);border-radius:3px;overflow:hidden;min-width:60px}
+.pfshare i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.pfstack{display:flex;gap:2px;height:14px;border-radius:5px;overflow:hidden;margin:4px 0 10px}
+.pfstack i{display:block;height:100%}
+.pflegend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:12px}
+.pflegend div{display:flex;align-items:center;gap:6px}
+.pflegend .sw{width:10px;height:10px;border-radius:3px;flex:none}
+.pflegend b{margin-left:auto;font-weight:700}
+.pflegend small{color:var(--mut);width:32px;text-align:right}
+.pfins{display:flex;flex-direction:column;gap:8px}
+.pfi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;color:var(--ink2)}
+.pfi b{color:var(--ink)}
+.pfmcols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pfmv{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer}
+.pfmn{display:flex;flex-direction:column;min-width:0}
+.pfmn b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pfmn small{font-size:10.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pfmr{display:flex;flex-direction:column;align-items:flex-end;font-size:11.5px;color:var(--mut);white-space:nowrap}
+.pfmr b{color:var(--ink)}
+@media(max-width:620px){.pfmcols{grid-template-columns:1fr}.pflegend{grid-template-columns:1fr}.pfdrow{grid-template-columns:1fr 1.2fr 62px}}
 </style>
 </head><body>
 <header>
@@ -415,6 +470,7 @@ nav button.on{color:var(--ink)}
   <div id="sets" class="hide"></div>
   <div id="watch" class="hide"></div>
   <div id="insights" class="hide"></div>
+  <div id="portfolio" class="hide"></div>
 </div>
 <div id="buildbar" class="hide"></div>
 <div id="sheet"></div>
@@ -422,6 +478,7 @@ nav button.on{color:var(--ink)}
 <div id="modal"></div>
 <nav>
   <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Home</button>
+  <button id="nav-portfolio" onclick="show('portfolio');renderPortfolio()"><span class="ic">&#8599;</span>Portfolio</button>
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Browse</button>
   <button id="nav-insights" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
   <button id="nav-watch" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
@@ -910,8 +967,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch','insights'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
- ['dash','search','review','lots','sold','shows','sealed','sets','watch','insights'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
+function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+ ['dash','search','review','lots','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -1523,6 +1580,134 @@ const ebaySearch=t=>'https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(S
 const itemLink=(id,t)=>id?'https://www.ebay.com/itm/'+id:ebaySearch(t);
 const entName=e=>String(e||'').replace(/^SW: /,'').replace(/^Artist: /,'');
 const KINDLBL={subject:'Player / character',franchise:'Franchise / team',product:'Product',artist:'Artist'};
+/* ================= v10: Portfolio tracker (value over time + where the change came from) ================= */
+let PF=null, PFRANGE='all';
+const PF_FAM=[['market-ebay','eBay sold comps','#2a78d6'],['market-cl','Card Ladder sales','#eb6834'],['market-sketch','Sketch model','#1baf7a'],['estimate','Estimates & owner values','#eda100']];
+const pfK=v=>{v=+v||0;const a=Math.abs(v);return (v<0?'-':'')+'$'+(a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e4?(a/1e3).toFixed(1)+'k':a>=1e3?(a/1e3).toFixed(2)+'k':Math.round(a).toLocaleString());};
+const pfSign=v=>(v>0?'+':v<0?'-':'')+pfK(Math.abs(v)).replace('-','');
+const pfPct=v=>(v>0?'+':'')+(v*100).toFixed(1)+'%';
+async function loadPortfolio(force){
+ if(PF&&!force)return PF;
+ const pts=await fetchJSON(SB+"/rest/v1/portfolio_points?select=*&order=as_of.asc",2).catch(()=>[]);
+ PF={pts:(pts||[]).map(p=>({...p,total_value:+p.total_value,market_index:+p.market_index,added_value:+p.added_value,removed_value:+p.removed_value,market_change:+p.market_change,reval_change:+p.reval_change,held_base:+p.held_base}))};
+ return PF;
+}
+function pfRangePts(){
+ const P=PF.pts;if(!P.length)return [];
+ if(PFRANGE==='all')return P;
+ const last=new Date(P[P.length-1].as_of+'T12:00:00');const days=PFRANGE==='7d'?7:30;
+ const cut=new Date(last.getTime()-days*864e5).toISOString().slice(0,10);
+ const inR=P.filter(p=>p.as_of>=cut);const before=P.filter(p=>p.as_of<cut);
+ return before.length?[before[before.length-1],...inR]:inR;
+}
+function pfDecomp(R){
+ const s=R[0],e=R[R.length-1],steps=R.slice(1);
+ const sum=k=>steps.reduce((t,p)=>t+(+p[k]||0),0);
+ const idx0=s.market_index,idx1=e.market_index;
+ return {s,e,added:sum('added_value'),addedN:sum('added_n'),removed:sum('removed_value'),removedN:sum('removed_n'),market:sum('market_change'),marketN:sum('market_n'),reval:sum('reval_change'),revalN:sum('reval_n'),idxRet:idx0?idx1/idx0-1:0};
+}
+function pfSegRows(R){
+ const e=R[R.length-1],segs=Object.keys(e.by_segment||{});
+ return segs.map(g=>{let f=1,add=0,rev=0;R.slice(1).forEach(p=>{const o=(p.by_segment||{})[g];if(!o)return;if(+o.held_base>0)f*=1+(+o.market)/(+o.held_base);add+=+o.added||0;rev+=+o.reval||0;});
+  const o=e.by_segment[g];return {g,value:+o.value,n:+o.n,mret:f-1,added:add,reval:rev};}).sort((a,b)=>b.value-a.value);
+}
+function pfLineChart(id,R,key,opt){
+ opt=opt||{};const W=Math.round(Math.min(900,Math.max(300,((document.getElementById('portfolio')||{}).clientWidth||720)-32))),H=opt.h||(W<520?190:220),L=W<520?46:58,Rp=10,T=12,B=26;
+ const xs=R.map(p=>new Date(p.as_of+'T12:00:00').getTime()),ys=R.map(p=>+p[key]);
+ const x0=xs[0],x1=xs[xs.length-1]===x0?x0+864e5:xs[xs.length-1];
+ let y0=opt.zero?0:Math.min(...ys),y1=Math.max(...ys);if(opt.ref!=null){y0=Math.min(y0,opt.ref);y1=Math.max(y1,opt.ref);}
+ const pad=(y1-y0)*.12||Math.abs(y1)*.02||1;if(!opt.zero)y0-=pad;y1+=pad;
+ const step=(()=>{const r=(y1-y0)/4,m=Math.pow(10,Math.floor(Math.log10(r)));return [1,2,2.5,5,10].map(k=>k*m).find(k=>k>=r)||r;})();
+ const t0=Math.floor(y0/step)*step,ticks=[];for(let t=t0;t<=y1+1e-9;t+=step)if(t>=y0-1e-9)ticks.push(t);
+ const X=t=>L+(t-x0)/(x1-x0)*(W-L-Rp),Y=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B);
+ const pts=R.map((p,i)=>[X(xs[i]),Y(ys[i])]);
+ const line=pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+ const area=opt.zero?line+` L${pts[pts.length-1][0].toFixed(1)} ${Y(0).toFixed(1)} L${pts[0][0].toFixed(1)} ${Y(0).toFixed(1)} Z`:'';
+ const fmtY=opt.fmt||pfK;
+ const xl=[0,Math.floor((R.length-1)/2),R.length-1].filter((v,i,a)=>a.indexOf(v)===i).map(i=>`<text x="${X(xs[i]).toFixed(1)}" y="${H-7}" text-anchor="${i===0?'start':i===R.length-1?'end':'middle'}" class="pfax">${fmtDay(R[i].as_of)}</text>`).join('');
+ return `<div class="pfchart" id="${id}" data-w="${W}" data-l="${L}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.label||key)}">
+  ${ticks.map(t=>`<line x1="${L}" x2="${W-Rp}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="pfgrid"/><text x="${L-8}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" class="pfax">${fmtY(t)}</text>`).join('')}
+  ${opt.ref!=null?`<line x1="${L}" x2="${W-Rp}" y1="${Y(opt.ref).toFixed(1)}" y2="${Y(opt.ref).toFixed(1)}" class="pfref"/>`:''}
+  ${area?`<path d="${area}" class="pfarea"/>`:''}<path d="${line}" class="pfline"/>
+  <circle r="4.5" class="pfdot" cx="${pts[pts.length-1][0].toFixed(1)}" cy="${pts[pts.length-1][1].toFixed(1)}"/>
+  <line class="pfcross" y1="${T}" y2="${H-B}" x1="-10" x2="-10" style="display:none"/><circle r="5" class="pfhov" cx="-10" cy="-10" style="display:none"/>
+  ${xl}<rect x="${L}" y="0" width="${W-L-Rp}" height="${H}" fill="transparent" class="pfhit"/></svg><div class="pftip"></div></div>`;
+}
+function pfWire(id,R,key,tipFn){
+ const el=document.getElementById(id);if(!el)return;const svg=el.querySelector('svg'),tip=el.querySelector('.pftip'),cr=el.querySelector('.pfcross'),hv=el.querySelector('.pfhov'),hit=el.querySelector('.pfhit');
+ const W=+el.dataset.w,L=+el.dataset.l,Rp=10;const xs=R.map(p=>new Date(p.as_of+'T12:00:00').getTime());const x0=xs[0],x1=xs[xs.length-1]===x0?x0+864e5:xs[xs.length-1];
+ const dots=[...svg.querySelectorAll('.pfline')][0];
+ const ptsY=(()=>{const d=dots.getAttribute('d').split(/[ML]/).filter(Boolean).map(s=>s.trim().split(' ').map(Number));return d;})();
+ const move=ev=>{const b=svg.getBoundingClientRect();const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-b.left;const vx=cx/b.width*W;
+  const tx=x0+(vx-L)/(W-L-Rp)*(x1-x0);let i=0,best=1e18;xs.forEach((t,k)=>{const d=Math.abs(t-tx);if(d<best){best=d;i=k;}});
+  const [px,py]=ptsY[i];cr.style.display='';cr.setAttribute('x1',px);cr.setAttribute('x2',px);hv.style.display='';hv.setAttribute('cx',px);hv.setAttribute('cy',py);
+  tip.innerHTML=tipFn(R[i],R[i-1]);tip.style.display='block';const left=px/W*b.width;tip.style.left=Math.min(Math.max(left,90),b.width-90)+'px';};
+ const out=()=>{tip.style.display='none';cr.style.display='none';hv.style.display='none';};
+ hit.addEventListener('mousemove',move);hit.addEventListener('touchstart',move,{passive:true});hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('mouseleave',out);
+}
+function pfBar(label,v,max,n,note){const w=max?Math.abs(v)/max*50:0;return `<div class="pfdrow"><div class="pfdl">${label}<small>${note||''}</small></div><div class="pfdtrack"><div class="pfdmid"></div><div class="pfdbar ${v>=0?'pos':'neg'}" style="${v>=0?'left:50%':'right:50%'};width:${w.toFixed(2)}%"></div></div><div class="pfdv ${v>0?'up':v<0?'dn':''}">${pfSign(v)}</div></div>`;}
+async function renderPortfolio(force){
+ const el=document.getElementById('portfolio');
+ if(!PF||force)el.innerHTML='<div class="spin">Loading portfolio history…</div>';
+ await loadPortfolio(force);
+ if(!PF.pts.length){el.innerHTML='<div class="dnote" style="margin-top:20px">No portfolio history yet. The first point is built tonight.</div>';return;}
+ const R=pfRangePts(),D=pfDecomp(R),e=D.e,s=D.s,segs=pfSegRows(R);
+ const chg=e.total_value-s.total_value;
+ let h=`<div class="sechd" style="margin-top:8px"><h2>Portfolio</h2><a onclick="renderPortfolio(true)">Refresh &#8635;</a></div>
+ <div class="herov"><div class="l">Total value &middot; ${Number(e.card_count).toLocaleString()} items</div><div class="n">${money(e.total_value)}</div>
+ <div class="s"><span><b class="${chg>=0?'up':'dn'}">${pfSign(chg)}</b> since ${fmtDay(s.as_of)}</span><span>Market index <b>${e.market_index.toFixed(1)}</b> <span class="trend ${D.idxRet>0?'up':D.idxRet<0?'dn':'flat'}">${pfPct(D.idxRet)}</span></span></div></div>
+ <div class="chips">${[['7d','1 week'],['30d','1 month'],['all','All history']].map(([k,t])=>`<div class="chip ${PFRANGE===k?'on':''}" onclick="PFRANGE='${k}';renderPortfolio()">${t}</div>`).join('')}</div>`;
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>Total value</b><span>Every item you own, valued at its latest price on each date</span></div>${pfLineChart('pfv',R,'total_value',{zero:true,label:'Total portfolio value over time'})}</div>`;
+ const mx=Math.max(Math.abs(D.added),Math.abs(D.removed),Math.abs(D.market),Math.abs(D.reval),1);
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>Where the change came from</b><span>${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}: ${money(s.total_value)} &rarr; ${money(e.total_value)}</span></div>
+  ${pfBar('New items',D.added,mx,D.addedN,`${D.addedN.toLocaleString()} added or priced for the first time`)}
+  ${pfBar('Market moves',D.market,mx,D.marketN,`${D.marketN.toLocaleString()} re-comps using the same method`)}
+  ${pfBar('Revaluations & corrections',D.reval,mx,D.revalN,`${D.revalN.toLocaleString()} method changes, comp fixes, your own values`)}
+  ${pfBar('Sold or removed',-D.removed,mx,D.removedN,`${D.removedN.toLocaleString()} left the vault`)}
+  <div class="dnote">Only market moves reflect prices actually changing. New items, revaluations and corrections change the total without the market moving.</div></div>`;
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>Vault market index</b><span>Starts at 100 on ${fmtDay(PF.pts[0].as_of)}. Moves only when a card you already held is re-comped by the same method and lands within 0.6x to 1.67x of its old value. Adding cards, method changes and comp corrections don't move it.</span></div>${pfLineChart('pfi',R,'market_index',{ref:100,fmt:v=>v.toFixed(1),label:'Vault market index'})}</div>`;
+ const tot=e.total_value||1;
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>By segment</b><span>Market = same-method re-comps within a normal price band, chained over the range</span></div><table class="pftab"><thead><tr><th>Segment</th><th class="r">Value</th><th>Share</th><th class="r">Market</th><th class="r">Added</th></tr></thead><tbody>
+  ${segs.map(r=>`<tr><td>${esc(r.g)}<small>${r.n.toLocaleString()} items</small></td><td class="r">${money(r.value)}</td><td><div class="pfshare"><i style="width:${(r.value/tot*100).toFixed(1)}%"></i></div><small>${(r.value/tot*100).toFixed(1)}%</small></td><td class="r ${r.mret>0.0005?'up':r.mret<-0.0005?'dn':''}">${Math.abs(r.mret)<0.0005?'0.0%':pfPct(r.mret)}</td><td class="r">${r.added?pfK(r.added):'--'}</td></tr>`).join('')}</tbody></table></div>`;
+ const fam=e.by_family||{};const ftot=PF_FAM.reduce((t,[k])=>t+(+fam[k]||0),0)||1;
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>How the value is priced</b><span>Share of total value by pricing method today</span></div>
+  <div class="pfstack">${PF_FAM.filter(([k])=>+fam[k]>0).map(([k,t,c])=>`<i style="width:${(+fam[k]/ftot*100).toFixed(2)}%;background:${c}" title="${esc(t)}"></i>`).join('')}</div>
+  <div class="pflegend">${PF_FAM.map(([k,t,c])=>`<div><span class="sw" style="background:${c}"></span>${t}<b>${money(+fam[k]||0)}</b><small>${((+fam[k]||0)/ftot*100).toFixed(0)}%</small></div>`).join('')}</div></div>`;
+ h+=`<div class="sechd"><h2>What stands out</h2></div><div class="pfins">${pfInsights(R,D,segs).map(t=>`<div class="pfi">${t}</div>`).join('')}</div>`;
+ h+=`<div class="sechd"><h2>Biggest moves</h2></div><div class="dnote" style="margin-top:-4px">Individual cards, ${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}. Tap a card to open it.</div><div id="pfmovers"><div class="spin">Loading…</div></div>`;
+ el.innerHTML=h;
+ pfWire('pfv',R,'total_value',(p,q)=>`<b>${fmtDay(p.as_of)}</b><div>${money(p.total_value)}</div>${q?`<small>${pfSign(p.total_value-q.total_value)} vs ${fmtDay(q.as_of)}${+p.added_value?`<br>new items ${pfSign(+p.added_value)}`:''}${+p.market_change?`<br>market ${pfSign(+p.market_change)}`:''}${+p.reval_change?`<br>revaluations ${pfSign(+p.reval_change)}`:''}${+p.removed_value?`<br>sold/removed ${pfSign(-p.removed_value)}`:''}</small>`:'<small>first point</small>'}`);
+ pfWire('pfi',R,'market_index',(p,q)=>`<b>${fmtDay(p.as_of)}</b><div>${p.market_index.toFixed(2)}</div>${q?`<small>${pfPct(p.market_index/q.market_index-1)} on ${(+p.market_n).toLocaleString()} re-comps</small>`:''}`);
+ pfLoadMovers(s.as_of,e.as_of);
+}
+function pfInsights(R,D,segs){
+ const e=D.e,s=D.s,out=[];const chg=e.total_value-s.total_value;
+ if(R.length>1&&Math.abs(chg)>0){const share=v=>chg?Math.round(Math.abs(v)/Math.abs(chg)*100):0;
+  out.push(`Value went ${chg>0?'up':'down'} <b>${pfK(Math.abs(chg))}</b> since ${fmtDay(s.as_of)}. New items account for <b>${pfK(D.added)}</b>, revaluations <b>${pfSign(D.reval)}</b>, and market moves on cards you already held <b>${pfSign(D.market)}</b> (index ${pfPct(D.idxRet)}).${Math.abs(D.market)<Math.abs(chg)*0.1?' Almost all of the change is cataloging and comp corrections, not the market.':''}`);}
+ const fam=e.by_family||{},ftot=Object.values(fam).reduce((t,v)=>t+(+v||0),0)||1,est=+fam.estimate||0;
+ if(est/ftot>0.15)out.push(`<b>${pfK(est)}</b> (${Math.round(est/ftot*100)}%) of the value rests on estimates and owner values rather than sales comps. Card Ladder or eBay comps on the biggest of these would firm up the total the most.`);
+ if(+e.top10_value)out.push(`Your 10 most valuable items are <b>${pfK(+e.top10_value)}</b>, ${Math.round(+e.top10_value/e.total_value*100)}% of the portfolio. A move in any one of them shows up in the total.`);
+ if(+e.n_cost)out.push(`Cost basis is known for <b>${Number(e.n_cost).toLocaleString()}</b> of ${Number(e.card_count).toLocaleString()} items. On those, value is ${money(+e.value_cost_known)} against ${money(+e.cost_known)} paid (<b class="${+e.value_cost_known>=+e.cost_known?'up':'dn'}">${pfPct(+e.value_cost_known/+e.cost_known-1)}</b>). The rest have no recorded cost, so total profit can't be measured yet.`);
+ const fr=+e.fresh_value/e.total_value;if(fr<0.9)out.push(`Only ${Math.round(fr*100)}% of the value was priced in the last 14 days. A comp run would bring the rest up to date.`);
+ const mv=segs.filter(r=>r.value>=1000&&Math.abs(r.mret)>=0.005).sort((a,b)=>b.mret-a.mret);
+ if(mv.length){const b=mv[0],w=mv[mv.length-1];out.push(`Strongest segment on market moves: <b>${esc(b.g)}</b> ${pfPct(b.mret)}${mv.length>1&&w.mret<b.mret?`; weakest: <b>${esc(w.g)}</b> ${pfPct(w.mret)}`:''}.`);}
+ const days=(new Date(e.as_of)-new Date(PF.pts[0].as_of))/864e5;
+ if(days<60)out.push(`History starts ${fmtDay(PF.pts[0].as_of)}, so the index is young. Early market moves still include first-time comp clean-ups. It becomes a real read on your cards once weekly re-comps pile up over a couple of months.`);
+ return out;
+}
+async function pfLoadMovers(d0,d1){
+ const box=document.getElementById('pfmovers');if(!box)return;
+ if(d0===d1){box.innerHTML='<div class="dnote">Pick a longer range to see movers.</div>';return;}
+ let rows=[];try{const r=await fetch(SB+"/rest/v1/rpc/portfolio_movers",{method:'POST',headers:{apikey:KEY,Authorization:"Bearer "+KEY,'content-type':'application/json'},body:JSON.stringify({d0,d1,lim:40})});rows=await r.json();}catch(e){}
+ if(!Array.isArray(rows)||!rows.length){box.innerHTML='<div class="dnote">No card-level moves in this range.</div>';return;}
+ const seen=new Set();rows=rows.filter(r=>!seen.has(r.card_id)&&seen.add(r.card_id));
+ const mk=rows.filter(r=>r.kind==='market'),rv=rows.filter(r=>r.kind==='reval');
+ const up=mk.filter(r=>+r.delta>0).sort((a,b)=>b.delta-a.delta).slice(0,6),dn=mk.filter(r=>+r.delta<0).sort((a,b)=>a.delta-b.delta).slice(0,6),rvv=rv.sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,6);
+ const row=r=>{const c=CARDS.find(x=>x.id===r.card_id);const p=(+r.v1/+r.v0-1);return `<div class="pfmv" onclick="openCard('${r.card_id}')"><div class="pfmn"><b>${esc(r.player||'')}</b><small>${esc([r.set_name,r.variation].filter(Boolean).join(' · '))}</small></div><div class="pfmr"><span>${money(r.v0)} &rarr; <b>${money(r.v1)}</b></span><span class="trend ${+r.delta>0?'up':'dn'}">${+r.v0?pfPct(p):''}</span></div></div>`;};
+ box.innerHTML=`<div class="pfmcols"><div><h3 class="subh">Market gains</h3>${up.map(row).join('')||'<div class="dnote">None</div>'}</div><div><h3 class="subh">Market drops</h3>${dn.map(row).join('')||'<div class="dnote">None</div>'}</div></div>
+ ${rvv.length?`<h3 class="subh">Biggest revaluations</h3><div class="dnote" style="margin-top:-4px">Value changed because the pricing method changed or a comp was corrected, not because the market moved.</div>${rvv.map(row).join('')}`:''}`;
+}
+
 async function loadInsights(force){
  if(INS&&!force)return INS;
  const since=new Date(Date.now()-21*864e5).toISOString().slice(0,10);
