@@ -1,5 +1,5 @@
 {
   "cleanUrls": true,
-  "rewrites": [{ "source": "/s/:slug", "destination": "/index.html" }],
+  "rewrites": [{ "source": "/s/:slug", "destination": "/" }],
   "headers": [{ "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }, { "key": "Referrer-Policy", "value": "no-referrer" }] }]
 }
