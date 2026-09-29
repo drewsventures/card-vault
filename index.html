@@ -2112,7 +2112,7 @@ function shareScopeText(l){
  if(l.scope_type==='segment')return 'Collection: '+l.segment;
  return (l.card_ids||[]).length+' hand-picked cards';
 }
-function sharePriceText(l){return l.price_mode==='hide'?'Prices hidden':l.price_mode==='value'?'Shows market value':('Asking = value +'+(+l.markup_pct||0)+'%');}
+function sharePriceText(l){return l.price_mode==='hide'?'Prices hidden':l.price_mode==='value'?'Shows market value':('Asking = last sale +'+(+l.markup_pct||0)+'%');}
 function shareCount(l){
  const live=c=>c.status!=='sold'&&c.status!=='duplicate'&&(c.photos||[]).length;
  if(l.scope_type==='all')return CARDS.filter(c=>live(c)&&!c.share_hidden).length;
@@ -2146,7 +2146,7 @@ async function renderShare(){
 function shareSegments(){const cnt={};CARDS.forEach(c=>{if(c.status==='sold'||c.status==='duplicate'||!(c.photos||[]).length)return;const s=seg(c);cnt[s]=(cnt[s]||0)+1;});return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>[s,cnt[s]]);}
 function shareForm(id){
  const t=terms();
- const base={title:'',intro:'',scope_type:'all',lot_id:null,segment:null,price_mode:'ask',markup_pct:15,show_comps:false,terms:[t.pay,t.ship,t.claim].filter(Boolean).join(' '),contact:''};
+ const base={title:'',intro:'',scope_type:'all',lot_id:null,segment:null,price_mode:'ask',markup_pct:20,show_comps:false,terms:[t.pay,t.ship,t.claim].filter(Boolean).join(' '),contact:''};
  SHAREFORM=id?Object.assign({},base,(SHARES||[]).find(x=>x.id===id)):base;
  renderShare().then(()=>{const f=document.getElementById('shf-title');if(f)f.focus();});
 }
@@ -2162,8 +2162,8 @@ function shareFormHTML(f){
   <div id="shf-lotw" ${f.scope_type==='lot'?'':'hidden'}><label for="shf-lot">Lot</label><select id="shf-lot">${lots.map(l=>`<option value="${l.id}"${sel(f.lot_id,l.id)}>${esc(l.name||'Untitled lot')}</option>`).join('')||'<option value="">No lots yet</option>'}</select></div>
   <div id="shf-segw" ${f.scope_type==='segment'?'':'hidden'}><label for="shf-seg">Collection</label><select id="shf-seg">${segs.map(([s,n])=>`<option value="${esc(s)}"${sel(f.segment,s)}>${esc(s)} (${n})</option>`).join('')}</select></div>
   <label for="shf-price">Prices</label>
-  <select id="shf-price" onchange="document.getElementById('shf-mkw').hidden=this.value!=='ask'"><option value="ask"${sel(f.price_mode,'ask')}>Asking price (market value plus a markup)</option><option value="value"${sel(f.price_mode,'value')}>Market value</option><option value="hide"${sel(f.price_mode,'hide')}>Hide prices (message for price)</option></select>
-  <div id="shf-mkw" ${f.price_mode==='ask'?'':'hidden'}><label for="shf-mk">Markup over market value (%)</label><input id="shf-mk" type="number" inputmode="decimal" min="0" max="200" value="${+f.markup_pct||0}"><div class="skidn">A card's own asking price (set on its page) always wins over this.</div></div>
+  <select id="shf-price" onchange="document.getElementById('shf-mkw').hidden=this.value!=='ask'"><option value="ask"${sel(f.price_mode,'ask')}>Asking price (most recent sale plus a markup)</option><option value="value"${sel(f.price_mode,'value')}>Market value</option><option value="hide"${sel(f.price_mode,'hide')}>Hide prices (message for price)</option></select>
+  <div id="shf-mkw" ${f.price_mode==='ask'?'':'hidden'}><label for="shf-mk">Markup over the most recent sale (%)</label><input id="shf-mk" type="number" inputmode="decimal" min="0" max="200" value="${+f.markup_pct||0}"><div class="skidn">Uses each card's most recent sold comp. Falls back to market value for 1/1s and sketches, cards with no recent sale, or when the latest sale is under half or over double the market value. A card's own asking price (set on its page) always wins.</div></div>
   <label class="skchk"><input type="checkbox" id="shf-comps"${f.show_comps?' checked':''}> Show each card's 5 most recent sales</label>
   <label for="shf-intro">Note at the top (optional)</label><input id="shf-intro" value="${esc(f.intro||'')}" placeholder="e.g. Everything here is available. Bundle deals welcome.">
   <label for="shf-terms">Sale terms</label><input id="shf-terms" value="${esc(f.terms||'')}">
@@ -2189,7 +2189,7 @@ async function toggleShare(id){const l=SHARES.find(x=>x.id===id);if(!l)return;aw
 async function deleteShare(id){if(!confirm('Delete this link? Anyone who has it will see "link not available".'))return;await shareOp({op:'delete_link',id});renderShare();}
 function shareCardBlock(c){
  const allLink=(SHARES||[]).find(l=>l.active&&l.scope_type==='all');
- const est=c.current_value?Math.ceil(c.current_value*1.15):null;
+ const est=(()=>{const v=+c.current_value||0,r=c.value_recent!=null?+c.value_recent:null,one=c.serial_den===1||/^(sketch|owner|estimate|ebay-relative|cost\+25)/i.test(c.value_source||'');const b=(r&&!one&&(!v||(r>=v*.5&&r<=v*2)))?r:v;return b?Math.ceil(b*1.2):null;})();
  return `<div class="shcard"><div class="rl"><span style="font-weight:700">Sharing</span><span>${c.not_for_sale?'Not for sale':c.share_hidden?'Hidden from links':'Visible in links'}</span></div>
   <div class="shgrid"><label>Asking price<input id="sc-ask" type="number" inputmode="decimal" min="0" value="${c.ask_price!=null?c.ask_price:''}" placeholder="${est?'auto ≈ $'+est:'auto'}"></label>
   <label class="skchk"><input type="checkbox" id="sc-nfs"${c.not_for_sale?' checked':''}> Not for sale</label>
