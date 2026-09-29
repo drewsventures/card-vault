@@ -492,6 +492,18 @@ body{font-variant-numeric:tabular-nums}
  #mainnav #nav-more,#nav-sealed,#nav-sets{display:none!important}
  header{z-index:12}
 }
+
+/* ===== clean studio photos everywhere (matches the share gallery) ===== */
+:root{--photo:#f1f1ef}
+.tile .ph{aspect-ratio:4/5;background:var(--photo);border-radius:14px}
+.tile .ph img{object-fit:contain;padding:0}
+.tile .ph img:not([src*="/display/"]){padding:7%}
+.ctile{background:var(--photo)}
+.ctile img:not([src*="/display/"]){object-fit:contain;padding:10%}
+.dphotos img{aspect-ratio:4/5;object-fit:contain;background:var(--photo);border:0;border-radius:14px}
+.dphotos img:not([src*="/display/"]){padding:5%}
+.litem img{object-fit:contain;background:var(--photo)}
+.skph img{background:var(--photo);border-radius:12px;object-fit:contain}
 </style>
 </head><body>
 <header>
@@ -1913,7 +1925,7 @@ function renderSketchReview(){
   ${SKPULL[c.id]?`<div class="skpull ${SKPULL[c.id].state}">${SKPULL[c.id].state==='done'||SKPULL[c.id].state==='error'?'':'<span class="sp"></span>'}${esc(SKPULL[c.id].msg)}</div>`:''}
   ${c._nophoto?`<div class="skflag"><b>No photos yet.</b> The value is based on the character only. Photograph the front and back so the artist can be read.</div>`:''}
   ${c._fnote?`<div class="sknote">${esc(c._fnote)}</div>`:''}
-  <div class="skph">${front?`<a href="${front.url}" target="_blank" rel="noopener"><img src="${front.url}" alt="front"></a>`:'<div class="no">no front photo</div>'}${back?`<a href="${back.url}" target="_blank" rel="noopener"><img src="${back.url}" alt="back"></a>`:'<div class="no">no back photo</div>'}</div>
+  <div class="skph">${front?`<a href="${front.url}" target="_blank" rel="noopener"><img src="${front.display_url||front.url}" alt="front"></a>`:'<div class="no">no front photo</div>'}${back?`<a href="${back.url}" target="_blank" rel="noopener"><img src="${back.display_url||back.url}" alt="back"></a>`:'<div class="no">no back photo</div>'}</div>
   <div class="skval"><div><div class="lab">${c._skr?'CURRENT VALUE':'PROPOSED VALUE'}</div><div class="big">${money(c._skr?c.current_value:proposed)}</div></div>
    <div style="text-align:right">${conf?`<span class="skpill ${conf}">${conf} confidence</span><div style="font-size:11px;color:var(--mut);margin-top:4px;max-width:210px">${SKCONF[conf]||''}</div>`:'<span class="skpill none">no model value</span>'}</div></div>
   <div class="skgrid">
