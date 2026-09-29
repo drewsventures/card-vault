@@ -466,6 +466,32 @@ nav button.on{color:var(--ink)}
 .shgrid label{font-size:12px;color:var(--mut);font-weight:600}
 .shgrid input[type=number]{display:block;width:100%;margin-top:4px;border:1px solid var(--line2);border-radius:10px;padding:9px 10px;font:15px var(--ui);background:var(--card)}
 .shgrid .skchk{display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:13.5px;font-weight:500}
+
+/* ===== v9 design pass: nav, contrast, type ===== */
+:root{--faint:#767676;--mono:var(--ui)}
+body{font-variant-numeric:tabular-nums}
+.idchip,.idbig>span,.mono.id,code{font-family:'IBM Plex Mono',ui-monospace,monospace}
+#mainnav button.sec,#nav-sealed,#nav-sets{display:none}
+#mainnav{overflow:visible}
+#mainnav button{flex:1 1 0;min-width:0;min-height:52px;color:var(--mut)}
+#mainnav button.on{color:var(--ink)}
+.moresheet{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.18)}
+.moresheet .mscard{position:absolute;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.16);padding:6px;min-width:200px}
+.moresheet .mscard button{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:13px 14px;border-radius:11px;font:600 15px var(--ui);color:var(--ink);cursor:pointer;text-align:left}
+.moresheet .mscard button:hover{background:var(--elev)}
+.moresheet .mscard .ic{width:20px;text-align:center;color:var(--mut)}
+.dphotos.one{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto}
+.nophoto{margin:12px 0;padding:12px;border:1px dashed var(--line2);border-radius:12px;color:var(--mut);font-size:13px;text-align:center}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media(min-width:1000px){
+ body{padding-bottom:0;padding-left:208px}
+ #mainnav{top:0;bottom:0;right:auto;width:208px;flex-direction:column;justify-content:flex-start;gap:2px;padding:84px 12px 20px;border-top:0;border-right:1px solid var(--line);background:var(--bg2);overflow-y:auto}
+ #mainnav button,#mainnav button.sec{display:flex;flex:none;flex-direction:row;justify-content:flex-start;gap:12px;font-size:14.5px;padding:10px 12px;min-height:0;border-radius:10px;width:100%}
+ #mainnav button .ic{width:20px;text-align:center;font-size:16px}
+ #mainnav button.on{background:var(--elev)}
+ #mainnav #nav-more,#nav-sealed,#nav-sets{display:none!important}
+ header{z-index:12}
+}
 </style>
 </head><body>
 <header>
@@ -499,20 +525,22 @@ nav button.on{color:var(--ink)}
 <div id="sheet"></div>
 <div id="settings"></div>
 <div id="modal"></div>
-<nav>
+<nav id="mainnav" aria-label="Main">
   <button id="nav-dash" class="on" onclick="show('dash')"><span class="ic">&#9632;</span>Home</button>
-  <button id="nav-portfolio" onclick="show('portfolio');renderPortfolio()"><span class="ic">&#8599;</span>Portfolio</button>
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Browse</button>
-  <button id="nav-insights" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
-  <button id="nav-watch" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
+  <button id="nav-portfolio" onclick="show('portfolio');renderPortfolio()"><span class="ic">&#8599;</span>Portfolio</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
-  <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#8599;</span>Share</button>
-  <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
-  <button id="nav-sold" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
-  <button id="nav-shows" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#127942;</span>Shows</button>
-  <button id="nav-sealed" onclick="show('sealed');renderSealed()"><span class="ic">&#128230;</span>Sealed</button>
-  <button id="nav-sets" onclick="show('sets');renderSets()"><span class="ic">&#128218;</span>Sets</button>
+  <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#10150;</span>Share</button>
+  <button id="nav-insights" class="sec" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
+  <button id="nav-watch" class="sec" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
+  <button id="nav-review" class="sec" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
+  <button id="nav-sold" class="sec" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
+  <button id="nav-shows" class="sec" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#9733;</span>Shows</button>
+  <button id="nav-sealed" class="sec" onclick="show('sealed');renderSealed()"><span class="ic">&#9635;</span>Sealed</button>
+  <button id="nav-sets" class="sec" onclick="show('sets');renderSets()"><span class="ic">&#9776;</span>Sets</button>
+  <button id="nav-more" onclick="toggleMore()" aria-haspopup="true" aria-expanded="false"><span class="ic">&#8943;</span>More</button>
 </nav>
+<div id="moresheet" class="moresheet hide" onclick="if(event.target===this)toggleMore(false)"><div class="mscard" role="menu"></div></div>
 <script>
 const SB="https://kcmrmswazprkizbzewpm.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbXJtc3dhenBya2l6Ynpld3BtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NTEzMzAsImV4cCI6MjEwNDEyNzMzMH0.EuB77E8I0b6HzdK8zfDG1qlg-q_k0FUej6pYLyEFiJI";
@@ -701,7 +729,7 @@ function openCard(id){
    ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
    ${serialBadgeHTML(c)}
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
-   <div class="dphotos">${front?`<img src="${front.display_url||front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.display_url||back.url}">`:'<div class="no">no back</div>'}</div>
+   ${(front||back)?`<div class="dphotos${front&&back?'':' one'}">${front?`<img src="${front.display_url||front.url}" alt="front">`:''}${back?`<img src="${back.display_url||back.url}" alt="back">`:''}</div>`:'<div class="nophoto">No photos yet</div>'}
    <div class="dval">${money(c.current_value)}${vtagFor(c)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
    <div id="cvtr8"></div><div id="cvpops"></div>
    ${liveCompsBlock(c)}
@@ -992,7 +1020,7 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+function show(v){if(v!=='review')SKMODE=false;toggleMore(false);setTimeout(()=>{const a=document.querySelector('#mainnav button.sec.on');const m=document.getElementById('nav-more');if(m)m.classList.toggle('on',!!a);},0);['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
  ['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
@@ -2164,5 +2192,9 @@ async function saveCardShare(id,btn){
 }
 setTimeout(()=>loadShares().catch(()=>{}),1500);
 
+
+function toggleMore(force){const sh=document.getElementById('moresheet');if(!sh)return;const open=force===undefined?sh.classList.contains('hide'):force;
+ if(open){const c=sh.querySelector('.mscard');c.innerHTML=[...document.querySelectorAll('#mainnav button.sec')].filter(b=>getComputedStyle(b).display!=='none'||window.innerWidth<1000).filter(b=>!['nav-sealed','nav-sets'].includes(b.id)).map(b=>`<button role="menuitem" onclick="document.getElementById('${b.id}').click()">${b.innerHTML}</button>`).join('');}
+ sh.classList.toggle('hide',!open);const m=document.getElementById('nav-more');if(m)m.setAttribute('aria-expanded',open?'true':'false');}
 </script>
 </body></html>
