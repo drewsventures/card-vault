@@ -52,7 +52,7 @@ select.sort{height:34px;border-radius:999px;border:1px solid var(--line);backgro
 @media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 16px}}
 @media(min-width:960px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(min-width:1180px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
-.tile{display:block;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0}
+.tile{display:flex;flex-direction:column;justify-content:flex-start;align-self:start;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0;width:100%}
 .ph{position:relative;aspect-ratio:4/5;background:var(--photo);border-radius:var(--radius);overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s}
 .ph img.in{opacity:1}
@@ -252,7 +252,7 @@ function slideHTML(c,i){
     pb=`<div class="pricebox"><div class="lbl">${lbl}</div><div class="amt">${amt}</div>${D.terms&&!c.sold&&!c.nfs?`<div class="terms">${esc(D.terms)}</div>`:''}${comps}</div>`;
   } else if(D.terms){pb=`<div class="pricebox"><div class="lbl">Price</div><div class="amt" style="font-size:20px">Message for price</div><div class="terms">${esc(D.terms)}</div></div>`;}
   return `<article class="slide" data-i="${i}"><div class="stage">
-    <div class="big${raw?' raw':''}" data-i="${i}">${p.front?`<img alt="${esc(titleOf(c))} front" src="${esc(p.front.img)}" ${Math.abs(i-VI)>1?'loading="lazy"':''}>`:''}
+    <div class="big${raw?' raw':''}" data-i="${i}">${p.front?`<img alt="${esc(titleOf(c))} front" src="${esc(p.front.thumb)}" data-full="${esc(p.front.img)}" ${Math.abs(i-VI)>1?'loading="lazy"':''} onload="if(this.dataset.full&&this.src!==this.dataset.full){const f=this.dataset.full;this.dataset.full='';const t=new Image();t.onload=()=>{this.src=f};t.src=f;}">`:''}
       ${p.back?`<button class="flip" data-flip="${i}" aria-label="Show other side"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg><span>Back</span></button>`:''}</div>
     <div class="info"><h2>${esc(titleOf(c))}</h2><div class="sub">${esc(subOf(c))}</div>
       ${pills.length?`<div class="pills">${pills.join('')}</div>`:''}${pb}
