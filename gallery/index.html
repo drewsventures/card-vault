@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Card Collection</title>
+<meta name="description" content="Browse the collection: clean photos, grades and prices.">
+<meta property="og:title" content="Card Collection">
+<meta property="og:description" content="Browse the collection: clean photos, grades and prices.">
+<meta name="theme-color" content="#f5f5f3">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://kcmrmswazprkizbzewpm.supabase.co">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#f5f5f3;--surface:#ffffff;--photo:#f1f1ef;--ink:#111;--ink2:#3a3a3a;--mut:#6f6f6f;--faint:#a5a5a5;
+  --line:#e6e6e2;--chip:#ececE8;--accent:#111;--good:#0a7f45;--radius:14px;
+  --font:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+/* header */
+.top{padding:22px 0 6px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+h1{font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-.03em;margin:6px 0 6px}
+.intro{color:var(--ink2);max-width:640px;margin:0 0 4px}
+.meta{color:var(--mut);font-size:13px}
+
+/* toolbar */
+.bar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);padding:10px 0 8px;margin-top:10px}
+.srow{display:flex;gap:8px;align-items:center}
+.search{flex:1;position:relative}
+.search input{width:100%;height:44px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:0 14px 0 40px;font:16px var(--font);color:var(--ink)}
+.search input:focus{outline:none;border-color:#bdbdb8;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint)}
+.iconbtn{height:44px;min-width:44px;border:1px solid var(--line);background:var(--surface);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;cursor:pointer;font-weight:600;font-size:14px}
+.iconbtn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink2);white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip small{font-weight:600;opacity:.55;margin-left:4px}
+select.sort{height:34px;border-radius:999px;border:1px solid var(--line);background:var(--surface);padding:0 12px;font:600 13.5px var(--font);color:var(--ink2)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px;padding:14px 0 40px}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 16px}}
+@media(min-width:960px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1180px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.tile{display:block;text-align:left;background:none;border:0;padding:0;cursor:pointer;min-width:0}
+.ph{position:relative;aspect-ratio:4/5;background:var(--photo);border-radius:var(--radius);overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .25s}
+.ph img.in{opacity:1}
+.ph.raw img{padding:6%;object-fit:contain}
+@media(hover:hover){.tile:hover .ph{box-shadow:0 12px 28px rgba(0,0,0,.10)}}
+.badge{position:absolute;left:8px;top:8px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:2px 7px;font-size:11.5px;font-weight:800;letter-spacing:.01em}
+.badge.sold{background:var(--ink);color:#fff;border-color:var(--ink)}
+.t1{font-size:14px;font-weight:700;margin-top:9px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.t2{font-size:12.5px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr{font-size:15px;font-weight:800;margin-top:4px;letter-spacing:-.01em}
+.pr.muted{color:var(--mut);font-weight:600;font-size:13px}
+.sk .ph{background:linear-gradient(90deg,#ecece9 25%,#f3f3f1 50%,#ecece9 75%);background-size:200% 100%;animation:sh 1.2s infinite}
+.sk .t1,.sk .t2{height:12px;border-radius:6px;background:#ecece9;margin-top:10px}
+.sk .t2{width:60%}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{padding:60px 0;text-align:center;color:var(--mut)}
+.more{display:block;margin:0 auto 40px;height:44px;padding:0 22px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer}
+footer{border-top:1px solid var(--line);padding:22px 0 calc(28px + var(--safe-b));color:var(--mut);font-size:13px}
+footer b{color:var(--ink2)}
+
+/* viewer */
+.viewer{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column}
+.viewer.open{display:flex}
+.vtop{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 6px;gap:8px}
+.vcount{font-size:13px;color:var(--mut);font-weight:600}
+.track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;overflow-y:auto;padding:0 16px calc(96px + var(--safe-b))}
+.stage{max-width:520px;margin:0 auto}
+.big{position:relative;aspect-ratio:4/5;background:var(--photo);border-radius:18px;overflow:hidden;cursor:zoom-in}
+.big img{width:100%;height:100%;object-fit:contain;display:block}
+.big.raw img{padding:5%}
+.flip{position:absolute;right:10px;bottom:10px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.95);font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.info{padding:16px 2px 0}
+.info h2{font-size:22px;line-height:1.2;font-weight:800;letter-spacing:-.02em;margin:0}
+.info .sub{color:var(--ink2);margin-top:4px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;color:var(--ink2)}
+.pill.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pricebox{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.pricebox .lbl{font-size:12px;font-weight:700;color:var(--mut);letter-spacing:.04em;text-transform:uppercase}
+.pricebox .amt{font-size:28px;font-weight:800;letter-spacing:-.03em;margin-top:2px}
+.pricebox .terms{font-size:13px;color:var(--ink2);margin-top:6px}
+.comps{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.comps .lbl{margin-bottom:4px}
+.crow{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0;color:var(--ink2)}
+.idline{margin-top:12px;font-size:12.5px;color:var(--mut)}
+.cta{position:fixed;left:0;right:0;bottom:0;z-index:55;padding:10px 16px calc(12px + var(--safe-b));background:linear-gradient(to top,var(--bg) 70%,transparent);display:none}
+.viewer.open ~ .cta{display:block}
+.cta .in{max-width:520px;margin:0 auto;display:flex;gap:8px}
+.btn{flex:1;height:50px;border-radius:14px;border:0;background:var(--ink);color:#fff;font-weight:800;font-size:15.5px;cursor:pointer}
+.btn.sec{flex:0 0 auto;padding:0 16px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.navbtn{display:none}
+@media(min-width:900px){.navbtn{display:inline-flex}}
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transition:.2s;z-index:80;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.zoom{position:fixed;inset:0;background:#fff;z-index:70;display:none;overflow:auto;touch-action:pinch-zoom}
+.zoom.open{display:block}
+.zoom img{width:100%;min-height:100%;object-fit:contain}
+.zoom button{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px}
+.err{padding:80px 16px;text-align:center}
+.err h1{font-size:22px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="wrap">
+    <div class="top">
+      <div class="eyebrow" id="eyebrow">Collection</div>
+      <h1 id="title">Loading…</h1>
+      <p class="intro" id="intro" hidden></p>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="bar" id="bar">
+      <div class="srow">
+        <label class="search"><span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search cards</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Search player, set, grade…" autocomplete="off" enterkeyhint="search">
+        </label>
+        <button class="iconbtn" id="swipeBtn" aria-label="Swipe through cards" title="Swipe through">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M2 7v10M22 7v10"/></svg>
+          <span class="navbtn" style="display:inline">Swipe</span>
+        </button>
+      </div>
+      <div class="chips" id="chips" role="toolbar" aria-label="Filter"></div>
+    </div>
+    <div class="grid" id="grid" aria-live="polite"></div>
+    <button class="more" id="more" hidden>Show more</button>
+    <footer id="foot"></footer>
+  </div>
+</main>
+
+<section class="viewer" id="viewer" aria-modal="true" role="dialog" aria-label="Card viewer">
+  <div class="vtop">
+    <button class="iconbtn" id="vclose" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <span class="vcount" id="vcount"></span>
+    <span style="display:flex;gap:6px">
+      <button class="iconbtn navbtn" id="vprev" aria-label="Previous card">‹</button>
+      <button class="iconbtn navbtn" id="vnext" aria-label="Next card">›</button>
+      <button class="iconbtn" id="vshare" aria-label="Share this card">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+      </button>
+    </span>
+  </div>
+  <div class="track" id="track"></div>
+</section>
+<div class="cta" id="cta"><div class="in"><button class="btn" id="want">I'm interested</button></div></div>
+<div class="zoom" id="zoom"><img alt=""><button class="iconbtn" aria-label="Close zoom" id="zclose">✕</button></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const FN='https://kcmrmswazprkizbzewpm.supabase.co/functions/v1/share-gallery';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=v=>v==null?'':'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:v<100?2:0});
+let D=null, ALL=[], VIEW=[], seg='All', q='', shown=0, sort='feat';
+const PAGE=40;
+
+function slug(){
+  const m=location.pathname.match(/\/s\/([a-z0-9-]+)/i); if(m) return m[1];
+  return new URLSearchParams(location.search).get('s')||'';
+}
+function titleOf(c){return c.player||'Card';}
+function subOf(c){const y=String(c.year||'');const st=String(c.set||'');const yr=y&&st.startsWith(y)?'':y;return [yr,st,c.num?('#'+c.num):''].filter(Boolean).join(' ');}
+function grabble(c){return [c.player,c.year,c.set,c.num,c.variation,c.serial,c.grade,c.seg,c.id,(c.tags||[]).join(' ')].join(' ').toLowerCase();}
+function priceHTML(c){
+  if(c.sold) return '<div class="pr muted">Sold</div>';
+  if(D.price_mode==='hide') return '';
+  if(c.nfs) return '<div class="pr muted">Not for sale</div>';
+  if(c.price==null) return '<div class="pr muted">Make an offer</div>';
+  return `<div class="pr">${money(c.price)}</div>`;
+}
+function tileBadge(c){
+  if(c.sold) return '<span class="badge sold">Sold</span>';
+  if(c.grade) return `<span class="badge">${esc(c.grade)}</span>`;
+  if(c.serial) return `<span class="badge">${esc(c.serial)}</span>`;
+  return '';
+}
+function img(c,big){
+  const p=c.photos&&c.photos.front; if(!p) return '';
+  return `<img alt="${esc(titleOf(c))}" loading="lazy" decoding="async" src="${esc(big?p.img:p.thumb)}" onload="this.classList.add('in')">`;
+}
+function tileHTML(c,i){
+  const raw=c.photos&&c.photos.front&&!c.photos.front.clean;
+  return `<button class="tile" data-i="${i}" aria-label="${esc(titleOf(c)+' '+subOf(c))}">
+    <div class="ph${raw?' raw':''}">${img(c)}${tileBadge(c)}</div>
+    <div class="t1">${esc(titleOf(c))}${c.variation?' <span style="font-weight:600;color:var(--ink2)">'+esc(c.variation)+'</span>':''}</div>
+    <div class="t2">${esc(subOf(c))}</div>
+    ${priceHTML(c)}</button>`;
+}
+function skeleton(n){let h='';for(let i=0;i<n;i++)h+='<div class="tile sk"><div class="ph"></div><div class="t1"></div><div class="t2"></div></div>';return h;}
+
+function applyFilters(){
+  const qq=q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  VIEW=ALL.filter(c=>(seg==='All'||c.seg===seg)&&qq.every(w=>c._g.includes(w)));
+  const pv=c=>c.price==null?-1:c.price;
+  if(sort==='plh') VIEW.sort((a,b)=>(a.price??1e12)-(b.price??1e12));
+  else if(sort==='phl') VIEW.sort((a,b)=>pv(b)-pv(a));
+  else if(sort==='az') VIEW.sort((a,b)=>titleOf(a).localeCompare(titleOf(b)));
+  else if(sort==='new') VIEW.sort((a,b)=>String(b.year).localeCompare(String(a.year)));
+  shown=0; $('#grid').innerHTML=''; renderMore();
+  $('#meta').textContent=VIEW.length===ALL.length?`${ALL.length} cards`:`${VIEW.length} of ${ALL.length} cards`;
+  if(!VIEW.length) $('#grid').innerHTML='<div class="empty" style="grid-column:1/-1">No cards match that search.</div>';
+}
+function renderMore(){
+  const next=VIEW.slice(shown,shown+PAGE);
+  $('#grid').insertAdjacentHTML('beforeend',next.map((c,k)=>tileHTML(c,shown+k)).join(''));
+  shown+=next.length; $('#more').hidden=shown>=VIEW.length;
+}
+function renderChips(){
+  const cnt={};ALL.forEach(c=>cnt[c.seg]=(cnt[c.seg]||0)+1);
+  const segs=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+  let h='';
+  if(segs.length>1) h+=['All',...segs].map(s=>`<button class="chip" aria-pressed="${s===seg}" data-seg="${esc(s)}">${esc(s==='Unclassified'?'Other':s)}<small>${s==='All'?ALL.length:cnt[s]}</small></button>`).join('');
+  h+=`<select class="sort" id="sort" aria-label="Sort"><option value="feat">Featured</option>${D.price_mode!=='hide'?'<option value="phl">Price: high to low</option><option value="plh">Price: low to high</option>':''}<option value="new">Newest year</option><option value="az">A to Z</option></select>`;
+  $('#chips').innerHTML=h; $('#sort').value=sort;
+}
+
+/* viewer */
+let VI=0, flipped={};
+function slideHTML(c,i){
+  const p=c.photos||{}, raw=p.front&&!p.front.clean;
+  const pills=[];
+  if(c.grade)pills.push(`<span class="pill dark">${esc(c.grade)}</span>`);
+  if(c.serial)pills.push(`<span class="pill">${esc(c.serial)}</span>`);
+  (c.tags||[]).forEach(t=>pills.push(`<span class="pill">${esc(t)}</span>`));
+  if(c.variation)pills.push(`<span class="pill">${esc(c.variation)}</span>`);
+  let pb='';
+  if(D.price_mode!=='hide'||c.sold){
+    const amt=c.sold?'Sold':c.nfs?'Not for sale':c.price==null?'Make an offer':money(c.price);
+    const lbl=c.sold||c.nfs?'Status':(D.price_mode==='value'?'Market value':'Asking');
+    let comps='';
+    if(c.comps&&c.comps.length){comps=`<div class="comps"><div class="lbl">Recent sales</div>${c.comps.map(x=>`<div class="crow"><span>${new Date(x.d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</span><b>${money(x.p)}</b></div>`).join('')}</div>`;}
+    pb=`<div class="pricebox"><div class="lbl">${lbl}</div><div class="amt">${amt}</div>${D.terms&&!c.sold&&!c.nfs?`<div class="terms">${esc(D.terms)}</div>`:''}${comps}</div>`;
+  } else if(D.terms){pb=`<div class="pricebox"><div class="lbl">Price</div><div class="amt" style="font-size:20px">Message for price</div><div class="terms">${esc(D.terms)}</div></div>`;}
+  return `<article class="slide" data-i="${i}"><div class="stage">
+    <div class="big${raw?' raw':''}" data-i="${i}">${p.front?`<img alt="${esc(titleOf(c))} front" src="${esc(p.front.img)}" ${Math.abs(i-VI)>1?'loading="lazy"':''}>`:''}
+      ${p.back?`<button class="flip" data-flip="${i}" aria-label="Show other side"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg><span>Back</span></button>`:''}</div>
+    <div class="info"><h2>${esc(titleOf(c))}</h2><div class="sub">${esc(subOf(c))}</div>
+      ${pills.length?`<div class="pills">${pills.join('')}</div>`:''}${pb}
+      <div class="idline">Card ID ${esc(c.id)}${c.cert?` · Cert ${esc(c.cert)}`:''}</div></div></div></article>`;
+}
+function openViewer(i){
+  VI=i; flipped={};
+  const t=$('#track');
+  // render a window around the current card for speed; extend as you swipe
+  t.innerHTML=VIEW.map((c,k)=>slideHTML(c,k)).join('');
+  $('#viewer').classList.add('open'); document.body.style.overflow='hidden';
+  requestAnimationFrame(()=>{t.scrollLeft=i*t.clientWidth;updateCount();});
+  history.replaceState(null,'','#c='+encodeURIComponent(VIEW[i].id));
+}
+function closeViewer(){$('#viewer').classList.remove('open');document.body.style.overflow='';history.replaceState(null,'',location.pathname+location.search);}
+function updateCount(){
+  const t=$('#track'); const i=Math.round(t.scrollLeft/Math.max(1,t.clientWidth)); VI=Math.max(0,Math.min(VIEW.length-1,i));
+  $('#vcount').textContent=`${VI+1} of ${VIEW.length}`;
+  const c=VIEW[VI]; if(!c)return;
+  $('#want').textContent=c.sold?'Ask about similar cards':"I'm interested";
+  history.replaceState(null,'','#c='+encodeURIComponent(c.id));
+}
+function go(d){const t=$('#track');t.scrollTo({left:(VI+d)*t.clientWidth,behavior:'smooth'});}
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200);}
+function cardMsg(c){return `Hi! I'm interested in ${titleOf(c)} ${subOf(c)}${c.grade?' '+c.grade:''}${c.serial?' '+c.serial:''}${c.price&&!c.sold?' (listed '+money(c.price)+')':''}. Card ID ${c.id}.`;}
+function contactTarget(){
+  const ct=(D.contact||'').trim(); if(!ct) return null;
+  const digits=ct.replace(/[^\d+]/g,'');
+  if(/@/.test(ct)&&/\./.test(ct)&&!/^@/.test(ct)) return {kind:'mail',v:ct};
+  if(digits.length>=10) return {kind:'sms',v:digits};
+  if(/^@/.test(ct)) return {kind:'ig',v:ct.slice(1)};
+  return null;
+}
+async function interested(){
+  const c=VIEW[VI]; const msg=cardMsg(c); const tg=contactTarget();
+  if(tg&&tg.kind==='sms'){location.href=`sms:${tg.v}${/iPhone|iPad/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}`;return;}
+  if(tg&&tg.kind==='mail'){location.href=`mailto:${tg.v}?subject=${encodeURIComponent('Card: '+titleOf(c))}&body=${encodeURIComponent(msg+'\n\n'+location.href)}`;return;}
+  try{await navigator.clipboard.writeText(msg+' '+location.href);toast(tg&&tg.kind==='ig'?'Message copied. Opening Instagram…':'Message copied. Paste it to the person who sent you this link.');}catch(e){toast('Card ID '+c.id);}
+  if(tg&&tg.kind==='ig') setTimeout(()=>location.href='https://ig.me/m/'+encodeURIComponent(tg.v),600);
+}
+async function shareCard(){
+  const c=VIEW[VI]; const url=location.href;
+  if(navigator.share){try{await navigator.share({title:titleOf(c),text:subOf(c),url});}catch(e){}return;}
+  try{await navigator.clipboard.writeText(url);toast('Link copied');}catch(e){}
+}
+
+/* events */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('.tile'); if(t&&!t.classList.contains('sk')){openViewer(+t.dataset.i);return;}
+  const ch=e.target.closest('.chip'); if(ch){seg=ch.dataset.seg;renderChips();applyFilters();return;}
+  const f=e.target.closest('[data-flip]'); if(f){e.stopPropagation();const i=+f.dataset.flip,c=VIEW[i];flipped[i]=!flipped[i];const im=f.parentElement.querySelector('img');const s=flipped[i]?c.photos.back:c.photos.front;im.src=s.img;f.parentElement.classList.toggle('raw',!s.clean);f.querySelector('span').textContent=flipped[i]?'Front':'Back';return;}
+  const bg=e.target.closest('.big'); if(bg){const im=bg.querySelector('img');if(im){$('#zoom img').src=im.src;$('#zoom').classList.add('open');}return;}
+});
+$('#more').onclick=renderMore;
+$('#q').addEventListener('input',e=>{q=e.target.value;clearTimeout(window._qt);window._qt=setTimeout(applyFilters,120);});
+document.addEventListener('change',e=>{if(e.target.id==='sort'){sort=e.target.value;applyFilters();}});
+$('#swipeBtn').onclick=()=>VIEW.length&&openViewer(0);
+$('#vclose').onclick=closeViewer; $('#vprev').onclick=()=>go(-1); $('#vnext').onclick=()=>go(1);
+$('#vshare').onclick=shareCard; $('#want').onclick=interested;
+$('#zclose').onclick=()=>$('#zoom').classList.remove('open');
+$('#track').addEventListener('scroll',()=>{clearTimeout(window._st);window._st=setTimeout(updateCount,60);},{passive:true});
+document.addEventListener('keydown',e=>{
+  if($('#zoom').classList.contains('open')){if(e.key==='Escape')$('#zoom').classList.remove('open');return;}
+  if(!$('#viewer').classList.contains('open'))return;
+  if(e.key==='Escape')closeViewer(); if(e.key==='ArrowRight')go(1); if(e.key==='ArrowLeft')go(-1);
+});
+window.addEventListener('resize',()=>{if($('#viewer').classList.contains('open')){const t=$('#track');t.scrollLeft=VI*t.clientWidth;}});
+
+/* boot */
+(async function(){
+  $('#grid').innerHTML=skeleton(10);
+  const s=slug();
+  if(!s){document.getElementById('app').innerHTML='<div class="err"><h1>Link missing</h1><p>Ask for a fresh link.</p></div>';return;}
+  try{
+    const r=await fetch(FN+'?s='+encodeURIComponent(s)); D=await r.json();
+    if(!r.ok) throw new Error(D.error||'Not found');
+  }catch(e){document.getElementById('app').innerHTML=`<div class="err"><h1>This link isn't available</h1><p style="color:var(--mut)">${esc(e.message)}</p></div>`;return;}
+  document.title=D.title; $('#title').textContent=D.title; $('#eyebrow').textContent=D.price_mode==='hide'?'Collection':'Cards available';
+  if(D.intro){$('#intro').textContent=D.intro;$('#intro').hidden=false;}
+  ALL=D.cards.map(c=>(c._g=grabble(c),c));
+  $('#foot').innerHTML=`${D.terms?`<div><b>Terms:</b> ${esc(D.terms)}</div>`:''}<div style="margin-top:6px">Tap any card to swipe through with full photos, front and back. Prices can change; message to confirm.</div>`;
+  renderChips(); applyFilters();
+  const h=decodeURIComponent((location.hash.match(/c=([^&]+)/)||[])[1]||'');
+  if(h){const i=VIEW.findIndex(c=>c.id===h); if(i>=0) openViewer(i);}
+})();
+</script>
+</body>
+</html>

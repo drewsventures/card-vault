@@ -444,6 +444,28 @@ nav button.on{color:var(--ink)}
 .pfmr{display:flex;flex-direction:column;align-items:flex-end;font-size:11.5px;color:var(--mut);white-space:nowrap}
 .pfmr b{color:var(--ink)}
 @media(max-width:620px){.pfmcols{grid-template-columns:1fr}.pflegend{grid-template-columns:1fr}.pfdrow{grid-template-columns:1fr 1.2fr 62px}}
+/* share links */
+.shsub{color:var(--mut);font-size:13.5px;margin-bottom:12px;max-width:620px}
+.shrow{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:11px}
+.shrow.off{opacity:.6}
+.shrow .ln{font-weight:750;font-size:15.5px}
+.shrow .lm{color:var(--mut);font-size:12.5px;margin-top:2px}
+.shurl{margin:10px 0 2px;background:var(--elev);border-radius:9px;padding:8px 10px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.lotact .primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lotact .ok{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+.lotact .btnlink{border:1px solid var(--line2);background:var(--elev);color:var(--ink);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:600;text-decoration:none}
+.shform{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:14px 15px;margin:0 0 14px}
+.shform label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+.shform input,.shform select{width:100%;border:1px solid var(--line2);border-radius:10px;padding:10px 11px;font:15px var(--ui);background:var(--card);color:var(--ink)}
+.shform .skchk{display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:13.5px;margin-top:12px}
+.shform .skchk input{width:auto}
+.shform .skidb .go{background:var(--ink);color:#fff;border-color:var(--ink)}
+.shcard{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0}
+.shcard .rl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut)}
+.shgrid{display:grid;gap:8px;margin-top:8px}
+.shgrid label{font-size:12px;color:var(--mut);font-weight:600}
+.shgrid input[type=number]{display:block;width:100%;margin-top:4px;border:1px solid var(--line2);border-radius:10px;padding:9px 10px;font:15px var(--ui);background:var(--card)}
+.shgrid .skchk{display:flex;align-items:center;gap:8px;color:var(--ink2);font-size:13.5px;font-weight:500}
 </style>
 </head><body>
 <header>
@@ -464,6 +486,7 @@ nav button.on{color:var(--ink)}
   </div>
   <div id="review" class="hide"></div>
   <div id="lots" class="hide"></div>
+  <div id="share" class="hide"></div>
   <div id="sold" class="hide"></div>
   <div id="shows" class="hide"></div>
   <div id="sealed" class="hide"></div>
@@ -483,6 +506,7 @@ nav button.on{color:var(--ink)}
   <button id="nav-insights" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
   <button id="nav-watch" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
+  <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#8599;</span>Share</button>
   <button id="nav-review" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
   <button id="nav-sold" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
   <button id="nav-shows" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#127942;</span>Shows</button>
@@ -529,7 +553,7 @@ function segDomain(s){
  if(CULTURE_SEGS.includes(s))return 'Culture';
  return 'Other';
 }
-function primary(c){if(!c.photos||!c.photos.length)return null;const f=c.photos.find(p=>p.is_primary)||c.photos.find(p=>p.side==='front')||c.photos[0];return f?f.url:null;}
+function primary(c){if(!c.photos||!c.photos.length)return null;const f=c.photos.find(p=>p.is_primary)||c.photos.find(p=>p.side==='front')||c.photos[0];return f?(f.thumb_url||f.url):null;}
 async function fetchJSON(u,tries){
  for(let i=0;i<(tries||3);i++){
    try{const r=await fetch(u,{headers:{apikey:KEY,Authorization:"Bearer "+KEY}});
@@ -554,7 +578,7 @@ function costTag(c){return c._cm==='allocated'?' <span style="color:var(--faint)
 function copyId(ev,ref){ev.stopPropagation();const t=ref;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).catch(()=>{});const el=ev.currentTarget;if(el){const o=el.textContent;el.textContent='copied';setTimeout(()=>{el.textContent=o;},1000);}}
 async function load(){
  try{
-  CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
+  CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary,display_url,thumb_url)&order=current_value.desc.nullslast&limit=5000");
   await mergeCost();
   DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
   renderDash(); buildChips(); loadLots(); loadExtras();
@@ -677,7 +701,7 @@ function openCard(id){
    ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
    ${serialBadgeHTML(c)}
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
-   <div class="dphotos">${front?`<img src="${front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.url}">`:'<div class="no">no back</div>'}</div>
+   <div class="dphotos">${front?`<img src="${front.display_url||front.url}">`:'<div class="no">no front</div>'}${back?`<img src="${back.display_url||back.url}">`:'<div class="no">no back</div>'}</div>
    <div class="dval">${money(c.current_value)}${vtagFor(c)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
    <div id="cvtr8"></div><div id="cvpops"></div>
    ${liveCompsBlock(c)}
@@ -688,6 +712,7 @@ function openCard(id){
    <div id="cvcomp"></div>
    <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
+   ${c.status!=='sold'&&c.status!=='duplicate'?shareCardBlock(c):''}
    ${/^(sketch-model|sketch-confirmed|owner-estimate)$/.test(c.value_source||'')?`<button class="addlotbtn" style="border-color:var(--gold);color:var(--gold)" onclick="closeCard();openSketchReview('${c.id}')">Review sketch value &amp; comps</button>`:''}
    <button class="addlotbtn" onclick="editCard('${c.id}')">Edit details</button>
    <button class="addlotbtn" onclick="addToLotMenu('${c.id}')">+ Add to a lot</button>
@@ -967,8 +992,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
- ['dash','search','review','lots','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
+function show(v){if(v!=='review')SKMODE=false;['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+ ['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -1006,7 +1031,7 @@ function fval(id){const el=document.getElementById(id);if(!el)return null;const 
 function saleNet(c){return (num(c.sale_price)||0)-(num(c.sold_fees)||0);}
 function realizedPL(c){return (c.cost_basis!=null&&c.sale_price!=null)?(saleNet(c)-(+c.cost_basis)):null;}
 async function refreshData(){
- CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary)&order=current_value.desc.nullslast&limit=5000");
+ CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary,display_url,thumb_url)&order=current_value.desc.nullslast&limit=5000");
  await mergeCost();
  DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
 }
@@ -2034,6 +2059,110 @@ function sketchEntryHTML(){
  const todo=sk.filter(c=>c.needs_review).length;
  return `<div class="skentry" onclick="openSketchReview()"><div><div class="t">Sketch values</div><div class="s">${todo?todo+' to confirm or adjust':'All reviewed'} &middot; photos, comps and one-tap confirm</div></div><button>${todo?'Start':'Open'}</button></div>`;
 }
+
+/* ================= Share links (buyer galleries) ================= */
+const FN_SHARE=SB+"/functions/v1/share-gallery", GALLERY_BASE='https://drew-austin-cards.vercel.app/s/';
+let SHARES=null, SHAREFORM=null;
+async function shareOp(body){try{const r=await fetch(FN_SHARE,{method:'POST',headers:{'content-type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-ingest-secret':LOT_SECRET},body:JSON.stringify(body)});return await r.json();}catch(e){return {error:String(e)};}}
+async function loadShares(force){if(SHARES&&!force)return SHARES;const r=await shareOp({op:'list_links'});SHARES=(r&&r.links)||[];return SHARES;}
+function shareUrl(l,ref){return GALLERY_BASE+l.slug+(ref?'#c='+encodeURIComponent(ref):'');}
+function shareScopeText(l){
+ if(l.scope_type==='all')return 'Whole collection';
+ if(l.scope_type==='lot'){const lot=(typeof LOTS!=='undefined'&&LOTS||[]).find(x=>x.id===l.lot_id);return 'Lot: '+(lot?lot.name:'(deleted lot)');}
+ if(l.scope_type==='segment')return 'Collection: '+l.segment;
+ return (l.card_ids||[]).length+' hand-picked cards';
+}
+function sharePriceText(l){return l.price_mode==='hide'?'Prices hidden':l.price_mode==='value'?'Shows market value':('Asking = value +'+(+l.markup_pct||0)+'%');}
+function shareCount(l){
+ const live=c=>c.status!=='sold'&&c.status!=='duplicate'&&(c.photos||[]).length;
+ if(l.scope_type==='all')return CARDS.filter(c=>live(c)&&!c.share_hidden).length;
+ if(l.scope_type==='segment')return CARDS.filter(c=>live(c)&&!c.share_hidden&&seg(c)===l.segment).length;
+ if(l.scope_type==='lot'){const m=(typeof LOTMEM!=='undefined'&&LOTMEM[l.lot_id])||new Set();return CARDS.filter(c=>m.has(c.id)&&(c.photos||[]).length).length;}
+ return (l.card_ids||[]).length;
+}
+async function copyText(t,btn,label){try{await navigator.clipboard.writeText(t);}catch(e){prompt('Copy this link',t);}if(btn){const o=btn.textContent;btn.textContent=label||'Copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent=o;btn.classList.remove('ok');},1600);}}
+async function nativeShare(id){const l=(SHARES||[]).find(x=>x.id===id);if(!l)return;const url=shareUrl(l);if(navigator.share){try{await navigator.share({title:l.title,url});}catch(e){}}else copyText(url);}
+async function renderShare(){
+ const el=document.getElementById('share');
+ el.innerHTML='<h2 style="margin:16px 0 8px">Share</h2><div class="spin">Loading…</div>';
+ if(typeof loadLots==='function')await loadLots();
+ await loadShares(true);
+ let h=`<div class="shhead"><h2 style="margin:16px 0 2px">Share</h2><div class="shsub">Send a buyer or friend a clean, swipeable gallery. They see photos, grades and your asking price. Never your cost, P&amp;L or notes.</div></div>`;
+ h+=`<button class="newlot" onclick="shareForm()">+ New share link</button>`;
+ if(SHAREFORM)h+=shareFormHTML(SHAREFORM);
+ if(!SHARES.length&&!SHAREFORM)h+=`<div class="stat-note">No links yet. Start with your whole collection, a lot you're selling, or one collection like Star Wars.</div>`;
+ SHARES.forEach(l=>{
+  const n=shareCount(l);
+  h+=`<div class="shrow${l.active?'':' off'}">
+   <div class="shtop"><div style="min-width:0"><div class="ln">${esc(l.title)}</div><div class="lm">${esc(shareScopeText(l))} · ${n} card${n===1?'':'s'} · ${esc(sharePriceText(l))}${l.show_comps?' · recent sales shown':''}</div>
+   <div class="lm">${l.views||0} view${l.views===1?'':'s'}${l.last_viewed_at?' · last '+new Date(l.last_viewed_at).toLocaleDateString():''}${l.active?'':' · <b>paused</b>'}</div></div></div>
+   <div class="shurl mono" onclick="copyText('${shareUrl(l)}',this,'Link copied')">${shareUrl(l).replace('https://','')}</div>
+   <div class="lotact"><button class="primary" onclick="copyText('${shareUrl(l)}',this,'Link copied')">Copy link</button><button onclick="nativeShare('${l.id}')">Share…</button><a class="btnlink" href="${shareUrl(l)}" target="_blank" rel="noopener">Open</a><button onclick="shareForm('${l.id}')">Edit</button><button onclick="toggleShare('${l.id}')">${l.active?'Pause':'Resume'}</button><button onclick="deleteShare('${l.id}')">Delete</button></div>
+  </div>`;
+ });
+ h+=`<div class="stat-note" style="margin-top:14px">Tip: to share hand-picked cards, build a lot in Lots, then share that lot. Per-card asking price, "not for sale" and "hide from links" live on each card's page under Sharing.</div>`;
+ el.innerHTML=h;
+}
+function shareSegments(){const cnt={};CARDS.forEach(c=>{if(c.status==='sold'||c.status==='duplicate'||!(c.photos||[]).length)return;const s=seg(c);cnt[s]=(cnt[s]||0)+1;});return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>[s,cnt[s]]);}
+function shareForm(id){
+ const t=terms();
+ const base={title:'',intro:'',scope_type:'all',lot_id:null,segment:null,price_mode:'ask',markup_pct:15,show_comps:false,terms:[t.pay,t.ship,t.claim].filter(Boolean).join(' '),contact:''};
+ SHAREFORM=id?Object.assign({},base,(SHARES||[]).find(x=>x.id===id)):base;
+ renderShare().then(()=>{const f=document.getElementById('shf-title');if(f)f.focus();});
+}
+function shareFormHTML(f){
+ const lots=(typeof LOTS!=='undefined'&&LOTS)||[];
+ const segs=shareSegments();
+ const sel=(v,o)=>v===o?' selected':'';
+ return `<div class="shform" id="shform">
+  <div class="skidh">${f.id?'Edit link':'New share link'}</div>
+  <label for="shf-title">Title buyers see</label><input id="shf-title" value="${esc(f.title||'')}" placeholder="e.g. Star Wars autos for sale">
+  <label for="shf-scope">What to share</label>
+  <select id="shf-scope" onchange="shareScopeChange()"><option value="all"${sel(f.scope_type,'all')}>Whole collection (cards with photos)</option><option value="lot"${sel(f.scope_type,'lot')}>A lot</option><option value="segment"${sel(f.scope_type,'segment')}>One collection</option></select>
+  <div id="shf-lotw" ${f.scope_type==='lot'?'':'hidden'}><label for="shf-lot">Lot</label><select id="shf-lot">${lots.map(l=>`<option value="${l.id}"${sel(f.lot_id,l.id)}>${esc(l.name||'Untitled lot')}</option>`).join('')||'<option value="">No lots yet</option>'}</select></div>
+  <div id="shf-segw" ${f.scope_type==='segment'?'':'hidden'}><label for="shf-seg">Collection</label><select id="shf-seg">${segs.map(([s,n])=>`<option value="${esc(s)}"${sel(f.segment,s)}>${esc(s)} (${n})</option>`).join('')}</select></div>
+  <label for="shf-price">Prices</label>
+  <select id="shf-price" onchange="document.getElementById('shf-mkw').hidden=this.value!=='ask'"><option value="ask"${sel(f.price_mode,'ask')}>Asking price (market value plus a markup)</option><option value="value"${sel(f.price_mode,'value')}>Market value</option><option value="hide"${sel(f.price_mode,'hide')}>Hide prices (message for price)</option></select>
+  <div id="shf-mkw" ${f.price_mode==='ask'?'':'hidden'}><label for="shf-mk">Markup over market value (%)</label><input id="shf-mk" type="number" inputmode="decimal" min="0" max="200" value="${+f.markup_pct||0}"><div class="skidn">A card's own asking price (set on its page) always wins over this.</div></div>
+  <label class="skchk"><input type="checkbox" id="shf-comps"${f.show_comps?' checked':''}> Show each card's 5 most recent sales</label>
+  <label for="shf-intro">Note at the top (optional)</label><input id="shf-intro" value="${esc(f.intro||'')}" placeholder="e.g. Everything here is available. Bundle deals welcome.">
+  <label for="shf-terms">Sale terms</label><input id="shf-terms" value="${esc(f.terms||'')}">
+  <label for="shf-contact">How buyers reach you (optional)</label><input id="shf-contact" value="${esc(f.contact||'')}" placeholder="Phone for texts, @instagram, or email">
+  <div class="skidn">With a phone number, "I'm interested" opens a text to you with the card filled in. Leave blank and buyers copy a message to send back to you.</div>
+  <div class="skidb"><button class="go" onclick="saveShare()">${f.id?'Save':'Create link'}</button><button onclick="SHAREFORM=null;renderShare()">Cancel</button></div>
+ </div>`;
+}
+function shareScopeChange(){const v=document.getElementById('shf-scope').value;document.getElementById('shf-lotw').hidden=v!=='lot';document.getElementById('shf-segw').hidden=v!=='segment';}
+async function saveShare(){
+ const g=id=>document.getElementById(id);
+ const scope=g('shf-scope').value;
+ const body={title:g('shf-title').value.trim()||(scope==='all'?'My collection':scope==='segment'?g('shf-seg').value:'Cards for sale'),
+  intro:g('shf-intro').value.trim()||null,scope_type:scope,lot_id:scope==='lot'?(g('shf-lot').value||null):null,segment:scope==='segment'?g('shf-seg').value:null,
+  price_mode:g('shf-price').value,markup_pct:+g('shf-mk').value||0,show_comps:g('shf-comps').checked,terms:g('shf-terms').value.trim()||null,contact:g('shf-contact').value.trim()||null};
+ if(scope==='lot'&&!body.lot_id){alert('Make a lot first, then share it.');return;}
+ const r=await shareOp(SHAREFORM&&SHAREFORM.id?Object.assign({op:'update_link',id:SHAREFORM.id},body):Object.assign({op:'create_link'},body));
+ if(!r||!r.ok){alert('Could not save: '+((r&&r.error)||'unknown'));return;}
+ SHAREFORM=null; await renderShare();
+ if(r.link&&!body.id) copyText(shareUrl(r.link));
+}
+async function toggleShare(id){const l=SHARES.find(x=>x.id===id);if(!l)return;await shareOp({op:'update_link',id,active:!l.active});renderShare();}
+async function deleteShare(id){if(!confirm('Delete this link? Anyone who has it will see "link not available".'))return;await shareOp({op:'delete_link',id});renderShare();}
+function shareCardBlock(c){
+ const allLink=(SHARES||[]).find(l=>l.active&&l.scope_type==='all');
+ const est=c.current_value?Math.ceil(c.current_value*1.15):null;
+ return `<div class="shcard"><div class="rl"><span style="font-weight:700">Sharing</span><span>${c.not_for_sale?'Not for sale':c.share_hidden?'Hidden from links':'Visible in links'}</span></div>
+  <div class="shgrid"><label>Asking price<input id="sc-ask" type="number" inputmode="decimal" min="0" value="${c.ask_price!=null?c.ask_price:''}" placeholder="${est?'auto ≈ $'+est:'auto'}"></label>
+  <label class="skchk"><input type="checkbox" id="sc-nfs"${c.not_for_sale?' checked':''}> Not for sale</label>
+  <label class="skchk"><input type="checkbox" id="sc-hide"${c.share_hidden?' checked':''}> Hide from whole-collection links</label></div>
+  <div class="lotact" style="margin-top:8px"><button onclick="saveCardShare('${c.id}',this)">Save</button>${allLink?`<button onclick="copyText('${shareUrl(allLink,c.ref)}',this,'Card link copied')">Copy card link</button>`:''}</div></div>`;
+}
+async function saveCardShare(id,btn){
+ const v=document.getElementById('sc-ask').value;const body={op:'set_card',card_id:id,ask_price:v===''?null:+v,not_for_sale:document.getElementById('sc-nfs').checked,share_hidden:document.getElementById('sc-hide').checked};
+ const r=await shareOp(body);
+ if(r&&r.ok){const c=CARDS.find(x=>x.id===id);if(c){c.ask_price=body.ask_price;c.not_for_sale=body.not_for_sale;c.share_hidden=body.share_hidden;}btn.textContent='Saved';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Save';btn.classList.remove('ok');},1500);}
+ else alert('Could not save: '+((r&&r.error)||'unknown'));
+}
+setTimeout(()=>loadShares().catch(()=>{}),1500);
 
 </script>
 </body></html>
