@@ -163,11 +163,45 @@ Edge function ops: public `submit_offer`, `offer_status`, `respond_counter`
 3. **Negotiation**: counters, buyer status page, partial accept, paid/shipped → Sold,
    link view tracking.
 
+## Decisions (from Drew, Sep 30)
+
+- **Notifications to Drew: email and text.** Email from the edge function (Resend) on
+  every new offer / counter-back. Text via Twilio once A2P 10DLC sole-proprietor
+  registration clears (takes days to weeks, start it early). Carrier email-to-SMS
+  gateways are not an option (AT&T shut its gateway down; others are unreliable).
+- **Holds:** an accepted offer puts its cards On hold. They stay visible on every
+  link with an "On hold" badge and stay open to backup offers ("Get in line").
+  Only Drew marking the sale done moves them to Sold. If the deal falls through he
+  releases the hold and any backup offers surface at the top of the inbox.
+  Pending (not yet accepted) offers do not hold cards.
+- **Link discount applies to hand-set asking prices too.**
+
+## Counter-offers
+
+At submit the buyer picks how Drew gets back to them: **Text** (phone required) or
+**Email**. That choice is stored on the offer.
+
+Every offer has a private status page (`/o/<token>`) with the full thread:
+offer → counter → counter-back … Each step shows per-card prices and the total.
+Buttons for whoever's turn it is: **Accept**, **Counter**, **Decline**.
+Counters expire after 48h by default.
+
+Drew counters from the inbox (one total or per card, optional note), then picks how
+it goes out:
+
+1. **Text from my phone** (default): opens Messages prefilled with
+   "Countered at $1,000 for the 3 cards. Accept or reply here: <status link>".
+   Comes from Drew's real number, needs no Twilio, and the buyer can just reply
+   by text.
+2. **Email**: sent automatically by the edge function with the same link.
+3. **Automatic text**: via Twilio, once registered.
+
+The buyer can respond on the status page (Drew gets email/text) or just reply in the
+text thread; then Drew marks it accepted/declined in the inbox by hand. Both paths
+end in the same offer record.
+
 ## Open questions
 
-- Notification channel: email, Slack, ntfy, or text?
-- Should other viewers see "On hold" on claimed cards, or should those cards just
-  disappear?
-- Counters in-app (status page) or just reply by text?
-- Does a link discount also apply to cards with a hand-set asking price? (Draft: yes.)
-- Expire discounts by date, or leave them open until Drew edits the link?
+- Counter expiry: 48h ok?
+- Should the buyer's status page show other open offers on the same cards
+  ("someone else has an offer in")? Draft: no.
