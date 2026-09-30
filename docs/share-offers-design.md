@@ -165,10 +165,11 @@ Edge function ops: public `submit_offer`, `offer_status`, `respond_counter`
 
 ## Decisions (from Drew, Sep 30)
 
-- **Notifications to Drew: email and text.** Email from the edge function (Resend) on
-  every new offer / counter-back. Text via Twilio once A2P 10DLC sole-proprietor
-  registration clears (takes days to weeks, start it early). Carrier email-to-SMS
-  gateways are not an option (AT&T shut its gateway down; others are unreliable).
+- **Notifications to Drew: email first, no Twilio for now.** Email via Resend
+  (free tier: 3,000/month, 100/day) from the edge function on every new offer and
+  counter-back. Optional free phone push via ntfy (app + private topic) if email
+  isn't fast enough. Twilio texts deferred. Counters to buyers go out as texts
+  from Drew's own phone (prefilled Messages), or as email.
 - **Holds:** an accepted offer puts its cards On hold. They stay visible on every
   link with an "On hold" badge and stay open to backup offers ("Get in line").
   Only Drew marking the sale done moves them to Sold. If the deal falls through he
