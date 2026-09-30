@@ -156,8 +156,12 @@ Edge function ops: public `submit_offer`, `offer_status`, `respond_counter`
 
 ## Phasing
 
-1. **Browse**: filter sheet, URL filters, select + select all, tray. Submit sends a
-   structured SMS/email (reuses today's contact flow). Discount links.
+1. **Browse** (built Sep 30): filter sheet (sidebar on desktop), URL filters, select +
+   select all, tray, lot / per-card offer sheet with $ or %, claim vs offer. Submit sends
+   a structured text/email/IG message (reuses the link's contact). Discount links with
+   recipient, end date and offers on/off; "Copy for someone" in the Share tab.
+   `share-gallery` v5 sends `team`, `list` (pre-discount price) and the link deal fields;
+   source now lives in `supabase/functions/share-gallery/index.ts`.
 2. **Offers**: offers tables, submit_offer, inbox with accept/decline, email + push
    notification, holds.
 3. **Negotiation**: counters, buyer status page, partial accept, paid/shipped → Sold,

@@ -2135,9 +2135,10 @@ async function renderShare(){
   const n=shareCount(l);
   h+=`<div class="shrow${l.active?'':' off'}">
    <div class="shtop"><div style="min-width:0"><div class="ln">${esc(l.title)}</div><div class="lm">${esc(shareScopeText(l))} · ${n} card${n===1?'':'s'} · ${esc(sharePriceText(l))}${l.show_comps?' · recent sales shown':''}</div>
+   ${shareDealText(l)?`<div class="lm"><b>${esc(shareDealText(l))}</b></div>`:''}
    <div class="lm">${l.views||0} view${l.views===1?'':'s'}${l.last_viewed_at?' · last '+new Date(l.last_viewed_at).toLocaleDateString():''}${l.active?'':' · <b>paused</b>'}</div></div></div>
    <div class="shurl mono" onclick="copyText('${shareUrl(l)}',this,'Link copied')">${shareUrl(l).replace('https://','')}</div>
-   <div class="lotact"><button class="primary" onclick="copyText('${shareUrl(l)}',this,'Link copied')">Copy link</button><button onclick="nativeShare('${l.id}')">Share…</button><a class="btnlink" href="${shareUrl(l)}" target="_blank" rel="noopener">Open</a><button onclick="shareForm('${l.id}')">Edit</button><button onclick="toggleShare('${l.id}')">${l.active?'Pause':'Resume'}</button><button onclick="deleteShare('${l.id}')">Delete</button></div>
+   <div class="lotact"><button class="primary" onclick="copyText('${shareUrl(l)}',this,'Link copied')">Copy link</button><button onclick="nativeShare('${l.id}')">Share…</button><a class="btnlink" href="${shareUrl(l)}" target="_blank" rel="noopener">Open</a><button onclick="shareForm('${l.id}')">Edit</button><button onclick="shareDup('${l.id}')">Copy for someone</button><button onclick="toggleShare('${l.id}')">${l.active?'Pause':'Resume'}</button><button onclick="deleteShare('${l.id}')">Delete</button></div>
   </div>`;
  });
  h+=`<div class="stat-note" style="margin-top:14px">Tip: to share hand-picked cards, build a lot in Lots, then share that lot. Per-card asking price, "not for sale" and "hide from links" live on each card's page under Sharing.</div>`;
@@ -2146,9 +2147,22 @@ async function renderShare(){
 function shareSegments(){const cnt={};CARDS.forEach(c=>{if(c.status==='sold'||c.status==='duplicate'||!(c.photos||[]).length)return;const s=seg(c);cnt[s]=(cnt[s]||0)+1;});return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]).map(s=>[s,cnt[s]]);}
 function shareForm(id){
  const t=terms();
- const base={title:'',intro:'',scope_type:'all',lot_id:null,segment:null,price_mode:'ask',markup_pct:20,show_comps:false,terms:[t.pay,t.ship,t.claim].filter(Boolean).join(' '),contact:''};
+ const base={title:'',intro:'',scope_type:'all',lot_id:null,segment:null,price_mode:'ask',markup_pct:20,show_comps:false,terms:[t.pay,t.ship,t.claim].filter(Boolean).join(' '),contact:'',recipient:'',discount_pct:null,discount_ends_at:null,allow_offers:true};
  SHAREFORM=id?Object.assign({},base,(SHARES||[]).find(x=>x.id===id)):base;
  renderShare().then(()=>{const f=document.getElementById('shf-title');if(f)f.focus();});
+}
+// Same cards and pricing as an existing link, new URL for one person (their own name and discount).
+function shareDup(id){
+ const l=(SHARES||[]).find(x=>x.id===id);if(!l)return;
+ SHAREFORM=Object.assign({},l,{id:null,slug:null,recipient:'',views:0,last_viewed_at:null,active:true});
+ renderShare().then(()=>{const f=document.getElementById('shf-rcp');if(f){f.scrollIntoView({block:'center'});f.focus();}});
+}
+function shareDealText(l){
+ const d=+l.discount_pct||0, parts=[];
+ if(l.recipient)parts.push('For '+l.recipient);
+ if(d>0&&l.price_mode!=='hide'){const end=l.discount_ends_at?new Date(l.discount_ends_at):null;parts.push(d+'% off'+(end?(end<new Date()?' (ended '+end.toLocaleDateString(undefined,{month:'short',day:'numeric'})+')':' through '+end.toLocaleDateString(undefined,{month:'short',day:'numeric'})):''));}
+ if(l.allow_offers===false)parts.push('Claim only, no offers');
+ return parts.join(' · ');
 }
 function shareFormHTML(f){
  const lots=(typeof LOTS!=='undefined'&&LOTS)||[];
@@ -2165,10 +2179,16 @@ function shareFormHTML(f){
   <select id="shf-price" onchange="document.getElementById('shf-mkw').hidden=this.value!=='ask'"><option value="ask"${sel(f.price_mode,'ask')}>Asking price (most recent sale plus a markup)</option><option value="value"${sel(f.price_mode,'value')}>Market value</option><option value="hide"${sel(f.price_mode,'hide')}>Hide prices (message for price)</option></select>
   <div id="shf-mkw" ${f.price_mode==='ask'?'':'hidden'}><label for="shf-mk">Markup over the most recent sale (%)</label><input id="shf-mk" type="number" inputmode="decimal" min="0" max="200" value="${+f.markup_pct||0}"><div class="skidn">Uses each card's most recent sold comp. Falls back to market value for 1/1s and sketches, cards with no recent sale, or when the latest sale is under half or over double the market value. A card's own asking price (set on its page) always wins.</div></div>
   <label class="skchk"><input type="checkbox" id="shf-comps"${f.show_comps?' checked':''}> Show each card's 5 most recent sales</label>
+  <label for="shf-rcp">Who it's for (optional)</label><input id="shf-rcp" value="${esc(f.recipient||'')}" placeholder="e.g. Mike">
+  <div class="skidn">Shows "Picked for Mike" at the top. Tip: use "Copy for someone" on a link to make a personal copy for each buyer.</div>
+  <label for="shf-disc">Discount for this link (%)</label><input id="shf-disc" type="number" inputmode="decimal" min="0" max="90" value="${+f.discount_pct||''}" placeholder="None">
+  <label for="shf-dend">Discount ends (optional)</label><input id="shf-dend" type="date" value="${f.discount_ends_at?String(f.discount_ends_at).slice(0,10):''}">
+  <div class="skidn">Buyers see your price struck through with the discounted price under it, and a "15% off" banner. Applies to every card, including ones with their own asking price. Ends at midnight on the end date; after that the link shows normal prices.</div>
+  <label class="skchk"><input type="checkbox" id="shf-offers"${f.allow_offers!==false?' checked':''}> Let buyers make offers (off = claim at your price only)</label>
   <label for="shf-intro">Note at the top (optional)</label><input id="shf-intro" value="${esc(f.intro||'')}" placeholder="e.g. Everything here is available. Bundle deals welcome.">
   <label for="shf-terms">Sale terms</label><input id="shf-terms" value="${esc(f.terms||'')}">
   <label for="shf-contact">How buyers reach you (optional)</label><input id="shf-contact" value="${esc(f.contact||'')}" placeholder="Phone for texts, @instagram, or email">
-  <div class="skidn">With a phone number, "I'm interested" opens a text to you with the card filled in. Leave blank and buyers copy a message to send back to you.</div>
+  <div class="skidn">With a phone number, offers and claims open a text to you with the cards and prices filled in. Leave blank and buyers copy a message to send back to you.</div>
   <div class="skidb"><button class="go" onclick="saveShare()">${f.id?'Save':'Create link'}</button><button onclick="SHAREFORM=null;renderShare()">Cancel</button></div>
  </div>`;
 }
@@ -2178,7 +2198,9 @@ async function saveShare(){
  const scope=g('shf-scope').value;
  const body={title:g('shf-title').value.trim()||(scope==='all'?'My collection':scope==='segment'?g('shf-seg').value:'Cards for sale'),
   intro:g('shf-intro').value.trim()||null,scope_type:scope,lot_id:scope==='lot'?(g('shf-lot').value||null):null,segment:scope==='segment'?g('shf-seg').value:null,
-  price_mode:g('shf-price').value,markup_pct:+g('shf-mk').value||0,show_comps:g('shf-comps').checked,terms:g('shf-terms').value.trim()||null,contact:g('shf-contact').value.trim()||null};
+  price_mode:g('shf-price').value,markup_pct:+g('shf-mk').value||0,show_comps:g('shf-comps').checked,terms:g('shf-terms').value.trim()||null,contact:g('shf-contact').value.trim()||null,
+  recipient:g('shf-rcp').value.trim()||null,discount_pct:+g('shf-disc').value>0?Math.min(90,+g('shf-disc').value):null,
+  discount_ends_at:g('shf-dend').value?new Date(g('shf-dend').value+'T23:59:59').toISOString():null,allow_offers:g('shf-offers').checked};
  if(scope==='lot'&&!body.lot_id){alert('Make a lot first, then share it.');return;}
  const r=await shareOp(SHAREFORM&&SHAREFORM.id?Object.assign({op:'update_link',id:SHAREFORM.id},body):Object.assign({op:'create_link'},body));
  if(!r||!r.ok){alert('Could not save: '+((r&&r.error)||'unknown'));return;}
