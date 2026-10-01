@@ -311,7 +311,30 @@ nav button.on{color:var(--ink)}
 .herov .n{font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:2px}
 .herov .s{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
 .herov .s b{color:var(--ink);font-weight:700}
-.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0 4px}
+.kpis{display:grid;grid-template-columns:1fr;gap:12px;margin:6px 0 4px}
+@media(min-width:760px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;min-width:0}
+.kpi .kl{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);font-weight:700}
+.kpi .kl a{color:var(--ink);font-weight:700;cursor:pointer;font-size:12.5px}
+.kpi .kn{font-size:36px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:4px}
+@media(min-width:1000px){.kpi .kn{font-size:42px}}
+.kpi .ks{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
+.kpi .ks b{color:var(--ink);font-weight:700}
+.kchg{display:inline-block;line-height:1.4;margin-top:8px;padding:5px 10px;border-radius:9px;font-size:13.5px;font-weight:700;background:var(--bg);color:var(--ink2)}
+.kchg.up{background:var(--upsoft);color:var(--up)}.kchg.dn{background:var(--dnsoft);color:var(--dn)}
+.kchg span{font-weight:600;opacity:.85;margin-left:4px}
+.ksub{font-size:12px;color:var(--mut);margin-top:5px}
+.krange{display:flex;gap:4px;margin-top:12px}
+.krange button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font:700 11.5px var(--ui);color:var(--ink2);cursor:pointer}
+.krange button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.kchart{margin-top:6px;min-height:120px}
+.kbars{position:relative;margin-top:12px}
+.kbars svg{width:100%;height:auto;display:block;overflow:visible}
+.kbar{fill:var(--ink);opacity:.82}.kbar.cur{opacity:1}
+.kbars .hit:hover+.kbar,.kbars .hit:focus+.kbar{opacity:1;fill:var(--ink2)}
+.kfoot{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);margin-top:8px;flex-wrap:wrap}
+.kfoot b{color:var(--ink)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
 .quick button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;font:600 12px var(--ui);color:var(--ink);cursor:pointer}
 .quick button b{display:block;font-size:16px;font-weight:750;letter-spacing:-.01em}
 .sechd{display:flex;justify-content:space-between;align-items:baseline;margin:28px 0 10px}
@@ -1508,6 +1531,58 @@ function trendPill(c,compact){
 function popPill(c){const a=POPS[c.id];if(!a||!a.pop_total)return '';return `<span class="poppill" title="${esc(a.asset_name||'')} (${a.match} match via Alt)">Graded pop ${Number(a.pop_total).toLocaleString()}${a.match==='probable'?'*':''}</span>`;}
 function rvPill(c){const t=TREND[c.id];if(!t||t.pct==null)return '';const p=+t.pct;return `<span class="trend rv" title="Re-valued since ${t.then_date} (${esc(t.source_then||'')} to ${esc(c.value_source||'')}), not a market move">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}% re-comp</span>`;}
 function miniTile(c,rv){const u=primary(c);return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(subjectOf(c)||c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)}${rv?rvPill(c):trendPill(c,true)}</div></div></div>`;}
+/* ---- home: headline value + sales cards ---- */
+let DASHRANGE='30d';
+const ymd=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');};
+function dashSales(sold){
+ // rolling 30-day windows, so the 1st of a month doesn't reset the number to zero
+ const now=new Date(),m0=ymd(now.getTime()-29*864e5),m1=ymd(now.getTime()-59*864e5);
+ let gross=0,mNow=0,nNow=0,mPrev=0,nPrev=0,undated=0;
+ // weekly buckets (Mon start) for the last 12 weeks, oldest first
+ const mon=new Date(now);mon.setHours(12,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+ const weeks=[];for(let i=11;i>=0;i--){const d=new Date(mon);d.setDate(d.getDate()-7*i);weeks.push({start:ymd(d),v:0,n:0});}
+ sold.forEach(c=>{const p=+c.sale_price||0;gross+=p;const d=c.sold_date?String(c.sold_date).slice(0,10):null;
+  if(!d){undated++;return;}
+  if(d>=m0){mNow+=p;nNow++;}else if(d>=m1){mPrev+=p;nPrev++;}
+  for(let i=weeks.length-1;i>=0;i--){if(d>=weeks[i].start){weeks[i].v+=p;weeks[i].n++;break;}}});
+ const priced=sold.filter(c=>c.sale_price!=null).length;
+ return {gross,mNow,nNow,mPrev,nPrev,undated,weeks,avg:priced?gross/priced:0};
+}
+function dashSalesBars(S){
+ const W=520,H=92,B=18,T=4,n=S.weeks.length,gap=4,bw=(W-gap*(n-1))/n,mx=Math.max(...S.weeks.map(w=>w.v),1);
+ const bars=S.weeks.map((w,i)=>{const x=i*(bw+gap),h=w.v?Math.max(3,(w.v/mx)*(H-B-T)):0,y=H-B-h;
+  const lbl=`Week of ${fmtDay(w.start)}: ${money(w.v)} · ${w.n} card${w.n===1?'':'s'}`;
+  return `<rect class="hit" x="${x.toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H-B}" fill="transparent" tabindex="0"><title>${esc(lbl)}</title></rect>${h?`<path class="kbar${i===n-1?' cur':''}" d="M${x.toFixed(1)} ${(H-B).toFixed(1)}V${(y+4).toFixed(1)}q0 -4 4 -4h${(bw-8).toFixed(1)}q4 0 4 4V${(H-B).toFixed(1)}Z"><title>${esc(lbl)}</title></path>`:''}`;}).join('');
+ const xl=[0,n-1].map(i=>`<text x="${i?W:0}" y="${H-4}" text-anchor="${i?'end':'start'}" class="pfax">${i?'This week':fmtDay(S.weeks[0].start)}</text>`).join('');
+ const best=S.weeks.reduce((a,w)=>w.v>a.v?w:a,S.weeks[0]);
+ return `<div class="kbars"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sales by week, last 12 weeks"><line x1="0" x2="${W}" y1="${H-B}" y2="${H-B}" class="pfgrid"/>${bars}${xl}</svg></div>
+  <div class="kfoot"><span>Sales by week, last 12 weeks</span>${best.v?`<span>Best: <b>${money(best.v)}</b> wk of ${fmtDay(best.start)}</span>`:''}</div>${S.undated?`<div class="ksub">${S.undated} sale${S.undated===1?'':'s'} without a date aren't in the weekly bars.</div>`:''}`;
+}
+// "Since last comp": the most recent snapshot where cards you already held changed value
+// (market moves + re-comps), compared with the snapshot before it. Additions don't count.
+async function dashValueFill(){
+ const ce=document.getElementById('kpiv-chg'),ch=document.getElementById('kpiv-chart');if(!ce||!ch)return;
+ try{await loadPortfolio();}catch(e){return;}
+ const P=PF&&PF.pts||[];if(!P.length)return;
+ let i=P.length-1;while(i>0&&Math.abs((+P[i].market_change||0)+(+P[i].reval_change||0))<0.5)i--;
+ if(i>0){const p=P[i],d=(+p.market_change||0)+(+p.reval_change||0),base=+p.held_base||(+P[i-1].total_value||0),pct=base?d/base*100:0;
+  ce.innerHTML=`<div class="kchg ${d>=0?'up':'dn'}">${d>=0?'&#9650;':'&#9660;'} ${d>=0?'+':'-'}${money(Math.abs(d))} (${d>=0?'+':''}${pct.toFixed(1)}%) <span>since last comp, ${fmtDay(p.as_of)}</span></div>
+   <div class="ksub">${[+p.market_change?'Market '+pfSign(+p.market_change):'',+p.reval_change?'Re-comps '+pfSign(+p.reval_change):'',+p.added_value?'New cards '+pfSign(+p.added_value)+' (not counted)':''].filter(Boolean).join(' &middot; ')}</div>`;}
+ dashValueChart();
+}
+function dashValueChart(){
+ const ch=document.getElementById('kpiv-chart');if(!ch||!PF||!PF.pts.length)return;
+ const keep=PFRANGE;PFRANGE=DASHRANGE;const R=pfRangePts();PFRANGE=keep;
+ const W=Math.round(Math.max(280,Math.min(620,(document.getElementById('kpiv').clientWidth||340)-32)));
+ let foot='';
+ if(R.length>1){const D=pfDecomp(R),chg=D.e.total_value-D.s.total_value;
+  const hv=+(document.getElementById('kpiv').dataset.val||0),last=D.e.total_value;
+  const note=hv&&Math.abs(last-hv)/hv>0.02?`<div class="ksub">The chart counts everything you own, sealed and sets included (${money(last)} on ${fmtDay(D.e.as_of)}).</div>`:'';
+  foot=`<div class="kfoot"><span>${fmtDay(D.s.as_of)} &rarr; now: <b class="${chg>=0?'up':'dn'}" style="color:${chg>=0?'var(--up)':'var(--dn)'}">${pfSign(chg)}</b></span><span>Market ${pfPct(D.idxRet)} &middot; added ${pfK(D.added)} &middot; re-comps ${pfSign(D.reval)}</span></div>${note}`;}
+ ch.innerHTML=`<div class="krange">${[['7d','1W'],['30d','1M'],['all','All']].map(([k,t])=>`<button class="${DASHRANGE===k?'on':''}" onclick="DASHRANGE='${k}';dashValueChart()">${t}</button>`).join('')}</div>
+  <div class="kchart">${R.length>1?pfLineChart('kpivc',R,'total_value',{w:W,h:130,label:'Collection value over time'}):'<div class="ksub">The trend line builds as daily snapshots add up.</div>'}</div>${foot}`;
+ if(R.length>1)pfWire('kpivc',R,'total_value',(p,prev)=>`<b>${fmtDay(p.as_of)}</b><div>${money(p.total_value)}</div>${prev?`<small>${pfSign(p.total_value-prev.total_value)} that day${(+p.added_value)?` (${pfK(+p.added_value)} new)`:''}</small>`:''}`);
+}
 function renderDash(){
  const live=c=>c.status!=='sold'&&c.status!=='duplicate';
  const own=CARDS.filter(c=>live(c)&&c.item_type!=='sealed'&&c.item_type!=='set');
@@ -1520,10 +1595,20 @@ function renderDash(){
  const mk=own.map(c=>[c,TREND[c.id]]).filter(([c,t])=>t&&t.trend_kind==='market'&&t.chg!=null);
  const mchg=mk.reduce((s,[c,t])=>s+(+t.chg),0), mbase=mk.reduce((s,[c,t])=>s+(+t.value_then||0),0);
  const since=mk.length?mk.map(([c,t])=>t.then_date).sort()[0]:null;
- let h=`<div class="herov"><div class="l">Collection value</div><div class="n">${money(val)}</div>
-  <div class="s"><span><b>${own.length.toLocaleString()}</b> cards</span><span>Cost <b>${money(cost)}</b></span><span style="color:${gain>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${gain>=0?'+':'-'}${money(Math.abs(gain))}</b> vs cost</span>
-  ${mk.length>=20?`<span title="Only cards valued from live comps both then and now count as a market move">Market since ${fmtDay(since)} <b style="color:${mchg>=0?'var(--up)':'var(--dn)'}">${mchg>=0?'+':'-'}${money(Math.abs(mchg))}${mbase?` (${mchg>=0?'+':''}${(mchg/mbase*100).toFixed(1)}%)`:''}</b> on ${mk.length} comped cards</span>`:''}</div></div>
-  <div class="quick"><button onclick="show('insights');renderInsights()"><b>&#10022;</b>Insights</button><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="show('sold');renderSold()"><b style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b>Realized</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
+ const sales=dashSales(soldCards);
+ let h=`<div class="kpis">
+  <div class="kpi" id="kpiv" data-val="${Math.round(val)}"><div class="kl"><span>Collection value</span><a onclick="show('portfolio');renderPortfolio()">Portfolio &rsaquo;</a></div>
+   <div class="kn">${money(val)}</div><div id="kpiv-chg"></div>
+   <div class="ks"><span><b>${own.length.toLocaleString()}</b> cards</span><span>Cost <b>${money(cost)}</b></span><span style="color:${gain>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${gain>=0?'+':'-'}${money(Math.abs(gain))}</b> vs cost</span></div>
+   <div id="kpiv-chart"></div></div>
+  <div class="kpi" id="kpis"><div class="kl"><span>Sold</span><a onclick="show('sold');renderSold()">Sales &rsaquo;</a></div>
+   <div class="kn">${money(sales.gross)}</div>
+   <div class="kchg ${sales.mNow>=sales.mPrev&&sales.mNow>0?'up':''}">${money(sales.mNow)} last 30 days <span>&middot; ${sales.nNow} card${sales.nNow===1?'':'s'}${sales.mPrev||sales.nPrev?` &middot; ${money(sales.mPrev)} the 30 before`:''}</span></div>
+   <div class="ks"><span><b>${soldCards.length.toLocaleString()}</b> cards sold</span><span style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b> profit</span>${sales.avg?`<span>Avg <b>${money(sales.avg)}</b>/card</span>`:''}</div>
+   ${dashSalesBars(sales)}</div>
+ </div>
+  <div class="quick"><button onclick="show('insights');renderInsights()"><b>&#10022;</b>Insights</button><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
+ if(mk.length>=20)h+=`<div class="dnote" title="Only cards valued from live comps both then and now count as a market move">Market since ${fmtDay(since)}: <b style="color:${mchg>=0?'var(--up)':'var(--dn)'}">${mchg>=0?'+':'-'}${money(Math.abs(mchg))}${mbase?` (${mchg>=0?'+':''}${(mchg/mbase*100).toFixed(1)}%)`:''}</b> on ${mk.length} comped cards</div>`;
  // movers: market moves only, meaningful size
  const movers=mk.filter(([c,t])=>Math.abs(+t.pct)>=5&&(+c.current_value||0)>=10).sort((a,b)=>Math.abs(b[1].chg)-Math.abs(a[1].chg)).slice(0,12).map(x=>x[0]);
  if(movers.length){h+=`<div class="sechd"><h2>Biggest moves</h2><a onclick="SORT='move';openAll('all')">See all &rsaquo;</a></div><div class="rowscroll">${movers.map(miniTile).join('')}</div><div class="dnote">Market moves only: same comp method at both points, from a solid read (median or Card Ladder, not a single sale), and under a 60% swing. Anything else is labeled re-valued.</div>`;}
@@ -1543,6 +1628,7 @@ function renderDash(){
  h+=`<div class="sechd"><h2>Top cards</h2><a onclick="openAll('value')">See all &rsaquo;</a></div><div class="rowscroll">${top.map(miniTile).join('')}</div>`;
  h+=`<button class="addpbtn" style="margin-top:22px" onclick="addPurchase()">+ Add a purchase</button>`;
  document.getElementById('dash').innerHTML=h;
+ dashValueFill();
  const hs=document.getElementById('hsum');if(hs)hs.textContent=own.length.toLocaleString()+' cards · '+money(val);
 }
 /* ---- browse: subject bar + sort ---- */
@@ -1677,7 +1763,7 @@ function pfSegRows(R){
   const o=e.by_segment[g];return {g,value:+o.value,n:+o.n,mret:f-1,added:add,reval:rev};}).sort((a,b)=>b.value-a.value);
 }
 function pfLineChart(id,R,key,opt){
- opt=opt||{};const W=Math.round(Math.min(900,Math.max(300,((document.getElementById('portfolio')||{}).clientWidth||720)-32))),H=opt.h||(W<520?190:220),L=W<520?46:58,Rp=10,T=12,B=26;
+ opt=opt||{};const W=opt.w||Math.round(Math.min(900,Math.max(300,((document.getElementById('portfolio')||{}).clientWidth||720)-32))),H=opt.h||(W<520?190:220),L=W<520?46:58,Rp=10,T=12,B=26;
  const xs=R.map(p=>new Date(p.as_of+'T12:00:00').getTime()),ys=R.map(p=>+p[key]);
  const x0=xs[0],x1=xs[xs.length-1]===x0?x0+864e5:xs[xs.length-1];
  let y0=opt.zero?0:Math.min(...ys),y1=Math.max(...ys);if(opt.ref!=null){y0=Math.min(y0,opt.ref);y1=Math.max(y1,opt.ref);}
