@@ -1105,7 +1105,7 @@ function soldBlock(c){
  const net=saleNet(c),rl=realizedPL(c),mk=c.current_value;
  const hind=(c.sale_price!=null&&mk!=null)?(+c.sale_price-+mk):null;
  let h=`<div class="soldbox"><div class="sbrow"><span>Sold for</span><b>${money(c.sale_price)}</b></div>`;
- if(c.sold_fees)h+=`<div class="sbrow"><span>Fees + shipping</span><b>-${money(c.sold_fees)}</b></div><div class="sbrow"><span>Net proceeds</span><b>${money(net)}</b></div>`;
+ if(c.sold_fees)h+=`<div class="sbrow"><span>Fees + shipping${c.sold_fees_estimated?' (est.)':''}</span><b>-${money(c.sold_fees)}</b></div><div class="sbrow"><span>Net proceeds</span><b>${money(net)}</b></div>`;
  h+=`<div class="sbrow"><span>When / where</span><b>${c.sold_date||'--'}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}</b></div>`;
  if(c.cost_basis!=null)h+=`<div class="sbrow"><span>Cost basis</span><b>${money(c.cost_basis)}</b></div><div class="sbrow"><span>Realized P/L</span><b style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))}</b></div>`;
  if(mk!=null)h+=`<div class="sbrow"><span>Worth now (comp)</span><b>${money(mk)}</b></div><div class="sbrow"><span>Your call</span><b style="color:${hind>=0?'var(--green)':'var(--gold)'}">${hind>=0?'Good sell (at/above market)':'Left '+money(-hind)+' on the table'}</b></div>`;
@@ -1147,7 +1147,8 @@ function sellCard(id){
  const today=new Date().toISOString().slice(0,10);
  modal(`<h2 style="font-size:18px;margin:2px 24px 12px 0">Mark sold<br><span style="font-size:13px;color:var(--mut);font-weight:500">${esc(c.player||c.ref)}</span></h2>
   <div class="mrow"><div class="fld"><label>Sale price ($)</label><input id="s_price" type="number" inputmode="decimal" value="${c.current_value!=null?c.current_value:''}"></div>
-  <div class="fld"><label>Fees + shipping ($)</label><input id="s_fees" type="number" inputmode="decimal" placeholder="0"></div></div>
+  <div class="fld"><label>Fees + shipping ($)</label><input id="s_fees" type="number" inputmode="decimal" placeholder="eBay: auto"></div></div>
+  <div class="stat-note" style="margin:-4px 0 8px">Leave fees blank on an eBay sale and they are estimated at eBay's card rate (13.25% + $0.40). Enter the real number from the order to replace it. The card leaves its lots and active views; it stays in Sold &amp; P&amp;L.</div>
   <div class="mrow"><div class="fld"><label>Where</label><select id="s_venue">${venueOpts('eBay')}</select></div>
   <div class="fld"><label>Date</label><input id="s_date" type="date" value="${today}"></div></div>
   <div class="fld"><label>Buyer (optional)</label><input id="s_to" placeholder="username / name"></div>
@@ -1371,7 +1372,7 @@ let QUEUE=null;
 async function renderReview(){
  const el=document.getElementById('review');
  SKMODE=false;
- const revCards=CARDS.filter(c=>c.needs_review&&!/^sketch-/.test(c.value_source||''));
+ const revCards=CARDS.filter(c=>c.needs_review&&c.status!=='sold'&&c.status!=='duplicate'&&!/^sketch-/.test(c.value_source||''));
  el.innerHTML=sketchEntryHTML()+`<h2 style="margin:16px 0 4px">Review</h2>
   <div class="stat-note">Auto-added or auto-priced from your eBay purchases. Tap a card to check it; edit anything that looks off. Queued purchases below need you to confirm or add.</div>
   <h2>Cards to verify (${revCards.length})</h2><div class="grid" id="revgrid"></div>
@@ -1392,12 +1393,16 @@ async function lotOp(payload){
  const r=await fetch(FN_LOT,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(payload)});
  return await r.json();
 }
+let LOTSALES=[];
+function lotSold(id){let n=0,net=0;LOTSALES.forEach(s=>{if((s.lot_ids||[]).includes(id)){n++;net+=(+s.net||0);}});return {n,net};}
 async function loadLots(){
  try{
   LOTS=await fetchJSON(SB+"/rest/v1/lots?select=id,name,status,notes,suggested_price,created_at&order=created_at.desc",2)||[];
   const items=await fetchJSON(SB+"/rest/v1/lot_items?select=lot_id,card_id&limit=5000",2)||[];
+  LOTSALES=await fetchJSON(SB+"/rest/v1/sales?select=card_id,lot_ids,sold_price,net&limit=5000",2)||[];
+  const gone=new Set(CARDS.filter(c=>c.status==='sold').map(c=>c.id));
   LOTMEM={}; LOTS.forEach(l=>LOTMEM[l.id]=new Set());
-  items.forEach(it=>{(LOTMEM[it.lot_id]=LOTMEM[it.lot_id]||new Set()).add(it.card_id);});
+  items.forEach(it=>{if(gone.has(it.card_id))return;(LOTMEM[it.lot_id]=LOTMEM[it.lot_id]||new Set()).add(it.card_id);});
  }catch(e){LOTS=[];LOTMEM={};}
 }
 function lotTotals(id){
@@ -1412,9 +1417,14 @@ async function renderLots(){
  let h='<h2 style="margin:16px 0 8px">Lots</h2>';
  h+='<button class="newlot" onclick="newLot()">+ New lot</button>';
  if(!LOTS.length) h+='<div class="stat-note">No lots yet. Make one, then add cards from Search or a card’s page.</div>';
- LOTS.forEach(l=>{const t=lotTotals(l.id);
-   h+=`<div class="lotrow" onclick="openLot('${l.id}')"><div><div class="ln">${l.name||'Untitled lot'}</div><div class="lm">${t.n} card${t.n===1?'':'s'}${l.status?' &middot; '+l.status:''}</div></div><div class="lv">${money(t.val)}<small>${t.cost?('cost '+money(t.cost)):'value'}</small></div></div>`;
+ const open=LOTS.filter(l=>l.status!=='sold'&&l.status!=='closed'),done=LOTS.filter(l=>l.status==='sold'||l.status==='closed');
+ open.forEach(l=>{const t=lotTotals(l.id),sd=lotSold(l.id);
+   h+=`<div class="lotrow" onclick="openLot('${l.id}')"><div><div class="ln">${l.name||'Untitled lot'}</div><div class="lm">${t.n} card${t.n===1?'':'s'}${l.status?' &middot; '+l.status:''}${sd.n?' &middot; '+sd.n+' sold':''}</div></div><div class="lv">${money(t.val)}<small>${t.cost?('cost '+money(t.cost)):'value'}</small></div></div>`;
  });
+ if(done.length){h+='<h3 class="subh" style="margin-top:18px">Sold / closed lots</h3><div class="stat-note" style="margin-top:-4px">Sold cards leave their lots. The sales stay in Sold &amp; P&amp;L.</div>';
+  done.forEach(l=>{const sd=lotSold(l.id);
+   h+=`<div class="lotrow" style="opacity:.75" onclick="show('sold');renderSold()"><div><div class="ln">${l.name||'Untitled lot'}</div><div class="lm">${l.status}${sd.n?' &middot; '+sd.n+' card'+(sd.n===1?'':'s')+' sold':''}</div></div><div class="lv">${sd.n?money(sd.net):'--'}<small>${sd.n?'net proceeds':''}</small></div></div>`;
+  });}
  el.innerHTML=h;
 }
 async function newLot(){
