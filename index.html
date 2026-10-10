@@ -547,6 +547,43 @@ body{font-variant-numeric:tabular-nums}
 .gqb.on{background:var(--ink);color:var(--bg2);border-color:transparent}
 @media (max-width:520px){.gqph{flex-basis:58px;width:58px;height:80px}}
 
+.rvtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px;color:var(--ink2);margin:2px 2px 8px;flex-wrap:wrap}
+.rvtop b{font-size:20px;color:var(--ink)}
+.rvdone{color:var(--green);font-weight:700;font-size:12.5px}
+.rvcard{display:flex;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:8px;min-width:0}
+.rvph{flex:0 0 240px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.rvph img{width:100%;max-height:340px;object-fit:contain;border-radius:10px;background:var(--card2);cursor:zoom-in}
+.rvph .no{width:100%;height:220px;display:flex;align-items:center;justify-content:center;background:var(--card2);border-radius:10px;color:var(--mut)}
+.rvside{display:flex;gap:6px}.rvside button{padding:5px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--card);font-weight:700;font-size:12px;color:var(--ink2);cursor:pointer}
+.rvside button.on{background:var(--ink);color:var(--bg2);border-color:transparent}
+.rvbody{flex:1;min-width:0}
+.rvhd{display:flex;justify-content:space-between;align-items:center}
+.rvpos{font-size:12px;color:var(--mut);font-weight:700}
+.rvname{font-size:19px;font-weight:800;color:var(--ink);margin-top:6px;overflow-wrap:anywhere}
+.rvline{font-size:13.5px;color:var(--ink2);margin-top:2px;overflow-wrap:anywhere}
+.rvnums{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:8px 0 6px;align-items:center}
+.rvnums b{color:var(--ink)}.rvnums a{margin-left:auto;font-weight:700;color:var(--ink);cursor:pointer}
+.rvitem{border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--bg2)}
+.rvk{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.rvq{font-size:14.5px;font-weight:700;color:var(--ink);margin-top:3px;line-height:1.35}
+.rvd{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.45;overflow-wrap:anywhere}
+.rvacts{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.rvb{padding:8px 13px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;min-height:38px}
+.rvb.ok{background:var(--green);color:#fff;border-color:transparent}
+.rvb.main{background:var(--ink);color:var(--bg2);border-color:transparent}
+.rvb.warn{color:var(--accent);border-color:var(--accent)}
+.rvb.ghost{background:transparent}
+.rvb:disabled{opacity:.4;cursor:default}
+.rvin{width:110px;padding:8px 10px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;min-height:38px;box-sizing:border-box}
+.rvform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:9px}
+.rvform label{min-width:0}.rvform input{width:100%;box-sizing:border-box}
+.rvform label{display:flex;flex-direction:column;font-size:11px;font-weight:700;color:var(--mut);gap:3px}
+.rvform input{padding:8px 10px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;min-width:0}
+.rvnav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
+.rvempty{text-align:center;padding:40px 10px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:8px}
+.rvq{margin:18px 2px}.rvq summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--ink);padding:6px 0}
+@media (max-width:700px){.rvcard{flex-direction:column}.rvph{flex-basis:auto}.rvph img{max-height:300px}.rvkeys{display:none}.rvnav{justify-content:stretch}.rvnav .rvb{flex:1}}
+
 </style>
 </head><body>
 <header>
@@ -1391,23 +1428,7 @@ function openShow(name){
  window.scrollTo(0,0);
 }
 let QUEUE=null;
-async function renderReview(){
- const el=document.getElementById('review');
- SKMODE=false;
- const revCards=CARDS.filter(c=>c.needs_review&&c.status!=='sold'&&c.status!=='duplicate'&&!/^sketch-/.test(c.value_source||''));
- el.innerHTML=sketchEntryHTML()+`<h2 style="margin:16px 0 4px">Review</h2>
-  <div class="stat-note">Auto-added or auto-priced from your eBay purchases. Tap a card to check it; edit anything that looks off. Queued purchases below need you to confirm or add.</div>
-  <h2>Cards to verify (${revCards.length})</h2><div class="grid" id="revgrid"></div>
-  <h2>Queued eBay purchases</h2><div id="revq"><div class="spin">Loading queue…</div></div>`;
- document.getElementById('revgrid').innerHTML=revCards.map(c=>{
-   const u=primary(c);
-   return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(c.player||c.ref)}<span class="revbadge">check</span></div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;
- }).join('')||'<div class="spin">Nothing to verify.</div>';
- try{
-  if(!QUEUE) QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
-  document.getElementById('revq').innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img loading="lazy" src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
- }catch(e){document.getElementById('revq').innerHTML='<div class="stat-note">Could not load queue.</div>';}
-}
+/* old renderReview replaced Oct 10 2026 by the review inbox (see review section below) */
 /* ================= LOTS ================= */
 const FN_LOT=SB+"/functions/v1/lot-ops", LOT_SECRET='cv_ingest_7Kq2mZ';
 let LOTS=[], LOTMEM={}, BUILDLOT=null, OPENLOT=null;
@@ -2404,6 +2425,119 @@ function gqExport(){
  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
  const lines=[cols.join(',')].concat(rows.map(g=>{const c=CARDS.find(x=>x.id===g.card_id)||{};const o=Object.assign({},g,{player:c.player,year:c.year,set:c.set_name,card_number:c.card_number,variation:c.variation});return cols.map(k=>q(o[k])).join(',');}));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));a.download='psa-grading-list.csv';a.click();
+}
+
+/* ---- Review inbox (Oct 10 2026): one card at a time, specific questions, confirm or fix, then next ---- */
+const FN_REV=SB+"/functions/v1/review-ops";
+let RV={items:null,filter:'all',pos:0,skipped:new Set(),done:0,busy:false,edit:null,side:'front'};
+const RVKIND={identity:['Card info','#2f6ad6'],copies:['Copies','#7a49c9'],value_hold:['Value','#a67c2e'],estimate:['Value','#a67c2e'],no_value:['Value','#a67c2e'],cost:['Cost','#1e9a54']};
+const RVGROUP={identity:'identity',copies:'copies',value_hold:'value',estimate:'value',no_value:'value',cost:'cost'};
+function rvMoney(v){if(v==null||v==='')return '--';v=Number(v);return '$'+(v<100?v.toFixed(2).replace(/\.00$/,''):v.toLocaleString(undefined,{maximumFractionDigits:0}));}
+async function revOp(body){const r=await fetch(FN_REV,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(Object.assign({op:'review_resolve'},body))});return await r.json();}
+function rvCards(){
+ const open=(RV.items||[]).filter(i=>i.status==='open'&&(RV.filter==='all'||RVGROUP[i.kind]===RV.filter));
+ const by={};open.forEach(i=>{(by[i.card_id]=by[i.card_id]||[]).push(i);});
+ const ids=Object.keys(by).filter(id=>{const c=CARDS.find(x=>x.id===id);return c&&c.status!=='sold'&&c.status!=='duplicate';});
+ ids.sort((a,b)=>{const sa=RV.skipped.has(a)?1:0,sb=RV.skipped.has(b)?1:0;if(sa!==sb)return sa-sb;return (+(by[b][0].card_value)||0)-(+(by[a][0].card_value)||0);});
+ return {ids,by};
+}
+async function renderReview(force){
+ const el=document.getElementById('review');
+ SKMODE=false;
+ if(!RV.items||force){el.innerHTML='<div class="spin">Loading review…</div>';
+  try{RV.items=await fetchJSON(SB+'/rest/v1/review_items?select=*&status=eq.open&order=card_value.desc.nullslast&limit=5000',3);}catch(e){el.innerHTML='<div class="spin">Could not load the review list.</div>';return;}}
+ const {ids,by}=rvCards();
+ const all=(RV.items||[]).filter(i=>i.status==='open');
+ const cnt=g=>g==='all'?new Set(all.map(i=>i.card_id)).size:new Set(all.filter(i=>RVGROUP[i.kind]===g).map(i=>i.card_id)).size;
+ if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);
+ let h=sketchEntryHTML()+`<div class="sechd" style="margin-top:8px"><h2>Review</h2><a onclick="RV.skipped.clear();renderReview(true)">Refresh &#8635;</a></div>
+ <div class="rvtop"><div><b>${cnt('all')}</b> card${cnt('all')===1?'':'s'} left · ${all.length} question${all.length===1?'':'s'}</div><div class="rvdone">${RV.done?`${RV.done} cleared this session`:''}</div></div>
+ <div class="chips">${[['all','All'],['identity','Card info'],['copies','Copies'],['value','Value'],['cost','Cost']].map(([k,t])=>`<div class="chip ${RV.filter===k?'on':''}" onclick="RV.filter='${k}';RV.pos=0;RV.edit=null;renderReview()">${t} <span style="opacity:.55">${cnt(k)}</span></div>`).join('')}</div>`;
+ if(!ids.length){h+=`<div class="rvempty"><div style="font-size:30px">&#10003;</div><b>Inbox zero${RV.filter!=='all'?' for this filter':''}.</b><div class="dnote">Nothing left to check here.</div></div>`;el.innerHTML=h+rvQueueHTML();rvLoadQueue();return;}
+ const id=ids[RV.pos];const c=CARDS.find(x=>x.id===id)||{};const its=by[id];
+ const ph=(c.photos||[]);const front=ph.find(p=>p.side==='front')||ph.find(p=>p.is_primary)||ph[0];const back=ph.find(p=>p.side==='back');
+ const pic=RV.side==='back'&&back?back:front;const purl=pic?(pic.display_url||pic.url):null;
+ const line=[c.year,c.set_name&&c.year&&String(c.set_name).startsWith(String(c.year))?String(c.set_name).slice(String(c.year).length).trim():c.set_name,c.card_number?'#'+c.card_number:'',c.variation&&!/^base$/i.test(c.variation)?c.variation:'',c.serial?c.serial:'',c.grade&&!/raw/i.test(c.grade)?((c.grader&&!String(c.grade).includes(c.grader))?c.grader+' ':'')+c.grade:''].filter(Boolean).join(' · ');
+ h+=`<div class="rvcard">
+  <div class="rvph">${purl?`<img src="${purl}" onclick='openCard("${id}")'>`:`<div class="no">No photo</div>`}
+   ${back?`<div class="rvside"><button class="${RV.side!=='back'?'on':''}" onclick="RV.side='front';renderReview()">Front</button><button class="${RV.side==='back'?'on':''}" onclick="RV.side='back';renderReview()">Back</button></div>`:''}</div>
+  <div class="rvbody">
+   <div class="rvhd"><span class="idchip">${esc(c.ref||'')}</span><span class="rvpos">${RV.pos+1} of ${ids.length}</span></div>
+   <div class="rvname">${esc(c.player||c.ref||'')}</div>
+   <div class="rvline">${esc(line)}</div>
+   <div class="rvnums"><span>Value <b>${rvMoney(c.current_value)}</b></span><span>Cost <b>${c.cost_basis!=null?rvMoney(c.cost_basis):(c.cost_pool_id?'in a pool':'--')}</b></span><a onclick='openCard("${id}")'>Full card &rsaquo;</a></div>
+   ${its.map(i=>rvItemHTML(i,c)).join('')}
+   <div class="rvnav"><button class="rvb ghost" ${RV.pos===0?'disabled':''} onclick="rvMove(-1)">&lsaquo; Back</button>
+    <button class="rvb ghost" onclick="rvSkip('${id}')">Skip for now</button>
+    ${its.every(i=>i.kind!=='no_value')?`<button class="rvb main" onclick="rvConfirmAll('${id}')">Looks right, next &rsaquo;</button>`:''}</div>
+   <div class="dnote rvkeys">Keyboard: Y = looks right and next · S = skip · B = back</div>
+  </div></div>`;
+ el.innerHTML=h+rvQueueHTML();rvLoadQueue();
+}
+function rvItemHTML(i,c){
+ const [lbl,col]=RVKIND[i.kind]||['Check','#888'];
+ const ed=RV.edit===i.id;
+ let act='';
+ const vin=(ph,v)=>`<input class="rvin" id="rv_v_${i.id}" type="number" inputmode="decimal" step="0.01" placeholder="${ph}" value="${v!=null?v:''}">`;
+ if(i.kind==='identity'){
+  act=ed?`<div class="rvform">${[['player','Player / card'],['year','Year'],['set_name','Set'],['card_number','Card #'],['variation','Parallel / variation'],['serial','Serial'],['grade','Grade']].map(([k,t])=>`<label>${t}<input id="rv_${k}_${i.id}" value="${esc(c[k]||'')}"></label>`).join('')}</div>
+   <div class="rvacts"><button class="rvb main" onclick="rvSaveId('${i.id}')">Save and confirm</button><button class="rvb ghost" onclick="RV.edit=null;renderReview()">Cancel</button></div>`
+   :`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed')">&#10003; Looks right</button><button class="rvb" onclick="RV.edit='${i.id}';renderReview()">Fix details</button></div>`;
+ } else if(i.kind==='copies'){
+  act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Separate physical copy')">&#10003; It's a separate copy</button><button class="rvb warn" id="rvdup_${i.id}" onclick="rvDup('${i.id}')">Duplicate row, remove it</button></div>`;
+ } else if(i.kind==='value_hold'){
+  act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Kept vault value')">Keep ${rvMoney(c.current_value)}</button><button class="rvb" onclick="rvResolve('${i.id}','edited',{current_value:'${i.suggested}',value_source:'comps-recent'},'Took comp run value')">Use ${rvMoney(i.suggested)}</button>
+   ${vin('Other $')}<button class="rvb" onclick="rvSetVal('${i.id}')">Set</button><button class="rvb ghost" onclick="rvComp('${c.id}')">Fresh comp</button></div>`;
+ } else if(i.kind==='estimate'){
+  act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Estimate accepted')">Keep ${rvMoney(c.current_value)}</button>${vin('Your value $')}<button class="rvb" onclick="rvSetVal('${i.id}')">Set</button></div>`;
+ } else if(i.kind==='no_value'){
+  act=`<div class="rvacts">${vin('Value $')}<button class="rvb main" onclick="rvSetVal('${i.id}')">Set value</button><button class="rvb ghost" onclick="rvComp('${c.id}')">Fresh comp</button><button class="rvb ghost" onclick="rvResolve('${i.id}','dismissed',null,'Leave unvalued')">Leave unvalued</button></div>`;
+ } else if(i.kind==='cost'){
+  act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Cost confirmed')">&#10003; Right card</button>${`<input class="rvin" id="rv_v_${i.id}" type="number" inputmode="decimal" step="0.01" placeholder="Fix cost $">`}<button class="rvb" onclick="rvSetCost('${i.id}')">Set cost</button><button class="rvb warn" onclick="rvResolve('${i.id}','edited',{cost_basis:''},'Wrong card: Whatnot cost removed, re-match the order')">Wrong card</button></div>`;
+ }
+ return `<div class="rvitem" style="border-left-color:${col}"><div class="rvk" style="color:${col}">${lbl}</div><div class="rvq">${esc(i.question)}</div>${i.detail?`<div class="rvd">${esc(i.detail)}</div>`:''}${act}</div>`;
+}
+function rvNext(id){const {ids}=rvCards();RV.edit=null;RV.side='front';if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);renderReview();window.scrollTo({top:0,behavior:'smooth'});}
+async function rvResolve(itemId,status,patch,note){
+ if(RV.busy)return;const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;RV.busy=true;
+ try{const r=await revOp({card_id:it.card_id,item_ids:[itemId],status,patch:patch||undefined,note:note||undefined});
+  if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
+  it.status=status;const c=CARDS.find(x=>x.id===it.card_id);
+  if(c&&patch){Object.keys(patch).forEach(k=>{c[k]=patch[k]===''?null:(['current_value','cost_basis'].includes(k)?Number(patch[k]):patch[k]);});if(patch.current_value!==undefined&&!patch.value_source)c.value_source='owner-estimate';}
+  if(c&&!r.open_left){c.needs_review=false;RV.done++;}
+ }catch(e){alert('Could not save: '+e.message);} finally{RV.busy=false;}
+ rvNext(it.card_id);
+}
+async function rvConfirmAll(cardId){
+ if(RV.busy)return;const its=(RV.items||[]).filter(i=>i.card_id===cardId&&i.status==='open'&&i.kind!=='no_value');if(!its.length)return;RV.busy=true;
+ try{const r=await revOp({card_id:cardId,item_ids:its.map(i=>i.id),status:'confirmed',note:'Looks right (all)'});if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
+  its.forEach(i=>i.status='confirmed');const c=CARDS.find(x=>x.id===cardId);if(c&&!r.open_left){c.needs_review=false;RV.done++;}
+ }catch(e){alert('Could not save: '+e.message);} finally{RV.busy=false;}
+ rvNext(cardId);
+}
+function rvSetVal(itemId){const el=document.getElementById('rv_v_'+itemId);const v=el?el.value.trim():'';if(v===''||isNaN(+v)){el&&el.focus();return;}rvResolve(itemId,'edited',{current_value:v},'Owner set value');}
+function rvSetCost(itemId){const el=document.getElementById('rv_v_'+itemId);const v=el?el.value.trim():'';if(v===''||isNaN(+v)){el&&el.focus();return;}rvResolve(itemId,'edited',{cost_basis:v},'Owner fixed cost');}
+function rvSaveId(itemId){const it=(RV.items||[]).find(x=>x.id===itemId);const c=CARDS.find(x=>x.id===it.card_id)||{};const patch={};
+ ['player','year','set_name','card_number','variation','serial','grade'].forEach(k=>{const el=document.getElementById('rv_'+k+'_'+itemId);if(!el)return;const v=el.value.trim();if(v!==String(c[k]==null?'':c[k]))patch[k]=v;});
+ rvResolve(itemId,Object.keys(patch).length?'edited':'confirmed',Object.keys(patch).length?patch:null,Object.keys(patch).length?'Fixed card details':'Looks right');}
+function rvDup(itemId){const b=document.getElementById('rvdup_'+itemId);if(b&&!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to remove this row';return;}
+ const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;
+ (async()=>{if(RV.busy)return;RV.busy=true;try{const r=await revOp({card_id:it.card_id,status:'duplicate',note:'Duplicate row retired from review'});if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
+  (RV.items||[]).filter(x=>x.card_id===it.card_id).forEach(x=>x.status='duplicate');const c=CARDS.find(x=>x.id===it.card_id);if(c){c.status='duplicate';c.needs_review=false;}RV.done++;}
+  catch(e){alert('Could not save: '+e.message);}finally{RV.busy=false;}rvNext(it.card_id);})();}
+function rvComp(cardId){if(typeof requestComp==='function'){openCard(cardId);setTimeout(()=>requestComp(cardId),300);}}
+function rvSkip(id){RV.skipped.add(id);RV.edit=null;RV.side='front';renderReview();window.scrollTo({top:0,behavior:'smooth'});}
+function rvMove(d){RV.pos=Math.max(0,RV.pos+d);RV.edit=null;RV.side='front';renderReview();}
+document.addEventListener('keydown',e=>{const rv=document.getElementById('review');if(!rv||rv.classList.contains('hide')||SKMODE)return;if(/input|textarea|select/i.test((e.target||{}).tagName||''))return;if(document.querySelector('#modal .sheet'))return;
+ const {ids}=rvCards();const id=ids[RV.pos];if(!id)return;const k=e.key.toLowerCase();
+ if(k==='y'){e.preventDefault();rvConfirmAll(id);}else if(k==='s'){e.preventDefault();rvSkip(id);}else if(k==='b'){e.preventDefault();rvMove(-1);}});
+function rvQueueHTML(){return `<details class="rvq"><summary>Queued eBay purchases <span id="rvqn" style="opacity:.6"></span></summary><div id="revq"><div class="spin">Loading queue…</div></div></details>`;}
+async function rvLoadQueue(){
+ try{if(!QUEUE)QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
+  const n=document.getElementById('rvqn');if(n)n.textContent=(QUEUE||[]).length;
+  const el=document.getElementById('revq');if(!el)return;
+  el.innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img loading="lazy" src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
+ }catch(e){const el=document.getElementById('revq');if(el)el.innerHTML='<div class="stat-note">Could not load queue.</div>';}
 }
 
 </script>
