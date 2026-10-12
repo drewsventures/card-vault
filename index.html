@@ -582,6 +582,7 @@ body{font-variant-numeric:tabular-nums}
 .rvnav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
 .rvempty{text-align:center;padding:40px 10px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:8px}
 .rvqueue{margin:18px 2px}.rvqueue summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--ink);padding:6px 0}
+.rvnotebox{margin-top:12px}.rvnotebox textarea{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;resize:vertical;min-height:44px}.rvnotemsg{font-size:12px;color:var(--green);font-weight:700;margin-top:4px;min-height:0}
 .rvhow{font-size:12.5px;color:var(--mut);margin:-2px 2px 6px;line-height:1.4}
 @media (max-width:700px){.rvcard{flex-direction:column;gap:10px;padding:12px}.rvph{flex-basis:auto}.rvph img{max-height:170px;width:auto;max-width:100%}.rvph .no{height:80px}.rvname{font-size:17px;margin-top:4px}.rvkeys{display:none}.rvnav{justify-content:stretch;position:sticky;bottom:calc(60px + env(safe-area-inset-bottom));z-index:6;background:var(--card);margin:12px -12px -12px;padding:10px 12px;border-top:1px solid var(--line);border-radius:0 0 16px 16px}.rvnav .rvb{flex:1;padding:8px 6px}}
 
@@ -2453,7 +2454,7 @@ async function renderReview(force){
  if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);
  let h=sketchEntryHTML()+`<div class="sechd" style="margin-top:8px"><h2>Review</h2><a onclick="RV.skipped.clear();renderReview(true)">Refresh &#8635;</a></div>
  <div class="rvtop"><div><b>${cnt('all')}</b> card${cnt('all')===1?'':'s'} left · ${all.length} question${all.length===1?'':'s'}</div><div class="rvdone">${RV.done?`${RV.done} cleared this session`:''}</div></div>
- <div class="rvhow">Each card shows exactly what to check. Answer it with the buttons under the question, tap <b>Looks right, next</b> to confirm everything and move on, or <b>Skip</b> to come back later. Answered cards drop off the list.</div>
+ <div class="rvhow">Each card shows exactly what to check. Answer it with the buttons under the question, tap <b>Looks right, next</b> to confirm everything and move on, or <b>Skip</b> to come back later. Answered cards drop off the list. Anything you type in the note box comes to Claude to act on.</div>
  <div class="chips">${[['all','All'],['identity','Card info'],['copies','Copies'],['value','Value'],['cost','Cost']].map(([k,t])=>`<div class="chip ${RV.filter===k?'on':''}" onclick="RV.filter='${k}';RV.pos=0;RV.edit=null;renderReview()">${t} <span style="opacity:.55">${cnt(k)}</span></div>`).join('')}</div>`;
  if(!ids.length){h+=`<div class="rvempty"><div style="font-size:30px">&#10003;</div><b>Inbox zero${RV.filter!=='all'?' for this filter':''}.</b><div class="dnote">Nothing left to check here.</div></div>`;el.innerHTML=h+rvQueueHTML();rvLoadQueue();return;}
  const id=ids[RV.pos];const c=CARDS.find(x=>x.id===id)||{};const its=by[id];
@@ -2469,6 +2470,7 @@ async function renderReview(force){
    <div class="rvline">${esc(line)}</div>
    <div class="rvnums"><span>Value <b>${rvMoney(c.current_value)}</b></span><span>Cost <b>${c.cost_basis!=null?rvMoney(c.cost_basis):(c.cost_pool_id?'in a pool':'--')}</b></span><a onclick='openCard("${id}")'>Full card &rsaquo;</a></div>
    ${its.map(i=>rvItemHTML(i,c)).join('')}
+   <div class="rvnotebox"><textarea id="rvnote" data-card="${id}" data-ref="${esc(c.ref||'')}" rows="2" placeholder="Note for Claude (optional): what's wrong, what to change, or what you want done. It saves when you move on."></textarea><div class="rvnotemsg" id="rvnotemsg">${RV.lastNote?'Your note on the last card was saved for Claude.':''}</div></div>
    <div class="rvnav"><button class="rvb ghost" ${RV.pos===0?'disabled':''} onclick="rvMove(-1)">&lsaquo; Back</button>
     <button class="rvb ghost" onclick="rvSkip('${id}')">Skip for now</button>
     ${its.every(i=>i.kind!=='no_value')?`<button class="rvb main" onclick="rvConfirmAll('${id}')">Looks right, next &rsaquo;</button>`:''}</div>
@@ -2500,8 +2502,12 @@ function rvItemHTML(i,c){
  return `<div class="rvitem" style="border-left-color:${col}"><div class="rvk" style="color:${col}">${lbl}</div><div class="rvq">${esc(i.question)}</div>${i.detail?`<div class="rvd">${esc(i.detail)}</div>`:''}${act}</div>`;
 }
 function rvNext(id){const {ids}=rvCards();RV.edit=null;RV.side='front';if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);renderReview();window.scrollTo({top:0,behavior:'smooth'});}
+async function rvFlushNote(){const t=document.getElementById('rvnote');if(!t)return;const v=t.value.trim();if(!v){RV.lastNote=false;return;}
+ const its=(RV.items||[]).filter(i=>i.card_id===t.dataset.card).map(i=>i.kind+': '+i.question).join(' | ');
+ try{const r=await fetch(SB+'/rest/v1/review_notes',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({card_id:t.dataset.card,ref:t.dataset.ref,note:v.slice(0,2000),context:its.slice(0,1000)})});
+  if(!r.ok)throw new Error('HTTP '+r.status);t.value='';RV.lastNote=true;}catch(e){alert('Could not save your note: '+e.message);throw e;}}
 async function rvResolve(itemId,status,patch,note){
- if(RV.busy)return;const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;RV.busy=true;
+ if(RV.busy)return;try{await rvFlushNote();}catch(e){return;}const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;RV.busy=true;
  try{const r=await revOp({card_id:it.card_id,item_ids:[itemId],status,patch:patch||undefined,note:note||undefined});
   if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
   it.status=status;const c=CARDS.find(x=>x.id===it.card_id);
@@ -2511,7 +2517,7 @@ async function rvResolve(itemId,status,patch,note){
  rvNext(it.card_id);
 }
 async function rvConfirmAll(cardId){
- if(RV.busy)return;const its=(RV.items||[]).filter(i=>i.card_id===cardId&&i.status==='open'&&i.kind!=='no_value');if(!its.length)return;RV.busy=true;
+ if(RV.busy)return;try{await rvFlushNote();}catch(e){return;}const its=(RV.items||[]).filter(i=>i.card_id===cardId&&i.status==='open'&&i.kind!=='no_value');if(!its.length)return;RV.busy=true;
  try{const r=await revOp({card_id:cardId,item_ids:its.map(i=>i.id),status:'confirmed',note:'Looks right (all)'});if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
   its.forEach(i=>i.status='confirmed');const c=CARDS.find(x=>x.id===cardId);if(c&&!r.open_left){c.needs_review=false;RV.done++;}
  }catch(e){alert('Could not save: '+e.message);} finally{RV.busy=false;}
@@ -2524,12 +2530,12 @@ function rvSaveId(itemId){const it=(RV.items||[]).find(x=>x.id===itemId);const c
  rvResolve(itemId,Object.keys(patch).length?'edited':'confirmed',Object.keys(patch).length?patch:null,Object.keys(patch).length?'Fixed card details':'Looks right');}
 function rvDup(itemId){const b=document.getElementById('rvdup_'+itemId);if(b&&!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to remove this row';return;}
  const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;
- (async()=>{if(RV.busy)return;RV.busy=true;try{const r=await revOp({card_id:it.card_id,status:'duplicate',note:'Duplicate row retired from review'});if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
+ (async()=>{if(RV.busy)return;try{await rvFlushNote();}catch(e){return;}RV.busy=true;try{const r=await revOp({card_id:it.card_id,status:'duplicate',note:'Duplicate row retired from review'});if(!r||!r.ok)throw new Error((r&&r.error)||'failed');
   (RV.items||[]).filter(x=>x.card_id===it.card_id).forEach(x=>x.status='duplicate');const c=CARDS.find(x=>x.id===it.card_id);if(c){c.status='duplicate';c.needs_review=false;}RV.done++;}
   catch(e){alert('Could not save: '+e.message);}finally{RV.busy=false;}rvNext(it.card_id);})();}
 function rvComp(cardId){if(typeof requestComp==='function'){openCard(cardId);setTimeout(()=>requestComp(cardId),300);}}
-function rvSkip(id){RV.skipped.add(id);RV.edit=null;RV.side='front';renderReview();window.scrollTo({top:0,behavior:'smooth'});}
-function rvMove(d){RV.pos=Math.max(0,RV.pos+d);RV.edit=null;RV.side='front';renderReview();}
+async function rvSkip(id){try{await rvFlushNote();}catch(e){return;}RV.skipped.add(id);RV.edit=null;RV.side='front';renderReview();window.scrollTo({top:0,behavior:'smooth'});}
+async function rvMove(d){try{await rvFlushNote();}catch(e){return;}RV.pos=Math.max(0,RV.pos+d);RV.edit=null;RV.side='front';renderReview();}
 document.addEventListener('keydown',e=>{const rv=document.getElementById('review');if(!rv||rv.classList.contains('hide')||SKMODE)return;if(/input|textarea|select/i.test((e.target||{}).tagName||''))return;if(document.querySelector('#modal .sheet'))return;
  const {ids}=rvCards();const id=ids[RV.pos];if(!id)return;const k=e.key.toLowerCase();
  if(k==='y'){e.preventDefault();rvConfirmAll(id);}else if(k==='s'){e.preventDefault();rvSkip(id);}else if(k==='b'){e.preventDefault();rvMove(-1);}});
