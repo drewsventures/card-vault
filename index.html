@@ -581,8 +581,9 @@ body{font-variant-numeric:tabular-nums}
 .rvform input{padding:8px 10px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;min-width:0}
 .rvnav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
 .rvempty{text-align:center;padding:40px 10px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:8px}
-.rvq{margin:18px 2px}.rvq summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--ink);padding:6px 0}
-@media (max-width:700px){.rvcard{flex-direction:column}.rvph{flex-basis:auto}.rvph img{max-height:300px}.rvkeys{display:none}.rvnav{justify-content:stretch}.rvnav .rvb{flex:1}}
+.rvqueue{margin:18px 2px}.rvqueue summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--ink);padding:6px 0}
+.rvhow{font-size:12.5px;color:var(--mut);margin:-2px 2px 6px;line-height:1.4}
+@media (max-width:700px){.rvcard{flex-direction:column;gap:10px;padding:12px}.rvph{flex-basis:auto}.rvph img{max-height:170px;width:auto;max-width:100%}.rvph .no{height:80px}.rvname{font-size:17px;margin-top:4px}.rvkeys{display:none}.rvnav{justify-content:stretch;position:sticky;bottom:calc(60px + env(safe-area-inset-bottom));z-index:6;background:var(--card);margin:12px -12px -12px;padding:10px 12px;border-top:1px solid var(--line);border-radius:0 0 16px 16px}.rvnav .rvb{flex:1;padding:8px 6px}}
 
 </style>
 </head><body>
@@ -2452,6 +2453,7 @@ async function renderReview(force){
  if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);
  let h=sketchEntryHTML()+`<div class="sechd" style="margin-top:8px"><h2>Review</h2><a onclick="RV.skipped.clear();renderReview(true)">Refresh &#8635;</a></div>
  <div class="rvtop"><div><b>${cnt('all')}</b> card${cnt('all')===1?'':'s'} left · ${all.length} question${all.length===1?'':'s'}</div><div class="rvdone">${RV.done?`${RV.done} cleared this session`:''}</div></div>
+ <div class="rvhow">Each card shows exactly what to check. Answer it with the buttons under the question, tap <b>Looks right, next</b> to confirm everything and move on, or <b>Skip</b> to come back later. Answered cards drop off the list.</div>
  <div class="chips">${[['all','All'],['identity','Card info'],['copies','Copies'],['value','Value'],['cost','Cost']].map(([k,t])=>`<div class="chip ${RV.filter===k?'on':''}" onclick="RV.filter='${k}';RV.pos=0;RV.edit=null;renderReview()">${t} <span style="opacity:.55">${cnt(k)}</span></div>`).join('')}</div>`;
  if(!ids.length){h+=`<div class="rvempty"><div style="font-size:30px">&#10003;</div><b>Inbox zero${RV.filter!=='all'?' for this filter':''}.</b><div class="dnote">Nothing left to check here.</div></div>`;el.innerHTML=h+rvQueueHTML();rvLoadQueue();return;}
  const id=ids[RV.pos];const c=CARDS.find(x=>x.id===id)||{};const its=by[id];
@@ -2531,7 +2533,7 @@ function rvMove(d){RV.pos=Math.max(0,RV.pos+d);RV.edit=null;RV.side='front';rend
 document.addEventListener('keydown',e=>{const rv=document.getElementById('review');if(!rv||rv.classList.contains('hide')||SKMODE)return;if(/input|textarea|select/i.test((e.target||{}).tagName||''))return;if(document.querySelector('#modal .sheet'))return;
  const {ids}=rvCards();const id=ids[RV.pos];if(!id)return;const k=e.key.toLowerCase();
  if(k==='y'){e.preventDefault();rvConfirmAll(id);}else if(k==='s'){e.preventDefault();rvSkip(id);}else if(k==='b'){e.preventDefault();rvMove(-1);}});
-function rvQueueHTML(){return `<details class="rvq"><summary>Queued eBay purchases <span id="rvqn" style="opacity:.6"></span></summary><div id="revq"><div class="spin">Loading queue…</div></div></details>`;}
+function rvQueueHTML(){return `<details class="rvqueue"><summary>Queued eBay purchases <span id="rvqn" style="opacity:.6"></span></summary><div id="revq"><div class="spin">Loading queue…</div></div></details>`;}
 async function rvLoadQueue(){
  try{if(!QUEUE)QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
   const n=document.getElementById('rvqn');if(n)n.textContent=(QUEUE||[]).length;
