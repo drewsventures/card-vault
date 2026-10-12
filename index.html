@@ -582,7 +582,7 @@ body{font-variant-numeric:tabular-nums}
 .rvnav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:flex-end}
 .rvempty{text-align:center;padding:40px 10px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:8px}
 .rvqueue{margin:18px 2px}.rvqueue summary{cursor:pointer;font-weight:800;font-size:15px;color:var(--ink);padding:6px 0}
-.rvnotebox{margin-top:12px}.rvnotebox textarea{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;resize:vertical;min-height:44px}.rvnotemsg{font-size:12px;color:var(--green);font-weight:700;margin-top:4px;min-height:0}
+.rvnotebox{margin-top:12px}.rvnotebox textarea{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font:inherit;font-size:13px;resize:vertical;min-height:44px}.rvnoterow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}.rvnoterow .rvb{min-height:34px;padding:6px 11px;font-size:12.5px}.rvnotemsg{font-size:12px;color:var(--green);font-weight:700;margin-top:4px;min-height:0}
 .rvhow{font-size:12.5px;color:var(--mut);margin:-2px 2px 6px;line-height:1.4}
 @media (max-width:700px){.rvcard{flex-direction:column;gap:10px;padding:12px}.rvph{flex-basis:auto}.rvph img{max-height:170px;width:auto;max-width:100%}.rvph .no{height:80px}.rvname{font-size:17px;margin-top:4px}.rvkeys{display:none}.rvnav{justify-content:stretch;position:sticky;bottom:calc(60px + env(safe-area-inset-bottom));z-index:6;background:var(--card);margin:12px -12px -12px;padding:10px 12px;border-top:1px solid var(--line);border-radius:0 0 16px 16px}.rvnav .rvb{flex:1;padding:8px 6px}}
 
@@ -2470,7 +2470,7 @@ async function renderReview(force){
    <div class="rvline">${esc(line)}</div>
    <div class="rvnums"><span>Value <b>${rvMoney(c.current_value)}</b></span><span>Cost <b>${c.cost_basis!=null?rvMoney(c.cost_basis):(c.cost_pool_id?'in a pool':'--')}</b></span><a onclick='openCard("${id}")'>Full card &rsaquo;</a></div>
    ${its.map(i=>rvItemHTML(i,c)).join('')}
-   <div class="rvnotebox"><textarea id="rvnote" data-card="${id}" data-ref="${esc(c.ref||'')}" rows="2" placeholder="Note for Claude (optional): what's wrong, what to change, or what you want done. It saves when you move on."></textarea><div class="rvnotemsg" id="rvnotemsg">${RV.lastNote?'Your note on the last card was saved for Claude.':''}</div></div>
+   <div class="rvnotebox"><textarea id="rvnote" data-card="${id}" data-ref="${esc(c.ref||'')}" rows="2" placeholder="Note for Claude (optional): what's wrong, what to change, or what you want done. It also saves when you move on."></textarea><div class="rvnoterow"><button class="rvb" onclick="rvSendNote()">Send to Claude, keep card open</button><div class="rvnotemsg" id="rvnotemsg">${RV.lastNote?'Your note on the last card was saved for Claude.':''}</div></div></div>
    <div class="rvnav"><button class="rvb ghost" ${RV.pos===0?'disabled':''} onclick="rvMove(-1)">&lsaquo; Back</button>
     <button class="rvb ghost" onclick="rvSkip('${id}')">Skip for now</button>
     ${its.every(i=>i.kind!=='no_value')?`<button class="rvb main" onclick="rvConfirmAll('${id}')">Looks right, next &rsaquo;</button>`:''}</div>
@@ -2506,6 +2506,7 @@ async function rvFlushNote(){const t=document.getElementById('rvnote');if(!t)ret
  const its=(RV.items||[]).filter(i=>i.card_id===t.dataset.card).map(i=>i.kind+': '+i.question).join(' | ');
  try{const r=await fetch(SB+'/rest/v1/review_notes',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({card_id:t.dataset.card,ref:t.dataset.ref,note:v.slice(0,2000),context:its.slice(0,1000)})});
   if(!r.ok)throw new Error('HTTP '+r.status);t.value='';RV.lastNote=true;}catch(e){alert('Could not save your note: '+e.message);throw e;}}
+async function rvSendNote(){const t=document.getElementById('rvnote');if(!t||!t.value.trim()){t&&t.focus();return;}try{await rvFlushNote();}catch(e){return;}RV.lastNote=false;const m=document.getElementById('rvnotemsg');if(m)m.textContent='Sent to Claude. The card stays open; answer it now or skip.';}
 async function rvResolve(itemId,status,patch,note){
  if(RV.busy)return;try{await rvFlushNote();}catch(e){return;}const it=(RV.items||[]).find(x=>x.id===itemId);if(!it)return;RV.busy=true;
  try{const r=await revOp({card_id:it.card_id,item_ids:[itemId],status,patch:patch||undefined,note:note||undefined});
