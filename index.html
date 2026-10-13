@@ -595,6 +595,25 @@ body{font-variant-numeric:tabular-nums}
 .rvhow{font-size:12.5px;color:var(--mut);margin:-2px 2px 6px;line-height:1.4}
 @media (max-width:700px){.rvcard{flex-direction:column;gap:10px;padding:12px}.rvph{flex-basis:auto}.rvph img{max-height:170px;width:auto;max-width:100%}.rvph .no{height:80px}.rvname{font-size:17px;margin-top:4px}.rvkeys{display:none}.rvnav{justify-content:stretch;position:sticky;bottom:calc(60px + env(safe-area-inset-bottom));z-index:6;background:var(--card);margin:12px -12px -12px;padding:10px 12px;border-top:1px solid var(--line);border-radius:0 0 16px 16px}.rvnav .rvb{flex:1;padding:8px 6px}}
 
+
+/* spend report */
+.spk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.spk div{background:var(--card,#fff);border:1px solid var(--line,#e5e5e5);border-radius:12px;padding:10px 12px}
+.spk b{display:block;font-size:18px}.spk span{font-size:12px;opacity:.65}
+.splg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;margin:0 2px 8px;opacity:.85}
+.splg i,.spdh i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.sptbl{border:1px solid var(--line,#e5e5e5);border-radius:12px;overflow:hidden;background:var(--card,#fff)}
+.sprow{display:grid;grid-template-columns:86px 1fr 84px;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line,#eee);cursor:pointer}
+.sprow:first-child{border-top:0}.sprow.on{background:rgba(0,0,0,.04)}
+.spm{font-size:13px}.spt{text-align:right;font-weight:600;font-size:13px}
+.spbar{display:flex;height:12px;border-radius:4px;overflow:hidden;background:rgba(0,0,0,.05)}.spbar i{display:block;height:100%}
+.spdet{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:8px 12px 14px;background:rgba(0,0,0,.025)}
+.spdh{font-size:13px;font-weight:600;display:flex;align-items:center;margin-bottom:4px}.spdh b{margin-left:auto}
+.spdl{display:grid;grid-template-columns:1fr auto 70px;gap:8px;font-size:12px;padding:2px 0}.spdl span:nth-child(2){opacity:.6}.spdl b{text-align:right;font-weight:500}
+.spcat{border:1px solid var(--line,#e5e5e5);border-radius:12px;background:var(--card,#fff)}
+.spcl{display:grid;grid-template-columns:1fr auto auto 80px;gap:10px;padding:8px 12px;border-top:1px solid var(--line,#eee);font-size:13px;align-items:center}
+.spcl:first-child{border-top:0}.spcl span:nth-child(2),.spcl span:nth-child(3){opacity:.6;font-size:12px}.spcl b{text-align:right}
+@media (max-width:600px){.sprow{grid-template-columns:70px 1fr 70px}.spcl{grid-template-columns:1fr auto 70px}.spcl span:nth-child(3){display:none}.spk b{font-size:15px}}
 </style>
 </head><body>
 <header>
@@ -620,6 +639,7 @@ body{font-variant-numeric:tabular-nums}
   <div id="shows" class="hide"></div>
   <div id="sealed" class="hide"></div>
   <div id="grading" class="hide"></div>
+  <div id="spend" class="hide"></div>
   <div id="sets" class="hide"></div>
   <div id="watch" class="hide"></div>
   <div id="insights" class="hide"></div>
@@ -641,6 +661,7 @@ body{font-variant-numeric:tabular-nums}
   <button id="nav-sold" class="sec" onclick="show('sold');renderSold()"><span class="ic">&#9878;</span>Sold</button>
   <button id="nav-shows" class="sec" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#9733;</span>Shows</button>
   <button id="nav-grading" class="sec" onclick="show('grading');renderGrading()"><span class="ic">&#9672;</span>Grading</button>
+  <button id="nav-spend" class="sec" onclick="SPM=null;show('spend');renderSpend()"><span class="ic">&#36;</span>Spend</button>
   <button id="nav-sealed" class="sec" onclick="show('sealed');renderSealed()"><span class="ic">&#9635;</span>Sealed</button>
   <button id="nav-sets" class="sec" onclick="show('sets');renderSets()"><span class="ic">&#9776;</span>Sets</button>
   <button id="nav-more" onclick="toggleMore()" aria-haspopup="true" aria-expanded="false"><span class="ic">&#8943;</span>More</button>
@@ -1125,7 +1146,7 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;toggleMore(false);setTimeout(()=>{const a=document.querySelector('#mainnav button.sec.on');const m=document.getElementById('nav-more');if(m)m.classList.toggle('on',!!a);},0);['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+function show(v){if(v!=='review')SKMODE=false;toggleMore(false);setTimeout(()=>{const a=document.querySelector('#mainnav button.sec.on');const m=document.getElementById('nav-more');if(m)m.classList.toggle('on',!!a);},0);['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading','spend'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
  ['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
@@ -2380,6 +2401,49 @@ setTimeout(()=>loadShares().catch(()=>{}),1500);
 function toggleMore(force){const sh=document.getElementById('moresheet');if(!sh)return;const open=force===undefined?sh.classList.contains('hide'):force;
  if(open){const c=sh.querySelector('.mscard');c.innerHTML=[...document.querySelectorAll('#mainnav button.sec')].filter(b=>getComputedStyle(b).display!=='none'||window.innerWidth<1000).filter(b=>!['nav-sealed','nav-sets'].includes(b.id)).map(b=>`<button role="menuitem" onclick="document.getElementById('${b.id}').click()">${b.innerHTML}</button>`).join('');}
  sh.classList.toggle('hide',!open);const m=document.getElementById('nav-more');if(m)m.setAttribute('aria-expanded',open?'true':'false');}
+
+/* ---- Spend report (Oct 13 2026): monthly spend by channel, break spend by category, cost pools ---- */
+let SPD=null,SPP=null,SPM=null;
+const SPCAT={star_wars:'Star Wars',nba:'Basketball',nfl:'Football',mlb:'Baseball',tennis:'Tennis',wwe:'Wrestling',disney:'Disney',harry_potter:'Harry Potter',gpk:'GPK',pokemon:'Pokemon / TCG',marvel:'Marvel / comics',nonsport:'Other non-sport',soccer:'Soccer',ufc:'UFC',f1:'Racing',unknown:'Not classified',film_tv:'Film & TV',comics:'Comics',games:'Games / TCG',novelty:'Novelty',history_politics:'History',music:'Music'};
+function spMoney(v){v=Number(v||0);return '$'+(Math.abs(v)>=1000?Math.round(v).toLocaleString():v.toFixed(2).replace(/\.00$/,''));}
+function spMonthName(m){const [y,mo]=m.split('-');return new Date(+y,+mo-1,1).toLocaleString('en-US',{month:'short',year:'numeric'});}
+function spCat(c){return SPCAT[c]||c.replace(/_/g,' ');}
+async function renderSpend(force){
+ const el=document.getElementById('spend');
+ if(!SPD||force){el.innerHTML='<div class="spin">Loading spend…</div>';
+  try{SPD=await fetchJSON(SB+'/rest/v1/v_spend_monthly?select=*&limit=5000',3);
+      SPP=await fetchJSON(SB+'/rest/v1/v_cost_pool_status?select=*&status=eq.active&order=pool_total.desc&limit=200',3);}
+  catch(e){el.innerHTML='<div class="spin">Could not load spend.</div>';return;}}
+ const rows=SPD||[];
+ const months=[...new Set(rows.map(r=>r.month).filter(Boolean))].sort().reverse();
+ const col=(r)=>r.channel==='whatnot'?(r.kind==='break'?'wb':'ws'):(r.channel==='ebay'?'eb':'sh');
+ const M={};months.forEach(m=>M[m]={wb:0,ws:0,eb:0,sh:0,t:0});
+ rows.forEach(r=>{if(!M[r.month])return;const k=col(r);M[r.month][k]+=+r.total;M[r.month].t+=+r.total;});
+ const max=Math.max(1,...months.map(m=>M[m].t));
+ const sum=(f)=>months.slice(0,12).reduce((a,m)=>a+f(M[m]),0);
+ const t12=sum(x=>x.t), b12=sum(x=>x.wb);
+ const COLS=[['wb','Whatnot breaks','#7a49c9'],['ws','Whatnot singles','#2f6ad6'],['eb','eBay','#0a8a4a'],['sh','Card shows','#c2410c']];
+ let h=`<div class="sechd" style="margin-top:8px"><h2>Spend</h2><a onclick="renderSpend(true)">Refresh &#8635;</a></div>
+ <div class="dnote" style="margin:-4px 2px 12px">Whatnot is pulled from your Whatnot order history, eBay from your purchase history, and card shows from cards marked as show buys. Totals include tax and shipping. Break spend is what gets spread across break cards as cost.</div>
+ <div class="spk"><div><b>${spMoney(t12)}</b><span>Last 12 months</span></div><div><b>${spMoney(months[0]?M[months[0]].t:0)}</b><span>${months[0]?spMonthName(months[0]):'This month'}</span></div><div><b>${spMoney(b12)}</b><span>Breaks, 12 months</span></div></div>
+ <div class="splg">${COLS.map(c=>`<span><i style="background:${c[2]}"></i>${c[1]}</span>`).join('')}</div>
+ <div class="sptbl">`;
+ months.forEach(m=>{const x=M[m];h+=`<div class="sprow${SPM===m?' on':''}" onclick="SPM=SPM==='${m}'?null:'${m}';renderSpend()"><div class="spm">${spMonthName(m)}</div><div class="spbar">${COLS.map(c=>x[c[0]]>0?`<i style="width:${(x[c[0]]/max*100).toFixed(2)}%;background:${c[2]}" title="${c[1]} ${spMoney(x[c[0]])}"></i>`:'').join('')}</div><div class="spt">${spMoney(x.t)}</div></div>`;
+  if(SPM===m){const R=rows.filter(r=>r.month===m);const by={};R.forEach(r=>{const k=(r.channel==='whatnot'?(r.kind==='break'?'Whatnot breaks':'Whatnot singles'):(r.channel==='ebay'?'eBay':'Card shows'))+'|'+r.category;by[k]=by[k]||{n:0,t:0};by[k].n+=+r.orders;by[k].t+=+r.total;});
+   h+=`<div class="spdet">${COLS.map(c=>`<div class="spdc"><div class="spdh"><i style="background:${c[2]}"></i>${c[1]}<b>${spMoney(x[c[0]])}</b></div>`+Object.entries(by).filter(([k])=>k.startsWith(c[1]+'|')).sort((a,b)=>b[1].t-a[1].t).map(([k,v])=>`<div class="spdl"><span>${esc(spCat(k.split('|')[1]))}</span><span>${v.n} order${v.n===1?'':'s'}</span><b>${spMoney(v.t)}</b></div>`).join('')+`</div>`).join('')}</div>`;}
+ });
+ h+=`</div>`;
+ // break spend by category, all time, with pool coverage
+ const bc={};rows.filter(r=>r.channel==='whatnot'&&r.kind==='break').forEach(r=>{bc[r.category]=bc[r.category]||{t:0,n:0,i:0};bc[r.category].t+=+r.total;bc[r.category].i+=+r.item_amount;bc[r.category].n+=+r.orders;});
+ h+=`<div class="sechd" style="margin-top:18px"><h2 style="font-size:17px">Break spend by category</h2></div><div class="dnote" style="margin:-4px 2px 8px">All Whatnot breaks since Oct 2025. Item cost excludes tax and shipping.</div><div class="spcat">`;
+ Object.entries(bc).sort((a,b)=>b[1].t-a[1].t).forEach(([c,v])=>{h+=`<div class="spcl"><span>${esc(spCat(c))}</span><span>${v.n} breaks</span><span>${spMoney(v.i)} items</span><b>${spMoney(v.t)}</b></div>`;});
+ h+=`</div>`;
+ // cost pools
+ if(SPP&&SPP.length){h+=`<div class="sechd" style="margin-top:18px"><h2 style="font-size:17px">Cost pools</h2></div><div class="dnote" style="margin:-4px 2px 8px">Each pool spreads its spend across the cards in it by current value. Ratio is pool cost divided by those cards' value.</div><div class="spcat">`;
+  SPP.forEach(p=>{h+=`<div class="spcl"><span>${esc(p.name)}</span><span>${p.cards_in_pool||0} cards</span><span>${p.cost_to_value_ratio!=null?('ratio '+Number(p.cost_to_value_ratio).toFixed(2)):'no cards yet'}</span><b>${spMoney(p.pool_total)}</b></div>`;});
+  h+=`</div>`;}
+ el.innerHTML=h;
+}
 /* ---- Grading queue (Oct 10 2026): running list of cards worth sending to PSA ---- */
 let GQ=null, GQF='grade', GQSHOW=40;
 const GQLBL={'grade':['Send now','Pays even at PSA 8 or lower'],'grade-if-sharp':['Pays at PSA 9','Only if it looks sharp'],'gem-only':['Gem only','Pays only at PSA 10'],'crossover':['Crossover','Slabs worth moving to PSA'],'done':['Submitted / done','Pulled, submitted, graded or skipped']};
