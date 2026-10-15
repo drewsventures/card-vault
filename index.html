@@ -2738,4 +2738,274 @@ async function rvLoadQueue(){
 }
 
 </script>
+<!-- ===== Ask Claude (Oct 15 2026): Drew's private in-app assistant ===== -->
+<style>
+#askfab{position:fixed;right:16px;bottom:calc(70px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 16px 11px 13px;font:700 13.5px var(--ui);box-shadow:0 6px 20px rgba(32,29,22,.25);cursor:pointer}
+#askfab .spark{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
+body:has(#sheet .sheet) #askfab,body:has(#askpanel.on) #askfab{display:none}
+#askfab.busy .spark{animation:askpulse 1s ease-in-out infinite}
+@keyframes askpulse{50%{transform:scale(.7);opacity:.6}}
+#askpanel{position:fixed;inset:0;z-index:60;display:none;background:rgba(32,29,22,.28)}
+#askpanel.on{display:block}
+#askbox{position:absolute;right:0;top:0;bottom:0;width:100%;max-width:520px;background:var(--bg2);display:flex;flex-direction:column;border-left:1px solid var(--line2);box-shadow:-10px 0 40px rgba(32,29,22,.12)}
+.askhd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);padding-top:calc(12px + env(safe-area-inset-top))}
+.askhd h3{font:600 18px var(--disp);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.askhd button{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font:700 12px var(--ui);color:var(--ink2);cursor:pointer;white-space:nowrap}
+.askhd .x{border:none;background:none;font-size:24px;line-height:1;padding:2px 6px;color:var(--mut)}
+#askmsgs{flex:1;overflow-y:auto;padding:14px 14px 6px;-webkit-overflow-scrolling:touch}
+.am{margin:0 0 12px;display:flex}
+.am.u{justify-content:flex-end}
+.am .b{max-width:88%;border-radius:15px;padding:9px 13px;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere}
+.am.u .b{background:var(--ink);color:#fff;border-bottom-right-radius:5px;white-space:pre-wrap}
+.am.a .b{background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px;max-width:100%}
+.am.a .b p{margin:0 0 8px}.am.a .b p:last-child{margin:0}
+.am.a .b ul,.am.a .b ol{margin:4px 0 8px;padding-left:20px}
+.am.a .b code{font:12.5px var(--mono);background:var(--card2);border-radius:5px;padding:1px 4px}
+.am.a .b pre{background:var(--card2);border-radius:8px;padding:8px;overflow-x:auto;font:12px var(--mono)}
+.am.a .b h4{font:600 14.5px var(--disp);margin:8px 0 4px}
+.am.a .b a{color:var(--blue)}
+.am.a .b .tw{overflow-x:auto;margin:6px 0 8px}
+.am.a .b table{border-collapse:collapse;font-size:12.5px;min-width:100%}
+.am.a .b th,.am.a .b td{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;white-space:nowrap}
+.am.a .b th{color:var(--mut);font-weight:700;font-size:11.5px}
+.am .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.am .acts .ch{font:700 11.5px var(--ui);border:1px solid var(--line2);background:var(--card2);color:var(--ink2);border-radius:8px;padding:4px 8px;cursor:pointer}
+.am .acts .ch b{font-family:var(--mono);color:var(--gold);font-weight:600;margin-right:4px}
+.am .acts .job{border-style:dashed;cursor:default}
+.am .err{color:var(--accent);font-size:13px}
+.askprog{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:13px;margin:0 0 12px 4px}
+.askprog i{width:7px;height:7px;border-radius:50%;background:var(--gold);display:inline-block;animation:askpulse .9s infinite}
+.askprog i:nth-child(2){animation-delay:.15s}.askprog i:nth-child(3){animation-delay:.3s}
+.askctx{display:flex;align-items:center;gap:6px;margin:0 14px 6px;font-size:12px;color:var(--ink2);background:var(--goldsoft);border:1px solid rgba(166,124,46,.25);border-radius:9px;padding:5px 8px}
+.askctx b{font-family:var(--mono);color:var(--gold)}
+.askctx span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.askctx button{border:none;background:none;color:var(--mut);font-size:16px;cursor:pointer;padding:0 4px}
+.askin{display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg2)}
+.askin textarea{flex:1;resize:none;border:1px solid var(--line2);border-radius:13px;padding:10px 12px;font:15px/1.4 var(--ui);background:var(--card);color:var(--ink);max-height:160px;min-height:44px}
+.askin button{border:none;background:var(--gold);color:#fff;border-radius:12px;font:700 14px var(--ui);padding:0 16px;height:44px;cursor:pointer}
+.askin button:disabled{opacity:.45;cursor:default}
+.asksug{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.asksug button{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:9px 12px;font:13.5px var(--ui);color:var(--ink2);cursor:pointer}
+.askintro{color:var(--mut);font-size:13.5px;margin:4px 2px 12px}
+.askintro b{color:var(--ink)}
+.asksetup{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:14px}
+.asksetup h4{font:600 16px var(--disp);margin:0 0 6px}
+.asksetup ol{padding-left:20px;margin:6px 0}
+.asksetup li{margin:4px 0}
+.asksetup input{width:100%;font:15px var(--ui);padding:10px 12px;border:1px solid var(--line2);border-radius:10px;margin:8px 0;background:var(--bg2)}
+.asksetup button{border:none;background:var(--gold);color:#fff;border-radius:10px;font:700 14px var(--ui);padding:10px 16px;cursor:pointer}
+.asksetup .m{color:var(--mut);font-size:12.5px}
+.askchats .row{display:flex;justify-content:space-between;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.askchats .row small{color:var(--faint);font-family:var(--mono);font-size:11px;white-space:nowrap}
+.askcardbtn{display:inline-flex;align-items:center;gap:6px;margin:8px 0 2px;border:1px solid var(--line2);background:var(--card);border-radius:10px;padding:7px 11px;font:700 12.5px var(--ui);color:var(--ink2);cursor:pointer}
+.askcardbtn .spark{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
+@media (min-width:900px){#askfab{bottom:24px;right:24px}}
+</style>
+<button id="askfab" onclick="askOpen()" aria-label="Ask Claude"><span class="spark"></span>Ask Claude</button>
+<div id="askpanel" onclick="if(event.target===this)askClose()"><div id="askbox" role="dialog" aria-label="Ask Claude">
+ <div class="askhd"><h3 id="asktitle">Claude</h3><button onclick="askShowChats()">Chats</button><button onclick="askNew()">New</button><button class="x" onclick="askClose()" aria-label="Close">&times;</button></div>
+ <div id="askmsgs"></div>
+ <div id="askctx"></div>
+ <div class="askin"><textarea id="asktext" rows="1" placeholder="Ask anything or tell me what to do…" oninput="askGrow(this)" onkeydown="askKey(event)"></textarea><button id="asksend" onclick="askSend()">Send</button></div>
+</div></div>
+<script>
+(function(){
+const FN_AGENT=SB+"/functions/v1/vault-agent";
+const A={chat:null,last:0,busy:false,ctxCard:null,timer:null,pass:null,status:null,msgs:[]};
+window.CV_ASK=A;
+try{A.pass=localStorage.getItem('cv_agent_pass');}catch(e){}
+try{const c=localStorage.getItem('cv_agent_chat');if(c)A.chat=+c;}catch(e){}
+async function call(body){
+ const r=await fetch(FN_AGENT,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,'x-agent-pass':A.pass||'',apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(body)});
+ let d={};try{d=await r.json();}catch(e){}
+ if(!r.ok&&!d.error)d.error='HTTP '+r.status;
+ return d;
+}
+const $=id=>document.getElementById(id);
+function saveChat(){try{if(A.chat)localStorage.setItem('cv_agent_chat',A.chat);else localStorage.removeItem('cv_agent_chat');}catch(e){}}
+
+/* ---- tiny markdown ---- */
+let _refset=null,_refn=-1;
+function REFSET(){if(!_refset||_refn!==CARDS.length){_refset=new Set(CARDS.map(c=>c.ref));_refn=CARDS.length;}return _refset;}
+function inline(s){
+ s=esc(s);
+ s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+ s=s.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+ s=s.replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>');
+ s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+ s=s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+ let inA=false;
+ s=s.split(/(<[^>]+>)/).map(part=>{
+  if(part.startsWith('<')){if(/^<a\b/i.test(part))inA=true;else if(/^<\/a>/i.test(part))inA=false;return part;}
+  if(inA)return part;
+  return part.replace(/\b([A-Z][A-Z0-9]{0,4}-\d{2,5})\b/g,(m,r)=>REFSET().has(r)?`<a href="#" onclick="askOpenRef('${r}');return false">${r}</a>`:m);
+ }).join('');
+ return s;
+}
+function md(src){
+ const lines=String(src||'').replace(/\r/g,'').split('\n');let h='',i=0;
+ while(i<lines.length){
+  let l=lines[i];
+  if(/^```/.test(l)){let b=[];i++;while(i<lines.length&&!/^```/.test(lines[i])){b.push(lines[i]);i++;}i++;h+='<pre>'+esc(b.join('\n'))+'</pre>';continue;}
+  if(/^\s*\|.*\|\s*$/.test(l)&&i+1<lines.length&&/^\s*\|?\s*:?-{2,}/.test(lines[i+1])){
+   const row=x=>x.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+   const hd=row(l);i+=2;let rows=[];while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){rows.push(row(lines[i]));i++;}
+   h+='<div class="tw"><table><thead><tr>'+hd.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+inline(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';continue;}
+  if(/^#{1,4}\s/.test(l)){h+='<h4>'+inline(l.replace(/^#+\s/,''))+'</h4>';i++;continue;}
+  if(/^\s*[-*]\s+/.test(l)){let it=[];while(i<lines.length&&/^\s*[-*]\s+/.test(lines[i])){it.push(lines[i].replace(/^\s*[-*]\s+/,''));i++;}h+='<ul>'+it.map(x=>'<li>'+inline(x)+'</li>').join('')+'</ul>';continue;}
+  if(/^\s*\d+[.)]\s+/.test(l)){let it=[];while(i<lines.length&&/^\s*\d+[.)]\s+/.test(lines[i])){it.push(lines[i].replace(/^\s*\d+[.)]\s+/,''));i++;}h+='<ol>'+it.map(x=>'<li>'+inline(x)+'</li>').join('')+'</ol>';continue;}
+  if(!l.trim()){i++;continue;}
+  let p=[];while(i<lines.length&&lines[i].trim()&&!/^(```|#{1,4}\s|\s*[-*]\s+|\s*\d+[.)]\s+)/.test(lines[i])&&!/^\s*\|.*\|\s*$/.test(lines[i])){p.push(lines[i]);i++;}
+  h+='<p>'+p.map(inline).join('<br>')+'</p>';
+ }
+ return h;
+}
+
+/* ---- rendering ---- */
+function msgHTML(m){
+ if(m.role==='user')return `<div class="am u"><div class="b">${esc(m.display)}</div></div>`;
+ const a=m.actions||{};let acts='';
+ (a.cards||[]).forEach(c=>{acts+=`<button class="ch" onclick="askOpenCard('${c.id}')"><b>${esc(c.ref||'')}</b>${esc((c.player||'').slice(0,26))}${c.what?' · '+esc(c.what.slice(0,40)):''}</button>`;});
+ (a.jobs||[]).forEach(j=>{acts+=`<span class="ch job">Desktop task #${j.id}: ${esc(j.kind)}${j.refs&&j.refs.length?' · '+esc(j.refs.slice(0,4).join(', ')):''}</span>`;});
+ (a.log||[]).forEach(t=>{acts+=`<span class="ch job">${esc(t)}</span>`;});
+ return `<div class="am a"><div class="b">${md(m.display)}${acts?'<div class="acts">'+acts+'</div>':''}</div></div>`;
+}
+function scrollEnd(){const el=$('askmsgs');if(el)el.scrollTop=el.scrollHeight;}
+function renderMsgs(prog){
+ const el=$('askmsgs');if(!el)return;
+ let h='';
+ if(!A.msgs.length&&!prog){
+  h+=`<div class="askintro">I can see everything in your Vault: every card, what you paid, today's values, sales, posts, spend. Ask a question or tell me what to change and I'll do it. Every change is logged and flagged for review.</div><div class="asksug">`+
+  ['What did I pay for my Jordan cards, and what are they worth now?','Which cards worth over $100 have no price paid yet?','What are my 10 biggest gainers and losers vs what I paid?','How much have I spent on Whatnot this month?','Which of my eBay drafts are still not published?'].map(s=>`<button onclick="askUse(this.textContent)">${esc(s)}</button>`).join('')+`</div>`;
+ }
+ h+=A.msgs.map(msgHTML).join('');
+ if(prog)h+=`<div class="askprog"><i></i><i></i><i></i><span>${esc(prog)}</span></div>`;
+ el.innerHTML=h;scrollEnd();
+}
+function renderCtx(){
+ const el=$('askctx');if(!el)return;
+ const c=A.ctxCard&&CARDS.find(x=>x.id===A.ctxCard);
+ el.innerHTML=c?`<div class="askctx">About <b>${esc(c.ref)}</b><span>${esc(c.player||'')} ${esc(c.set_name||'')}</span><button onclick="CV_ASK.ctxCard=null;askRenderCtx()" aria-label="Remove card">&times;</button></div>`:'';
+}
+window.askRenderCtx=renderCtx;
+function setBusy(b){A.busy=b;const s=$('asksend');if(s)s.disabled=b;const f=$('askfab');if(f)f.classList.toggle('busy',b);}
+
+/* ---- setup / auth ---- */
+function setupHTML(st){
+ if(!st.has_key)return `<div class="asksetup"><h4>One step to turn me on</h4>
+  <div>I run on your own Anthropic API key, kept as a secret on your Supabase server (it never touches this page).</div>
+  <ol><li>Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (API keys, Create key).</li>
+  <li>Open <a href="https://supabase.com/dashboard/project/kcmrmswazprkizbzewpm/functions/secrets" target="_blank" rel="noopener">Supabase, Edge Functions, Secrets</a> and add a secret named <code>ANTHROPIC_API_KEY</code> with that key.</li>
+  <li>Come back and tap Check again.</li></ol>
+  <button onclick="askBoot(true)">Check again</button><div class="m" style="margin-top:8px">API usage is billed by Anthropic per message, separate from your Claude plan.</div></div>`;
+ if(!st.pass_set)return `<div class="asksetup"><h4>Set your passcode</h4><div>This page is on the open internet, so the assistant needs a passcode only you know. You enter it once per device.</div>
+  <input id="askp1" type="password" placeholder="Choose a passcode (6+ characters)" autocomplete="new-password"><input id="askp2" type="password" placeholder="Type it again" autocomplete="new-password">
+  <button onclick="askSetPass()">Save passcode</button><div class="m" id="askpm" style="margin-top:8px"></div></div>`;
+ return `<div class="asksetup"><h4>Enter your passcode</h4><input id="askp1" type="password" placeholder="Passcode" autocomplete="current-password" onkeydown="if(event.key==='Enter')askEnterPass()"><button onclick="askEnterPass()">Unlock</button><div class="m" id="askpm" style="margin-top:8px"></div></div>`;
+}
+window.askSetPass=async function(){
+ const a=$('askp1').value,b=$('askp2').value,m=$('askpm');
+ if(a.length<6){m.textContent='Use at least 6 characters.';return;}
+ if(a!==b){m.textContent='Those do not match.';return;}
+ const d=await call({op:'setup',passcode:a});
+ if(d.error){m.textContent=d.error;return;}
+ A.pass=a;try{localStorage.setItem('cv_agent_pass',a);}catch(e){}
+ askBoot(true);
+};
+window.askEnterPass=async function(){
+ const a=$('askp1').value,m=$('askpm');A.pass=a;
+ const d=await call({op:'verify'});
+ if(d.error){m.textContent=d.error==='bad_passcode'?'That passcode is not right.':d.error;A.pass=null;return;}
+ try{localStorage.setItem('cv_agent_pass',a);}catch(e){}
+ askBoot(true);
+};
+window.askBoot=async function(force){
+ const el=$('askmsgs');
+ if(!A.status||force){el.innerHTML='<div class="askprog"><i></i><i></i><i></i><span>Connecting</span></div>';A.status=await call({op:'status'});}
+ const st=A.status||{};
+ if(st.error){el.innerHTML=`<div class="asksetup">Could not reach the assistant: ${esc(st.error)}</div>`;return false;}
+ let ready=st.has_key&&st.pass_set&&A.pass;
+ if(ready){const v=await call({op:'verify'});if(v.error){A.pass=null;try{localStorage.removeItem('cv_agent_pass');}catch(e){}ready=false;}}
+ if(!ready){el.innerHTML=setupHTML(st);$('asksend').disabled=true;return false;}
+ $('asksend').disabled=false;
+ if(A.chat)await loadChat(A.chat);else{A.msgs=[];renderMsgs();}
+ return true;
+};
+
+/* ---- chats ---- */
+async function loadChat(id){
+ const d=await call({op:'poll',chat_id:id});
+ if(d.error||!d.chat){A.chat=null;saveChat();A.msgs=[];renderMsgs();return;}
+ A.chat=id;saveChat();A.msgs=d.messages||[];A.last=A.msgs.length?A.msgs[A.msgs.length-1].id:0;
+ $('asktitle').textContent=d.chat.title||'Claude';
+ if(d.chat.status==='working'){setBusy(true);renderMsgs(d.chat.progress||'Working');poll();}
+ else{setBusy(false);renderMsgs();if(d.chat.status==='error')showErr(d.chat.error);}
+}
+window.askShowChats=async function(){
+ if(!(await askReady()))return;
+ const el=$('askmsgs');el.innerHTML='<div class="askprog"><i></i><i></i><i></i><span>Loading chats</span></div>';
+ const d=await call({op:'chats'});
+ const rows=(d.chats||[]).map(c=>`<div class="row" onclick="askLoad(${c.id})"><span>${esc(c.title||'Chat')}</span><small>${esc(String(c.updated_at||'').slice(0,10))}</small></div>`).join('');
+ el.innerHTML=`<div class="askchats">${rows||'<div class="askintro">No chats yet.</div>'}</div>`;
+};
+window.askLoad=async function(id){await loadChat(id);};
+window.askNew=function(){if(A.busy)return;A.chat=null;saveChat();A.msgs=[];A.last=0;$('asktitle').textContent='Claude';renderMsgs();$('asktext').focus();};
+async function askReady(){if(A.status&&A.status.has_key&&A.status.pass_set&&A.pass)return true;return await askBoot(true);}
+
+/* ---- send / poll ---- */
+function showErr(e){const el=$('askmsgs');if(!el)return;el.insertAdjacentHTML('beforeend',`<div class="am a"><div class="b"><div class="err">Something went wrong: ${esc(String(e||'unknown').slice(0,300))}</div></div></div>`);scrollEnd();}
+window.askSend=async function(){
+ const ta=$('asktext');const text=ta.value.trim();if(!text||A.busy)return;
+ if(!(await askReady()))return;
+ ta.value='';askGrow(ta);
+ A.msgs.push({role:'user',display:text,id:0});setBusy(true);renderMsgs('Thinking');
+ const d=await call({op:'send',chat_id:A.chat,text,card_id:A.ctxCard||null});
+ if(d.error){setBusy(false);renderMsgs();showErr(d.error==='busy'?'I am still working on the last message.':d.error==='no_api_key'?'The API key is not set up yet.':d.error);return;}
+ if(!A.chat){A.chat=d.chat_id;saveChat();$('asktitle').textContent=text.slice(0,60);}
+ A.ctxCard=null;renderCtx();
+ poll();
+};
+function poll(){
+ clearTimeout(A.timer);
+ A.timer=setTimeout(async()=>{
+  let d;try{d=await call({op:'poll',chat_id:A.chat,after:A.last});}catch(e){poll();return;}
+  if(d.error){poll();return;}
+  const fresh=(d.messages||[]).filter(m=>m.id>A.last);
+  // replace optimistic user bubble with the stored one
+  if(fresh.length){A.msgs=A.msgs.filter(m=>m.id);A.msgs.push(...fresh);A.last=fresh[fresh.length-1].id;}
+  const ch=d.chat||{};
+  if(ch.status==='working'){renderMsgs(ch.progress||'Working');poll();return;}
+  setBusy(false);renderMsgs();
+  if(ch.status==='error')showErr(ch.error);
+  if(fresh.some(m=>m.actions&&((m.actions.cards||[]).length||(m.actions.log||[]).length))){try{await refreshData();}catch(e){}}
+ },1400);
+}
+window.askUse=function(t){const ta=$('asktext');ta.value=t;askGrow(ta);askSend();};
+window.askGrow=function(ta){ta.style.height='auto';ta.style.height=Math.min(160,ta.scrollHeight)+'px';};
+window.askKey=function(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();askSend();}};
+
+/* ---- open / close ---- */
+window.askOpen=async function(cardId){
+ if(cardId)A.ctxCard=cardId;
+ $('askpanel').classList.add('on');document.body.style.overflow='hidden';
+ renderCtx();
+ await askBoot(false);
+ setTimeout(()=>{const t=$('asktext');if(t&&!('ontouchstart' in window))t.focus();},50);
+};
+window.askClose=function(){$('askpanel').classList.remove('on');if(!document.querySelector('#sheet .sheet'))document.body.style.overflow='';};
+window.askOpenCard=function(id){askClose();setTimeout(()=>openCard(id),60);};
+window.askOpenRef=function(ref){const c=CARDS.find(x=>x.ref===ref&&x.status!=='duplicate')||CARDS.find(x=>x.ref===ref);if(c)askOpenCard(c.id);};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('askpanel').classList.contains('on'))askClose();});
+
+/* ---- "Ask Claude about this card" on every card page ---- */
+const _openCard=openCard;
+openCard=function(id){
+ const r=_openCard.apply(this,arguments);
+ try{const sc=document.querySelector('#sheet .sheetC');const h2=sc&&sc.querySelector('h2');
+  if(h2&&!sc.querySelector('.askcardbtn')){h2.insertAdjacentHTML('afterend',`<button class="askcardbtn" onclick="askOpen('${id}')"><span class="spark"></span>Ask Claude about this card</button>`);}}catch(e){}
+ return r;
+};
+})();
+</script>
+
 </body></html>
