@@ -2784,6 +2784,13 @@ body:has(#sheet .sheet) #askfab,body:has(#askpanel.on) #askfab{display:none}
 .askin textarea{flex:1;resize:none;border:1px solid var(--line2);border-radius:13px;padding:10px 12px;font:15px/1.4 var(--ui);background:var(--card);color:var(--ink);max-height:160px;min-height:44px}
 .askin button{border:none;background:var(--gold);color:#fff;border-radius:12px;font:700 14px var(--ui);padding:0 16px;height:44px;cursor:pointer}
 .askin button:disabled{opacity:.45;cursor:default}
+.askin button.alt{background:var(--card);color:var(--ink2);border:1px solid var(--line2);padding:0 11px;font-size:12.5px}
+.am .src{font:600 10.5px var(--mono);color:var(--faint);margin:4px 2px 0}
+.am.a{flex-direction:column;align-items:flex-start}
+.askwc{margin:0 0 12px;display:flex;gap:8px;align-items:center;background:var(--goldsoft);border:1px dashed rgba(166,124,46,.45);border-radius:11px;padding:8px 11px;font-size:12.5px;color:var(--ink2)}
+.askmodels .row{display:flex;justify-content:space-between;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px}
+.askmodels .row.on{font-weight:700;color:var(--gold)}
+.askmodels .row small{color:var(--faint);font-family:var(--mono);font-size:11px;white-space:nowrap}
 .asksug{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .asksug button{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:9px 12px;font:13.5px var(--ui);color:var(--ink2);cursor:pointer}
 .askintro{color:var(--mut);font-size:13.5px;margin:4px 2px 12px}
@@ -2801,12 +2808,12 @@ body:has(#sheet .sheet) #askfab,body:has(#askpanel.on) #askfab{display:none}
 .askcardbtn .spark{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
 @media (min-width:900px){#askfab{bottom:24px;right:24px}}
 </style>
-<button id="askfab" onclick="askOpen()" aria-label="Ask Claude"><span class="spark"></span>Ask Claude</button>
-<div id="askpanel" onclick="if(event.target===this)askClose()"><div id="askbox" role="dialog" aria-label="Ask Claude">
- <div class="askhd"><h3 id="asktitle">Claude</h3><button onclick="askShowChats()">Chats</button><button onclick="askNew()">New</button><button class="x" onclick="askClose()" aria-label="Close">&times;</button></div>
+<button id="askfab" onclick="askOpen()" aria-label="Ask the Vault assistant"><span class="spark"></span>Ask</button>
+<div id="askpanel" onclick="if(event.target===this)askClose()"><div id="askbox" role="dialog" aria-label="Vault assistant">
+ <div class="askhd"><h3 id="asktitle">Vault assistant</h3><button onclick="askShowModels()" id="askmodelbtn">Model</button><button onclick="askShowChats()">Chats</button><button onclick="askNew()">New</button><button class="x" onclick="askClose()" aria-label="Close">&times;</button></div>
  <div id="askmsgs"></div>
  <div id="askctx"></div>
- <div class="askin"><textarea id="asktext" rows="1" placeholder="Ask anything or tell me what to do…" oninput="askGrow(this)" onkeydown="askKey(event)"></textarea><button id="asksend" onclick="askSend()">Send</button></div>
+ <div class="askin"><textarea id="asktext" rows="1" placeholder="Ask anything or tell me what to do…" oninput="askGrow(this)" onkeydown="askKey(event)"></textarea><button id="askclaude" class="alt" onclick="askSend(true)" title="Send to Claude on your plan (next hourly pickup)">To Claude</button><button id="asksend" onclick="askSend()">Send</button></div>
 </div></div>
 <script>
 (function(){
@@ -2866,19 +2873,21 @@ function msgHTML(m){
  if(m.role==='user')return `<div class="am u"><div class="b">${esc(m.display)}</div></div>`;
  const a=m.actions||{};let acts='';
  (a.cards||[]).forEach(c=>{acts+=`<button class="ch" onclick="askOpenCard('${c.id}')"><b>${esc(c.ref||'')}</b>${esc((c.player||'').slice(0,26))}${c.what?' · '+esc(c.what.slice(0,40)):''}</button>`;});
- (a.jobs||[]).forEach(j=>{acts+=`<span class="ch job">Desktop task #${j.id}: ${esc(j.kind)}${j.refs&&j.refs.length?' · '+esc(j.refs.slice(0,4).join(', ')):''}</span>`;});
+ (a.jobs||[]).forEach(j=>{acts+=`<span class="ch job">Handed to Claude: ${esc(j.kind)}${j.refs&&j.refs.length?' · '+esc(j.refs.slice(0,4).join(', ')):''}</span>`;});
  (a.log||[]).forEach(t=>{acts+=`<span class="ch job">${esc(t)}</span>`;});
- return `<div class="am a"><div class="b">${md(m.display)}${acts?'<div class="acts">'+acts+'</div>':''}</div></div>`;
+ const src=m.source==='claude'?'Claude · on your plan':(m.model?('Venice · '+m.model):'');
+ return `<div class="am a"><div class="b">${md(m.display)}${acts?'<div class="acts">'+acts+'</div>':''}</div>${src?`<div class="src">${esc(src)}</div>`:''}</div>`;
 }
 function scrollEnd(){const el=$('askmsgs');if(el)el.scrollTop=el.scrollHeight;}
 function renderMsgs(prog){
  const el=$('askmsgs');if(!el)return;
  let h='';
- if(!A.msgs.length&&!prog){
-  h+=`<div class="askintro">I can see everything in your Vault: every card, what you paid, today's values, sales, posts, spend. Ask a question or tell me what to change and I'll do it. Every change is logged and flagged for review.</div><div class="asksug">`+
+ if(!A.msgs.length&&!prog&&!A.withClaude){
+  h+=`<div class="askintro">I can see everything in your Vault: every card, what you paid, today's values, sales, posts, spend. Ask a question or tell me what to change and I'll do it right away. Every change is logged and flagged for review. Anything that needs your browser (Card Ladder, eBay comps, drafts) goes to Claude on your plan, which replies here at its next hourly pickup. Tap To Claude to send it there yourself.</div><div class="asksug">`+
   ['What did I pay for my Jordan cards, and what are they worth now?','Which cards worth over $100 have no price paid yet?','What are my 10 biggest gainers and losers vs what I paid?','How much have I spent on Whatnot this month?','Which of my eBay drafts are still not published?'].map(s=>`<button onclick="askUse(this.textContent)">${esc(s)}</button>`).join('')+`</div>`;
  }
  h+=A.msgs.map(msgHTML).join('');
+ if(A.withClaude)h+=`<div class="askwc">&#9203; With Claude. It picks up at the top of the next hour (8am to 11pm ET) and replies here.</div>`;
  if(prog)h+=`<div class="askprog"><i></i><i></i><i></i><span>${esc(prog)}</span></div>`;
  el.innerHTML=h;scrollEnd();
 }
@@ -2888,16 +2897,16 @@ function renderCtx(){
  el.innerHTML=c?`<div class="askctx">About <b>${esc(c.ref)}</b><span>${esc(c.player||'')} ${esc(c.set_name||'')}</span><button onclick="CV_ASK.ctxCard=null;askRenderCtx()" aria-label="Remove card">&times;</button></div>`:'';
 }
 window.askRenderCtx=renderCtx;
-function setBusy(b){A.busy=b;const s=$('asksend');if(s)s.disabled=b;const f=$('askfab');if(f)f.classList.toggle('busy',b);}
+function setBusy(b){A.busy=b;const s=$('asksend');if(s)s.disabled=b||!(A.status&&A.status.has_key);const c=$('askclaude');if(c)c.disabled=b;const f=$('askfab');if(f)f.classList.toggle('busy',b);}
 
 /* ---- setup / auth ---- */
 function setupHTML(st){
  if(!st.has_key)return `<div class="asksetup"><h4>One step to turn me on</h4>
-  <div>I run on your own Anthropic API key, kept as a secret on your Supabase server (it never touches this page).</div>
-  <ol><li>Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (API keys, Create key).</li>
-  <li>Open <a href="https://supabase.com/dashboard/project/kcmrmswazprkizbzewpm/functions/secrets" target="_blank" rel="noopener">Supabase, Edge Functions, Secrets</a> and add a secret named <code>ANTHROPIC_API_KEY</code> with that key.</li>
+  <div>I run on your Venice API key, kept as a secret on your Supabase server so it never touches this page.</div>
+  <ol><li>Open <a href="https://supabase.com/dashboard/project/kcmrmswazprkizbzewpm/functions/secrets" target="_blank" rel="noopener">Supabase, Edge Functions, Secrets</a>.</li>
+  <li>Add a secret named <code>VENICE_API_KEY</code> and paste your Venice key as the value.</li>
   <li>Come back and tap Check again.</li></ol>
-  <button onclick="askBoot(true)">Check again</button><div class="m" style="margin-top:8px">API usage is billed by Anthropic per message, separate from your Claude plan.</div></div>`;
+  <button onclick="askBoot(true)">Check again</button><div class="m" style="margin-top:8px">Until then, To Claude still works: it sends your message to Claude on your plan.</div></div>`;
  if(!st.pass_set)return `<div class="asksetup"><h4>Set your passcode</h4><div>This page is on the open internet, so the assistant needs a passcode only you know. You enter it once per device.</div>
   <input id="askp1" type="password" placeholder="Choose a passcode (6+ characters)" autocomplete="new-password"><input id="askp2" type="password" placeholder="Type it again" autocomplete="new-password">
   <button onclick="askSetPass()">Save passcode</button><div class="m" id="askpm" style="margin-top:8px"></div></div>`;
@@ -2924,9 +2933,11 @@ window.askBoot=async function(force){
  if(!A.status||force){el.innerHTML='<div class="askprog"><i></i><i></i><i></i><span>Connecting</span></div>';A.status=await call({op:'status'});}
  const st=A.status||{};
  if(st.error){el.innerHTML=`<div class="asksetup">Could not reach the assistant: ${esc(st.error)}</div>`;return false;}
- let ready=st.has_key&&st.pass_set&&A.pass;
+ let ready=st.pass_set&&A.pass;
  if(ready){const v=await call({op:'verify'});if(v.error){A.pass=null;try{localStorage.removeItem('cv_agent_pass');}catch(e){}ready=false;}}
- if(!ready){el.innerHTML=setupHTML(st);$('asksend').disabled=true;return false;}
+ if(!ready){el.innerHTML=setupHTML(Object.assign({},st,{has_key:true}));$('asksend').disabled=true;$('askclaude').disabled=true;return false;}
+ $('askclaude').disabled=false;
+ if(!st.has_key){el.innerHTML=setupHTML(st);$('asksend').disabled=true;return true;}
  $('asksend').disabled=false;
  if(A.chat)await loadChat(A.chat);else{A.msgs=[];renderMsgs();}
  return true;
@@ -2936,35 +2947,59 @@ window.askBoot=async function(force){
 async function loadChat(id){
  const d=await call({op:'poll',chat_id:id});
  if(d.error||!d.chat){A.chat=null;saveChat();A.msgs=[];renderMsgs();return;}
- A.chat=id;saveChat();A.msgs=d.messages||[];A.last=A.msgs.length?A.msgs[A.msgs.length-1].id:0;
- $('asktitle').textContent=d.chat.title||'Claude';
+ A.chat=id;saveChat();A.msgs=d.messages||[];A.last=A.msgs.length?A.msgs[A.msgs.length-1].id:0;A.withClaude=!!d.chat.with_claude;
+ $('asktitle').textContent=d.chat.title||'Vault assistant';
  if(d.chat.status==='working'){setBusy(true);renderMsgs(d.chat.progress||'Working');poll();}
- else{setBusy(false);renderMsgs();if(d.chat.status==='error')showErr(d.chat.error);}
+ else{setBusy(false);renderMsgs();if(d.chat.status==='error')showErr(d.chat.error);if(A.withClaude)slowPoll();}
 }
 window.askShowChats=async function(){
  if(!(await askReady()))return;
  const el=$('askmsgs');el.innerHTML='<div class="askprog"><i></i><i></i><i></i><span>Loading chats</span></div>';
  const d=await call({op:'chats'});
- const rows=(d.chats||[]).map(c=>`<div class="row" onclick="askLoad(${c.id})"><span>${esc(c.title||'Chat')}</span><small>${esc(String(c.updated_at||'').slice(0,10))}</small></div>`).join('');
+ const rows=(d.chats||[]).map(c=>`<div class="row" onclick="askLoad(${c.id})"><span>${c.with_claude?'&#9203; ':''}${esc(c.title||'Chat')}</span><small>${esc(String(c.updated_at||'').slice(0,10))}</small></div>`).join('');
  el.innerHTML=`<div class="askchats">${rows||'<div class="askintro">No chats yet.</div>'}</div>`;
 };
 window.askLoad=async function(id){await loadChat(id);};
-window.askNew=function(){if(A.busy)return;A.chat=null;saveChat();A.msgs=[];A.last=0;$('asktitle').textContent='Claude';renderMsgs();$('asktext').focus();};
-async function askReady(){if(A.status&&A.status.has_key&&A.status.pass_set&&A.pass)return true;return await askBoot(true);}
+window.askShowModels=async function(){
+ if(!(await askReady()))return;
+ const el=$('askmsgs');el.innerHTML='<div class="askprog"><i></i><i></i><i></i><span>Loading Venice models</span></div>';
+ const d=await call({op:'models'});
+ if(d.error){el.innerHTML=`<div class="asksetup">Could not load models: ${esc(d.error)}</div>`;return;}
+ const pin=['zai-org-glm-5-2','claude-sonnet-5-5','deepseek-v4-pro','kimi-k3','qwen-3-8-max','grok-4-7'];
+ const ms=(d.models||[]).slice().sort((a,b)=>{const ia=pin.indexOf(a.id),ib=pin.indexOf(b.id);return (ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name);});
+ el.innerHTML=`<div class="askintro">Pick the Venice model that answers here. Prices are Venice's per million tokens (input / output).</div><div class="askmodels">`+ms.map(m=>`<div class="row${m.id===d.current?' on':''}" data-m="${esc(m.id)}" onclick="askSetModel(this.dataset.m)"><span>${esc(m.name)}${m.traits&&m.traits.includes('function_calling_default')?' (Venice default for tools)':''}</span><small>$${m.in??'?'} / $${m.out??'?'}</small></div>`).join('')+`</div>`;
+};
+window.askSetModel=async function(id){await call({op:'set_model',model:id});A.status=null;await askBoot(true);};
+window.askNew=function(){if(A.busy)return;A.chat=null;A.withClaude=false;saveChat();A.msgs=[];A.last=0;$('asktitle').textContent='Vault assistant';renderMsgs();$('asktext').focus();};
+async function askReady(toClaude){if(A.status&&(A.status.has_key||toClaude)&&A.status.pass_set&&A.pass)return true;const ok=await askBoot(true);return ok&&(toClaude||!!(A.status&&A.status.has_key));}
 
 /* ---- send / poll ---- */
 function showErr(e){const el=$('askmsgs');if(!el)return;el.insertAdjacentHTML('beforeend',`<div class="am a"><div class="b"><div class="err">Something went wrong: ${esc(String(e||'unknown').slice(0,300))}</div></div></div>`);scrollEnd();}
-window.askSend=async function(){
+window.askSend=async function(toClaude){
  const ta=$('asktext');const text=ta.value.trim();if(!text||A.busy)return;
- if(!(await askReady()))return;
+ if(!(await askReady(!!toClaude)))return;
  ta.value='';askGrow(ta);
- A.msgs.push({role:'user',display:text,id:0});setBusy(true);renderMsgs('Thinking');
- const d=await call({op:'send',chat_id:A.chat,text,card_id:A.ctxCard||null});
+ A.msgs.push({role:'user',display:text,id:0});setBusy(true);renderMsgs(toClaude?'Sending to Claude':'Thinking');
+ const d=await call({op:'send',chat_id:A.chat,text,card_id:A.ctxCard||null,to_claude:!!toClaude});
  if(d.error){setBusy(false);renderMsgs();showErr(d.error==='busy'?'I am still working on the last message.':d.error==='no_api_key'?'The API key is not set up yet.':d.error);return;}
  if(!A.chat){A.chat=d.chat_id;saveChat();$('asktitle').textContent=text.slice(0,60);}
  A.ctxCard=null;renderCtx();
+ if(d.to_claude){A.withClaude=true;try{const p=await call({op:'poll',chat_id:A.chat,after:A.last});const f=(p.messages||[]).filter(m=>m.id>A.last);if(f.length){A.msgs=A.msgs.filter(m=>m.id);A.msgs.push(...f);A.last=f[f.length-1].id;}}catch(e){}setBusy(false);renderMsgs();slowPoll();return;}
  poll();
 };
+function slowPoll(){
+ clearTimeout(A.slow);
+ A.slow=setTimeout(async()=>{
+  if(!A.chat||!$('askpanel').classList.contains('on')){return;}
+  let d;try{d=await call({op:'poll',chat_id:A.chat,after:A.last});}catch(e){slowPoll();return;}
+  const fresh=(d.messages||[]).filter(m=>m.id>A.last);
+  if(fresh.length){A.msgs.push(...fresh);A.last=fresh[fresh.length-1].id;}
+  A.withClaude=!!(d.chat&&d.chat.with_claude);
+  if(!A.busy)renderMsgs();
+  if(fresh.some(m=>m.actions&&((m.actions.cards||[]).length||(m.actions.log||[]).length))){try{await refreshData();}catch(e){}}
+  if(A.withClaude)slowPoll();
+ },20000);
+}
 function poll(){
  clearTimeout(A.timer);
  A.timer=setTimeout(async()=>{
@@ -2973,11 +3008,12 @@ function poll(){
   const fresh=(d.messages||[]).filter(m=>m.id>A.last);
   // replace optimistic user bubble with the stored one
   if(fresh.length){A.msgs=A.msgs.filter(m=>m.id);A.msgs.push(...fresh);A.last=fresh[fresh.length-1].id;}
-  const ch=d.chat||{};
+  const ch=d.chat||{};A.withClaude=!!ch.with_claude;
   if(ch.status==='working'){renderMsgs(ch.progress||'Working');poll();return;}
   setBusy(false);renderMsgs();
   if(ch.status==='error')showErr(ch.error);
   if(fresh.some(m=>m.actions&&((m.actions.cards||[]).length||(m.actions.log||[]).length))){try{await refreshData();}catch(e){}}
+  if(A.withClaude)slowPoll();
  },1400);
 }
 window.askUse=function(t){const ta=$('asktext');ta.value=t;askGrow(ta);askSend();};
@@ -3002,7 +3038,7 @@ const _openCard=openCard;
 openCard=function(id){
  const r=_openCard.apply(this,arguments);
  try{const sc=document.querySelector('#sheet .sheetC');const h2=sc&&sc.querySelector('h2');
-  if(h2&&!sc.querySelector('.askcardbtn')){h2.insertAdjacentHTML('afterend',`<button class="askcardbtn" onclick="askOpen('${id}')"><span class="spark"></span>Ask Claude about this card</button>`);}}catch(e){}
+  if(h2&&!sc.querySelector('.askcardbtn')){h2.insertAdjacentHTML('afterend',`<button class="askcardbtn" onclick="askOpen('${id}')"><span class="spark"></span>Ask about this card</button>`);}}catch(e){}
  return r;
 };
 })();

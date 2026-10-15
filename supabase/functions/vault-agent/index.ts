@@ -1,4 +1,5 @@
-// vault-agent: Drew's in-app Claude for Card Vault (Oct 15 2026).
+// vault-agent: Drew's in-app Vault assistant (Oct 15 2026). Runs on Venice (OpenAI-compatible tool calling).
+// Work that needs Drew's browser or a deeper pass is handed to Claude on Drew's plan via agent_jobs + a scheduled pickup.
 // Private use. Gated by the app secret AND a personal passcode (hash stored in agent_settings).
 // Reads through agent_sql() (read-only transaction). Writes only through whitelisted tools. Never deletes.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -11,7 +12,7 @@ const cors = {
 };
 const j = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json' } });
 const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-const API = 'https://api.anthropic.com/v1';
+const API = 'https://api.venice.ai/api/v1';
 const now = () => new Date().toISOString();
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -26,15 +27,16 @@ async function getSetting(k: string) {
 async function setSetting(k: string, v: unknown) {
   await supa.from('agent_settings').upsert({ key: k, value: v, updated_at: now() });
 }
-function apiKey() { return Deno.env.get('ANTHROPIC_API_KEY') || ''; }
-function hdrs() { return { 'x-api-key': apiKey(), 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }; }
+function apiKey() { return Deno.env.get('VENICE_API_KEY') || Deno.env.get('VENICE_INFERENCE_KEY') || ''; }
+function hdrs() { return { Authorization: 'Bearer ' + apiKey(), 'content-type': 'application/json' }; }
 
 // ---------- models ----------
-async function listModels(): Promise<{ id: string; name: string }[]> {
-  const r = await fetch(API + '/models?limit=50', { headers: hdrs() });
+async function listModels(): Promise<{ id: string; name: string; in: number | null; out: number | null; traits: string[]; privacy: string }[]> {
+  const r = await fetch(API + '/models?type=text', { headers: hdrs() });
   if (!r.ok) throw new Error('models ' + r.status + ': ' + (await r.text()).slice(0, 300));
   const d = await r.json();
-  return (d.data || []).map((m: any) => ({ id: m.id, name: m.display_name || m.id }));
+  return (d.data || []).filter((m: any) => m.model_spec?.capabilities?.supportsFunctionCalling && !m.model_spec?.offline && !/^e2ee-/.test(m.id))
+    .map((m: any) => ({ id: m.id, name: m.model_spec?.name || m.id, in: m.model_spec?.pricing?.input?.usd ?? null, out: m.model_spec?.pricing?.output?.usd ?? null, traits: m.model_spec?.traits || [], privacy: m.model_spec?.privacy || '' }));
 }
 async function pickModel(pref?: string) {
   if (pref) return pref;
@@ -42,9 +44,9 @@ async function pickModel(pref?: string) {
   if (s && typeof s === 'string') return s;
   const env = Deno.env.get('VAULT_AGENT_MODEL');
   if (env) return env;
-  const ms = await listModels(); // newest first
-  const son = ms.find((m) => /sonnet/i.test(m.id));
-  return (son || ms[0]).id;
+  const ms = await listModels();
+  const def = ms.find((m) => m.traits.includes('function_calling_default')) || ms.find((m) => m.traits.includes('default')) || ms[0];
+  return def.id;
 }
 
 // ---------- tools ----------
@@ -105,11 +107,12 @@ const TOOLS: any[] = [
     input_schema: { type: 'object', properties: { refs: { type: 'array', items: { type: 'string' } } }, required: ['refs'] },
   },
   {
-    name: 'queue_desktop_job',
-    description: 'Queue work that needs Drew\'s logged-in browser or the desktop Claude session: Card Ladder comps, eBay sold pulls, building or revising eBay drafts, Facebook posts, photo work. Creates an agent_jobs row the desktop Claude picks up. Be specific in instructions.',
+    name: 'hand_to_claude',
+    description: 'Hand this request to Claude, which runs on Drew\'s Claude plan with his logged-in browser and replies in this same chat at its next pickup (top of each hour, 8am to 11pm ET). Use it for: Card Ladder or live eBay sold comps, any new valuation, building or revising eBay drafts, Facebook posts, photo work, research you cannot verify from the database, or anything you are not confident you can do correctly. Write complete instructions (refs, what Drew wants, what you already found). After calling it, tell Drew in one line that Claude will pick it up.',
     input_schema: { type: 'object', properties: { kind: { type: 'string', enum: ['comps', 'ebay_draft', 'ebay_revise', 'facebook', 'photos', 'research', 'other'] }, refs: { type: 'array', items: { type: 'string' } }, instructions: { type: 'string' } }, required: ['kind', 'instructions'] },
   },
 ];
+const OA_TOOLS = TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
 
 async function resolveCard(ch: any) {
   let q = supa.from('cards').select('*');
@@ -152,7 +155,7 @@ async function runTool(name: string, input: any, ctx: { chatId: number; touched:
           const { error } = await supa.from('cards').update({ notes: nn }).eq('id', card.id);
           noteOk = !error;
         }
-        await supa.from('card_change_log').insert({ card_id: card.id, ref: card.ref, source: 'vault-agent', prior, note: ('In-app Claude: ' + (ch.why || '') + ' | set ' + keys.join(', ')).slice(0, 1000) });
+        await supa.from('card_change_log').insert({ card_id: card.id, ref: card.ref, source: 'vault-agent', prior, note: ('In-app assistant: ' + (ch.why || '') + ' | set ' + keys.join(', ')).slice(0, 1000) });
         ctx.touched.set(card.id, { id: card.id, ref: card.ref, player: card.player, what: keys.join(', ') + (noteOk ? (keys.length ? ', note' : 'note') : '') });
         out.push({ ref: card.ref, ok: true, changed: keys, prior, rejected_fields: rejected.length ? rejected : undefined, note_appended: noteOk === null ? undefined : noteOk });
       }
@@ -172,7 +175,7 @@ async function runTool(name: string, input: any, ctx: { chatId: number; touched:
       if (error) return { text: 'insert error: ' + error.message, isError: true };
       for (const d of data || []) {
         ctx.touched.set(d.id, { id: d.id, ref: d.ref, player: d.player, what: 'new card' });
-        await supa.from('card_change_log').insert({ card_id: d.id, ref: d.ref, source: 'vault-agent', prior: {}, note: ('In-app Claude created card: ' + (input.why || '')).slice(0, 1000) });
+        await supa.from('card_change_log').insert({ card_id: d.id, ref: d.ref, source: 'vault-agent', prior: {}, note: ('In-app assistant created card: ' + (input.why || '')).slice(0, 1000) });
       }
       return { text: cap({ created: data, rejected_fields: rej.length ? rej : undefined }) };
     }
@@ -211,14 +214,15 @@ async function runTool(name: string, input: any, ctx: { chatId: number; touched:
       ctx.log.push('Queued comp refresh for ' + rows.length + ' card(s)');
       return { text: cap({ queued: rows.map((r: any) => r.ref), not_found: refs.filter((r: string) => !(cs || []).some((c: any) => c.ref === r)) }) };
     }
-    if (name === 'queue_desktop_job') {
+    if (name === 'hand_to_claude' || name === 'queue_desktop_job') {
       const refs = input.refs || [];
       let ids: string[] = [];
       if (refs.length) { const { data: cs } = await supa.from('cards').select('id').in('ref', refs); ids = (cs || []).map((c: any) => c.id); }
       const { data, error } = await supa.from('agent_jobs').insert({ chat_id: ctx.chatId, kind: input.kind, refs, card_ids: ids, instructions: String(input.instructions).slice(0, 4000) }).select().single();
       if (error) return { text: 'error: ' + error.message, isError: true };
       ctx.jobs.push({ id: data.id, kind: data.kind, refs, instructions: data.instructions });
-      return { text: cap({ queued_job: data.id }) };
+      await supa.from('agent_chats').update({ with_claude: true }).eq('id', ctx.chatId);
+      return { text: cap({ handed_to_claude: true, job: data.id, pickup: 'top of the next hour, 8am to 11pm ET' }) };
     }
     return { text: 'unknown tool ' + name, isError: true };
   } catch (e) {
@@ -228,26 +232,26 @@ async function runTool(name: string, input: any, ctx: { chatId: number; touched:
 
 const TOOL_LABEL: Record<string, string> = {
   query_vault: 'Looking it up', update_cards: 'Updating cards', create_cards: 'Adding cards', insert_records: 'Saving records',
-  update_records: 'Updating records', request_comp_refresh: 'Queueing comp refresh', queue_desktop_job: 'Queueing a desktop task', web_search: 'Searching the web',
+  update_records: 'Updating records', request_comp_refresh: 'Queueing comp refresh', hand_to_claude: 'Handing to Claude',
 };
 
 async function systemPrompt() {
   const { data: rules } = await supa.from('vault_rules').select('scope,rule').eq('active', true).order('id');
   const ruleTxt = (rules || []).map((r: any) => '- [' + r.scope + '] ' + r.rule).join('\n');
-  return `You are Claude, working inside Card Vault, Drew Austin's private trading card investing app. Drew runs this as a business: about $100k deployed, run like a VC portfolio, aiming to compound. You are talking only to Drew. Today is ${today()}.
+  return `You are the Vault assistant inside Card Vault, Drew Austin's private trading card investing app. You run on a Venice model; for browser work or anything you cannot do confidently you hand off to Claude with hand_to_claude. Drew runs this as a business: about $100k deployed, run like a VC portfolio, aiming to compound. You are talking only to Drew. Today is ${today()}.
 
 You can read the whole database with query_vault and change things with the write tools. Do the work, then answer. Drew wants speed and automation: act on clear requests without asking permission, but ask one short question when a request is ambiguous in a way that would change data (for example, which of two matching cards he means). Never invent facts.
 
 STANDING RULES (Drew's, always follow)
 - No em dashes anywhere in what you write. Use commas, colons, parentheses or separate sentences.
 - Never guess. If something is not in the data and cannot be verified, say so plainly. Label any estimate as an estimate.
-- Values come from Card Ladder plus eBay sold comps matched to the exact parallel AND the exact card number. You cannot pull Card Ladder or live eBay sold data from here: for a real comp, queue_desktop_job(kind "comps"). Web search results are not comps.
+- Values come from Card Ladder plus eBay sold comps matched to the exact parallel AND the exact card number. You cannot pull Card Ladder or live eBay sold data: for any new comp or valuation, use hand_to_claude(kind "comps"). Web search results are never comps.
 - Never delete data. Retire bad or duplicate rows with status='duplicate'.
 - Every changed card gets needs_review=true (the tool does this).
 - Shipping and tax stay off cost basis.
 - When a buyer offer is 20% or more over comp, flag it and ask Drew.
 - Facebook sales: the buyer adds 3% for PayPal G&S.
-- Drew reviews and publishes all eBay listings himself. You only prepare drafts (via a desktop job).
+- Drew reviews and publishes all eBay listings himself. Drafts are built by Claude (hand_to_claude kind "ebay_draft").
 ${ruleTxt}
 
 DATA MODEL (Postgres, public schema)
@@ -261,101 +265,106 @@ DATA MODEL (Postgres, public schema)
 - lots / lot_items: sale lots. grading_queue: grading candidates. watchlist_items / v_watchlist: eBay watchlist. ebay_purchases, whatnot_orders, whatnot_api_orders, v_spend_monthly, v_spend_lines: purchase history and spend.
 - card_change_log: audit trail (source, prior jsonb, note). review_items: open review questions. vault_rules: Drew's standing rules (add new ones with insert_records when he states a durable rule).
 - photos(card_id, url, side front|back, is_primary).
-- agent_jobs: tasks you queue for the desktop Claude.
+- agent_jobs: work handed to Claude.
 If unsure of a column, query information_schema.columns first.
 
 HOW TO ANSWER
 - Be brief and concrete. Lead with the answer. Use a small markdown table when comparing several cards. Refer to cards by ref and name, e.g. "BKB-0978 Michael Jordan By the Letter /23".
 - Money as $1,234. Show paid, value today and gain/loss when relevant.
 - After making changes, say exactly what changed in one or two lines.
-- If Drew is viewing a card, the message starts with a [Viewing ...] context line: "this card" means that card.`;
+- If Drew is viewing a card, the message starts with a [Viewing ...] context line: "this card" means that card.
+- Data questions: always query, never answer from memory. If a query errors, fix it and retry.
+- Messages labeled as from Claude in the history are Claude's earlier replies in this chat.`;
 }
 
-// ---------- the agent loop ----------
+// ---------- the agent loop (OpenAI-format messages, stored one per row) ----------
 async function loadHistory(chatId: number) {
-  const { data } = await supa.from('agent_messages').select('role,content').eq('chat_id', chatId).order('id', { ascending: true });
-  let msgs = (data || []).map((m: any) => ({ role: m.role, content: m.content }));
-  // keep the last ~60 messages, cut at a plain user turn so tool_use/tool_result pairs stay intact
-  if (msgs.length > 60) {
-    let start = msgs.length - 60;
-    while (start < msgs.length && !(msgs[start].role === 'user' && Array.isArray(msgs[start].content) && msgs[start].content.some((b: any) => b.type === 'text'))) start++;
+  const { data } = await supa.from('agent_messages').select('role,content,source').eq('chat_id', chatId).order('id', { ascending: true });
+  let msgs: any[] = (data || []).map((m: any) => {
+    const c = m.content && typeof m.content === 'object' && !Array.isArray(m.content) ? { ...m.content } : { role: m.role, content: String(m.content ?? '') };
+    if (m.role === 'assistant' && m.source === 'claude' && typeof c.content === 'string') c.content = '[Claude, on Drew\'s plan] ' + c.content;
+    return c;
+  });
+  if (msgs.length > 80) {
+    let start = msgs.length - 80;
+    while (start < msgs.length && msgs[start].role !== 'user') start++;
     msgs = msgs.slice(start);
   }
-  // repair: every assistant tool_use must be answered by tool_results in the next user message; merge same-role neighbours
-  const fixed: any[] = [];
+  // repair: every assistant tool_call needs a tool reply before the next non-tool message
+  const out: any[] = [];
   for (let i = 0; i < msgs.length; i++) {
-    const m = { role: msgs[i].role, content: Array.isArray(msgs[i].content) ? [...msgs[i].content] : [{ type: 'text', text: String(msgs[i].content) }] };
-    if (!m.content.length) continue;
-    const prev = fixed[fixed.length - 1];
-    if (prev && prev.role === m.role) { prev.content.push(...m.content); continue; }
-    if (prev && prev.role === 'assistant') {
-      const ids = prev.content.filter((b: any) => b.type === 'tool_use').map((b: any) => b.id);
-      const have = new Set(m.content.filter((b: any) => b.type === 'tool_result').map((b: any) => b.tool_use_id));
-      const missing = ids.filter((id: string) => !have.has(id));
-      if (missing.length) m.content = [...missing.map((id: string) => ({ type: 'tool_result', tool_use_id: id, content: 'interrupted', is_error: true })), ...m.content];
+    const m = msgs[i];
+    if (m.role === 'tool') { out.push(m); continue; }
+    const prev = [...out].reverse().find((x) => x.role !== 'tool');
+    if (prev && prev.role === 'assistant' && Array.isArray(prev.tool_calls) && prev.tool_calls.length) {
+      const have = new Set(out.slice(out.lastIndexOf(prev) + 1).filter((x) => x.role === 'tool').map((x) => x.tool_call_id));
+      for (const tc of prev.tool_calls) if (!have.has(tc.id)) out.push({ role: 'tool', tool_call_id: tc.id, content: 'interrupted' });
     }
-    fixed.push(m);
+    out.push(m);
   }
-  const last = fixed[fixed.length - 1];
-  if (last && last.role === 'assistant' && last.content.some((b: any) => b.type === 'tool_use')) {
-    fixed.push({ role: 'user', content: last.content.filter((b: any) => b.type === 'tool_use').map((b: any) => ({ type: 'tool_result', tool_use_id: b.id, content: 'interrupted', is_error: true })) });
+  const lastNT = [...out].reverse().find((x) => x.role !== 'tool');
+  if (lastNT && lastNT.role === 'assistant' && Array.isArray(lastNT.tool_calls)) {
+    const have = new Set(out.slice(out.lastIndexOf(lastNT) + 1).filter((x) => x.role === 'tool').map((x) => x.tool_call_id));
+    for (const tc of lastNT.tool_calls) if (!have.has(tc.id)) out.push({ role: 'tool', tool_call_id: tc.id, content: 'interrupted' });
   }
-  // results must come first in a user message
-  for (const m of fixed) if (m.role === 'user') m.content.sort((a: any, b: any) => (a.type === 'tool_result' ? 0 : 1) - (b.type === 'tool_result' ? 0 : 1));
-  return fixed;
+  return out;
 }
 async function addMsg(chatId: number, role: string, content: any, display: string | null, extra: any = {}) {
-  await supa.from('agent_messages').insert({ chat_id: chatId, role, content, display, ...extra });
+  const { data } = await supa.from('agent_messages').insert({ chat_id: chatId, role, content, display, ...extra }).select('id').single();
+  return data ? data.id : null;
 }
 async function progress(chatId: number, p: string) {
   await supa.from('agent_chats').update({ progress: p, updated_at: now() }).eq('id', chatId);
 }
+function stripThink(t: string) { return String(t || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim(); }
 
 async function runAgent(chatId: number, model: string) {
   const ctx = { chatId, touched: new Map<string, any>(), jobs: [] as any[], log: [] as string[] };
   const t0 = Date.now();
-  let useWeb = true;
   const sys = await systemPrompt();
-  const usage = { input: 0, output: 0, cache_read: 0 };
+  const usage = { input: 0, output: 0 };
   let finished = false;
+  let retries = 0;
+  let useEffort = true;
   try {
-    for (let step = 0; step < 16; step++) {
+    for (let step = 0; step < 18; step++) {
       if (Date.now() - t0 > 330000) break;
-      const messages = await loadHistory(chatId);
-      const tools = [...TOOLS.map((t, i) => (i === TOOLS.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t))];
-      if (useWeb) tools.push({ type: 'web_search_20250305', name: 'web_search', max_uses: 4 });
-      const body = { model, max_tokens: 4096, system: [{ type: 'text', text: sys, cache_control: { type: 'ephemeral' } }], tools, messages };
-      const r = await fetch(API + '/messages', { method: 'POST', headers: hdrs(), body: JSON.stringify(body) });
+      const messages = [{ role: 'system', content: sys }, ...(await loadHistory(chatId))];
+      const body: any = { model, messages, tools: OA_TOOLS, max_completion_tokens: 4096, temperature: 0.2,
+        venice_parameters: { include_venice_system_prompt: false, strip_thinking_response: true, enable_web_search: 'off' } };
+      if (useEffort) body.reasoning_effort = 'low';
+      const r = await fetch(API + '/chat/completions', { method: 'POST', headers: hdrs(), body: JSON.stringify(body) });
       if (!r.ok) {
         const t = await r.text();
-        if (useWeb && r.status === 400 && /web_search/i.test(t)) { useWeb = false; step--; continue; }
-        if ((r.status === 429 || r.status === 529 || r.status >= 500) && step < 15) { await progress(chatId, 'Claude is busy, retrying'); await new Promise((res) => setTimeout(res, 4000)); continue; }
-        throw new Error('Claude API ' + r.status + ': ' + t.slice(0, 400));
+        if ((r.status === 429 || r.status === 503 || r.status === 504 || r.status >= 500) && retries < 4) { retries++; step--; await progress(chatId, 'Venice is busy, retrying'); await new Promise((res) => setTimeout(res, 3000 * retries)); continue; }
+        if (r.status === 400 && useEffort && /reasoning/i.test(t)) { useEffort = false; step--; continue; }
+        throw new Error('Venice ' + r.status + ': ' + t.slice(0, 400));
       }
       const d = await r.json();
-      if (d.usage) { usage.input += d.usage.input_tokens || 0; usage.output += d.usage.output_tokens || 0; usage.cache_read += d.usage.cache_read_input_tokens || 0; }
-      const content = d.content || [];
-      const toolUses = content.filter((b: any) => b.type === 'tool_use');
-      const text = content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n').trim();
-      if (d.stop_reason === 'pause_turn') { if (content.length) await addMsg(chatId, 'assistant', content, null, { model, usage: d.usage || null }); continue; }
-      const isFinal = d.stop_reason !== 'tool_use' || !toolUses.length;
-      if (!content.length) { await addMsg(chatId, 'assistant', [{ type: 'text', text: '(no reply)' }], '(no reply)', { model }); break; }
-      const extra: any = { model, usage: d.usage || null };
+      if (d.usage) { usage.input += d.usage.prompt_tokens || 0; usage.output += d.usage.completion_tokens || 0; }
+      const msg = (d.choices && d.choices[0] && d.choices[0].message) || {};
+      const calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+      const text = stripThink(msg.content || '');
+      const stored: any = { role: 'assistant', content: text || null };
+      if (calls.length) stored.tool_calls = calls.map((c: any) => ({ id: c.id, type: 'function', function: { name: c.function?.name, arguments: c.function?.arguments || '{}' } }));
+      const isFinal = !calls.length;
+      const extra: any = { model, usage: d.usage || null, source: 'venice' };
       if (isFinal) extra.actions = { cards: [...ctx.touched.values()], jobs: ctx.jobs, log: ctx.log, usage };
-      await addMsg(chatId, 'assistant', content, isFinal ? (text || '(no reply)') : null, extra);
+      if (isFinal && !text) stored.content = '(no reply)';
+      await addMsg(chatId, 'assistant', stored, isFinal ? (text || '(no reply)') : null, extra);
       if (isFinal) { finished = true; break; }
-      const results: any[] = [];
-      for (const tu of toolUses) {
-        await progress(chatId, (tu.input && tu.input.purpose) || TOOL_LABEL[tu.name] || tu.name);
-        const res = await runTool(tu.name, tu.input || {}, ctx);
-        results.push({ type: 'tool_result', tool_use_id: tu.id, content: res.text, ...(res.isError ? { is_error: true } : {}) });
+      for (const c of stored.tool_calls) {
+        let input: any = {};
+        try { input = JSON.parse(c.function.arguments || '{}'); } catch (_) { input = null; }
+        await progress(chatId, (input && input.purpose) || TOOL_LABEL[c.function.name] || c.function.name);
+        const res = input === null ? { text: 'arguments were not valid JSON, resend them', isError: true } : await runTool(c.function.name, input, ctx);
+        await addMsg(chatId, 'tool', { role: 'tool', tool_call_id: c.id, content: (res.isError ? 'ERROR: ' : '') + res.text }, null, { source: 'tool' });
       }
-      await addMsg(chatId, 'user', results, null);
       await progress(chatId, 'Thinking');
     }
     if (!finished) {
-      const msg = 'I ran out of time or steps on this one. ' + (ctx.touched.size ? 'I changed ' + ctx.touched.size + ' card(s) so far (see below). ' : '') + 'Say "continue" and I will keep going.';
-      await addMsg(chatId, 'assistant', [{ type: 'text', text: msg }], msg, { actions: { cards: [...ctx.touched.values()], jobs: ctx.jobs, log: ctx.log, usage } });
+      const msg = 'I ran out of time or steps on this one. ' + (ctx.touched.size ? 'I changed ' + ctx.touched.size + ' card(s) so far (see below). ' : '') + 'Say "continue" and I will keep going, or tap To Claude.';
+      await addMsg(chatId, 'assistant', { role: 'assistant', content: msg }, msg, { source: 'venice', model, actions: { cards: [...ctx.touched.values()], jobs: ctx.jobs, log: ctx.log, usage } });
     }
     await supa.from('agent_chats').update({ status: 'idle', progress: null, error: null, updated_at: now() }).eq('id', chatId);
   } catch (e) {
@@ -380,7 +389,7 @@ Deno.serve(async (req) => {
     const salt = 'cv-agent-v1:';
 
     if (op === 'status') {
-      return j({ ok: true, has_key: !!apiKey(), pass_set: !!passHash, model: await getSetting('model') });
+      return j({ ok: true, provider: 'venice', has_key: !!apiKey(), pass_set: !!passHash, model: await getSetting('model') });
     }
     if (op === 'setup') {
       if (passHash) return j({ error: 'passcode already set' }, 400);
@@ -400,13 +409,13 @@ Deno.serve(async (req) => {
     }
     if (op === 'set_model') { await setSetting('model', String(b.model || '')); return j({ ok: true }); }
     if (op === 'chats') {
-      const { data } = await supa.from('agent_chats').select('id,title,card_id,updated_at,status').eq('archived', false).order('updated_at', { ascending: false }).limit(40);
+      const { data } = await supa.from('agent_chats').select('id,title,card_id,updated_at,status,with_claude').eq('archived', false).order('updated_at', { ascending: false }).limit(40);
       return j({ ok: true, chats: data || [] });
     }
     if (op === 'archive') { await supa.from('agent_chats').update({ archived: true }).eq('id', b.chat_id); return j({ ok: true }); }
     if (op === 'poll') {
-      const { data: chat } = await supa.from('agent_chats').select('id,title,status,progress,error,updated_at').eq('id', b.chat_id).single();
-      let q = supa.from('agent_messages').select('id,role,display,actions,created_at').eq('chat_id', b.chat_id).not('display', 'is', null).order('id', { ascending: true });
+      const { data: chat } = await supa.from('agent_chats').select('id,title,status,progress,error,updated_at,with_claude').eq('id', b.chat_id).single();
+      let q = supa.from('agent_messages').select('id,role,display,actions,created_at,source,model').eq('chat_id', b.chat_id).not('display', 'is', null).order('id', { ascending: true });
       if (b.after) q = q.gt('id', b.after);
       const { data: msgs } = await q;
       return j({ ok: true, chat, messages: msgs || [] });
@@ -416,7 +425,7 @@ Deno.serve(async (req) => {
       return j({ ok: true, jobs: data || [] });
     }
     if (op === 'send') {
-      if (!apiKey()) return j({ error: 'no_api_key' }, 400);
+      if (!apiKey() && !b.to_claude) return j({ error: 'no_api_key' }, 400);
       const text = String(b.text || '').trim();
       if (!text) return j({ error: 'empty' }, 400);
       let chatId = b.chat_id ? Number(b.chat_id) : 0;
@@ -429,8 +438,13 @@ Deno.serve(async (req) => {
         chatId = nc.id;
       }
       const ctxLine = b.card_id ? await cardContext(b.card_id) : '';
-      const model = await pickModel(b.model);
-      await addMsg(chatId, 'user', [{ type: 'text', text: ctxLine + text }], text);
+      const model = b.to_claude ? '' : await pickModel(b.model);
+      await addMsg(chatId, 'user', { role: 'user', content: ctxLine + text }, text, { source: 'drew' });
+      if (b.to_claude) {
+        const { data: job } = await supa.from('agent_jobs').insert({ chat_id: chatId, kind: 'chat', instructions: text.slice(0, 4000), card_ids: b.card_id ? [b.card_id] : [] }).select('id').single();
+        await supa.from('agent_chats').update({ with_claude: true, status: 'idle', progress: null, updated_at: now() }).eq('id', chatId);
+        return j({ ok: true, chat_id: chatId, to_claude: true, job: job ? job.id : null });
+      }
       await supa.from('agent_chats').update({ status: 'working', progress: 'Thinking', error: null, run_started_at: now(), updated_at: now() }).eq('id', chatId);
       // @ts-ignore EdgeRuntime is provided by Supabase
       EdgeRuntime.waitUntil(runAgent(chatId, model));
