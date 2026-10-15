@@ -614,6 +614,27 @@ body{font-variant-numeric:tabular-nums}
 .spcl{display:grid;grid-template-columns:1fr auto auto 80px;gap:10px;padding:8px 12px;border-top:1px solid var(--line,#eee);font-size:13px;align-items:center}
 .spcl:first-child{border-top:0}.spcl span:nth-child(2),.spcl span:nth-child(3){opacity:.6;font-size:12px}.spcl b{text-align:right}
 @media (max-width:600px){.sprow{grid-template-columns:70px 1fr 70px}.spcl{grid-template-columns:1fr auto 70px}.spcl span:nth-child(3){display:none}.spk b{font-size:15px}}
+
+/* paid vs value (Oct 15 2026) */
+.cline{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;color:var(--mut);cursor:pointer;min-height:22px;flex-wrap:wrap}
+.cline b{color:var(--ink,inherit);font-weight:700;font-variant-numeric:tabular-nums}
+.cline .pool{font-family:var(--mono);font-size:9.5px;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 4px}
+.cline .pp{font-weight:700;font-size:11px;border-radius:6px;padding:1px 5px}
+.cline .pp.up{color:var(--green);background:rgba(10,125,51,.08)}.cline .pp.dn{color:var(--accent);background:rgba(200,40,40,.08)}
+.cline .addcost{font:inherit;font-weight:700;color:var(--accent);background:transparent;border:1px dashed var(--accent);border-radius:7px;padding:2px 8px;cursor:pointer}
+.cline .ced{display:flex;gap:4px;align-items:center;width:100%}
+.cline .ced input,.paidbox input,.paidbox select{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:inherit;min-width:0}
+.cline .ced input{width:76px;flex:1}
+.cline .ced button,.paidbox button{font:inherit;font-weight:700;font-size:12px;padding:6px 10px;border-radius:8px;border:none;background:var(--gold);color:#fff;cursor:pointer}
+.paidbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:10px 0 2px}
+.paidbox.missing{border:1.5px dashed var(--accent)}
+.paidbox .pgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.paidbox .l{color:var(--mut);font-size:11px}
+.paidbox .n{font-size:17px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums}
+.paidbox .meta{color:var(--mut);font-size:11.5px;margin-top:8px}
+.paidbox .edrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.paidbox .edrow input[type=number]{width:110px}
+.paidbox .lnk{color:var(--gold);font-weight:700;cursor:pointer;font-size:12px;margin-left:6px}
 </style>
 </head><body>
 <header>
@@ -729,6 +750,46 @@ async function mergeCost(){
  }catch(e){}
 }
 function costTag(c){return c._cm==='allocated'?' <span style="color:var(--faint);font-family:var(--mono);font-size:10px">pooled</span>':c._cm==='direct'?' <span style="color:var(--faint);font-family:var(--mono);font-size:10px">actual</span>':'';}
+
+/* ---- Paid vs value: on every tile + editable everywhere (Oct 15 2026) ---- */
+function pnlPct(c){if(c.cost_basis==null||c.current_value==null||!(+c.cost_basis>0))return null;return Math.round((c.current_value-c.cost_basis)/c.cost_basis*100);}
+function costLine(c){
+ if(BUILDLOT)return '';
+ if(c.cost_basis==null)return `<div class="cline" data-cl="${c.id}" onclick='startCost(event,"${c.id}")'><span>Paid</span><button class="addcost" onclick='startCost(event,"${c.id}")'>+ add what you paid</button></div>`;
+ const p=pnlPct(c),up=p!=null&&p>=0;
+ return `<div class="cline" data-cl="${c.id}" onclick='startCost(event,"${c.id}")' title="Tap to edit what you paid"><span>Paid</span><b>${money(c.cost_basis)}</b>${c._cm==='allocated'?'<span class="pool">pool</span>':''}${p!=null?`<span class="pp ${up?'up':'dn'}">${up?'+':''}${p}%</span>`:''}</div>`;
+}
+function startCost(ev,id){
+ ev.stopPropagation();ev.preventDefault();
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ document.querySelectorAll('.cline[data-cl="'+id+'"]').forEach(el=>{
+  if(el.querySelector('.ced'))return;
+  el.innerHTML=`<div class="ced" onclick="event.stopPropagation()"><span>$</span><input type="number" inputmode="decimal" step="0.01" placeholder="paid" value="${c._cm==='direct'&&c.cost_basis!=null?c.cost_basis:''}" onkeydown='if(event.key==="Enter")saveCost("${id}",this);if(event.key==="Escape")refreshCostUI("${id}")'><button onclick='saveCost("${id}",this.previousElementSibling)'>Save</button></div>`;
+  const i=el.querySelector('input');if(i)setTimeout(()=>i.focus(),30);
+ });
+}
+async function saveCost(id,inp,extra){
+ const c=CARDS.find(x=>x.id===id);if(!c||!inp)return;
+ const v=String(inp.value||'').trim();
+ if(v===''||isNaN(+v)||+v<0){inp.focus();inp.style.borderColor='var(--accent)';return;}
+ const btn=inp.parentElement&&inp.parentElement.querySelector('button');if(btn){btn.disabled=true;btn.textContent='Saving…';}
+ const payload=Object.assign({op:'set_card',card_id:id,cost_basis:v},extra||{});
+ let r=null;try{r=await lotOp(payload);}catch(e){r={error:e.message};}
+ if(r&&r.ok){c.cost_basis=+v;c._cm='direct';if(extra){if(extra.acquired_via!==undefined)c.acquired_via=extra.acquired_via||null;if(extra.acquired_date!==undefined)c.acquired_date=extra.acquired_date||null;}refreshCostUI(id);}
+ else{if(btn){btn.disabled=false;btn.textContent='Retry';}alert('Could not save: '+((r&&r.error)||'failed'));}
+}
+function refreshCostUI(id){
+ const c=CARDS.find(x=>x.id===id);if(!c)return;
+ document.querySelectorAll('.cline[data-cl="'+id+'"]').forEach(el=>{el.outerHTML=costLine(c);});
+ if(window.CUR&&window.CUR.id===id)renderPnl(c);
+ if(FILT==='no cost'&&c.cost_basis!=null){/* keep it visible until next search so he can see it saved */}
+}
+function saveCostFull(id){
+ const inp=document.getElementById('pb_cost');
+ const via=document.getElementById('pb_via'),dt=document.getElementById('pb_date');
+ const extra={};if(via&&via.value)extra.acquired_via=via.value;if(dt&&dt.value)extra.acquired_date=dt.value;
+ saveCost(id,inp,extra);
+}
 function copyId(ev,ref){ev.stopPropagation();const t=ref;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).catch(()=>{});const el=ev.currentTarget;if(el){const o=el.textContent;el.textContent='copied';setTimeout(()=>{el.textContent=o;},1000);}}
 async function load(){
  try{
@@ -744,7 +805,7 @@ async function load(){
 let FILT='all';
 let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
 function buildChips(){
- const c=['all','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
+ const c=['all','no cost','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
 }
 function setFilt(f,el){VALONLY=false;FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
@@ -752,6 +813,7 @@ function runSearch(){
  const q=document.getElementById('q').value.toLowerCase().trim();
  let list=CARDS.filter(c=>c.status!=='sold'&&c.status!=='duplicate'&&c.item_type!=='sealed'&&c.item_type!=='set');
  if(FILT==='listed')list=list.filter(c=>c.is_listed||c.listing_url);
+ else if(FILT==='no cost')list=list.filter(c=>c.cost_basis==null);
  else if(FILT==='graded')list=list.filter(c=>c.grade&&!/raw/i.test(c.grade));
  else if(FILT==='has photo')list=list.filter(c=>c.photos&&c.photos.length);
  else if(FILT==='rookies')list=list.filter(c=>c.is_rookie);
@@ -782,7 +844,7 @@ function searchTile(c,inSet){
      <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
      <div class="m"><div class="pl">${esc(c.player||c.ref)}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
      <div class="st">${esc(c.set_name||'')}</div>
-     <div class="pr">${money(c.current_value)}${(SORT==='move'&&TREND[c.id]&&TREND[c.id].trend_kind==='revalued')?rvPill(c):trendPill(c,true)}${vtagFor(c)}</div>${popPill(c)?`<div>${popPill(c)}</div>`:''}</div></div>`;
+     <div class="pr">${money(c.current_value)}${(SORT==='move'&&TREND[c.id]&&TREND[c.id].trend_kind==='revalued')?rvPill(c):trendPill(c,true)}${vtagFor(c)}</div>${costLine(c)}${popPill(c)?`<div>${popPill(c)}</div>`:''}</div></div>`;
 }
 function renderMore(){
    const el=document.getElementById('results');
@@ -857,14 +919,13 @@ function openCard(id){
    ${dupN>1?`<div class="dupe" style="margin:8px 0"><b>You own ${dupN} of this.</b> Same set, number, variation and condition.</div>`:''}
    ${(front||back)?`<div class="dphotos${front&&back?'':' one'}">${front?`<img src="${front.display_url||front.url}" alt="front">`:''}${back?`<img src="${back.display_url||back.url}" alt="back">`:''}</div>`:'<div class="nophoto">No photos yet</div>'}
    <div class="dval">${money(c.current_value)}${vtagFor(c)} <small style="color:${srcColor(c)}">${c.value_source?srcLabel(c):'unpriced'}${c.value_date?' &middot; '+c.value_date:''}</small></div>
-   <div id="cvtr8"></div><div id="cvpops"></div>
+   <div id="cvpnl"></div><div id="cvtr8"></div><div id="cvpops"></div>
    ${liveCompsBlock(c)}
    ${compUpdateBlock(c)}
    ${c.status==='sold'?soldBlock(c):''}
    ${c.status!=='sold'&&c.status!=='duplicate'?listingBlock(c):''}
    <div id="cvrange"></div>
    <div id="cvcomp"></div>
-   <div id="cvpnl"></div>
    <div id="cvsell" class="selltools"></div>
    ${c.status!=='sold'&&c.status!=='duplicate'?shareCardBlock(c):''}
    ${/^(sketch-model|sketch-confirmed|owner-estimate)$/.test(c.value_source||'')?`<button class="addlotbtn" style="border-color:var(--gold);color:var(--gold)" onclick="closeCard();openSketchReview('${c.id}')">Review sketch value &amp; comps</button>`:''}
@@ -877,7 +938,7 @@ function openCard(id){
    <div style="margin-top:10px">
      <div class="krow"><span class="k">Variation</span><span class="val">${c.variation||'--'}</span></div>
      <div class="krow"><span class="k">Grade</span><span class="val">${c.grade||'Raw'}</span></div>
-     <div class="krow"><span class="k">Cost basis</span><span class="val">${money(c.cost_basis)}</span></div>
+     <div class="krow"><span class="k">Paid</span><span class="val">${c.cost_basis!=null?money(c.cost_basis):'not recorded'}${c.acquired_via?' · '+esc(c.acquired_via):''}${c.acquired_date?' · '+c.acquired_date:''}</span></div>
      <div class="krow"><span class="k">Status</span><span class="val">${c.status}</span></div>
      ${c.serial?`<div class="krow"><span class="k">Serial</span><span class="val">${c.serial}</span></div>`:''}
      ${c.notes?`<div class="krow"><span class="k">Notes</span><span class="val" style="max-width:65%;font-weight:400;color:var(--mut)">${c.notes}</span></div>`:''}
@@ -975,14 +1036,33 @@ function cp(btn,taid){
 }
 function renderPnl(c){
  const el=document.getElementById('cvpnl');if(!el)return;
- if(c.cost_basis==null){el.innerHTML='';return;}
+ const via=c.acquired_via||'',dt=c.acquired_date||'';
+ const meta=(dt||via)?`Bought ${dt?new Date(dt+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):''}${dt&&via?' · ':''}${via?esc(via):''}`:'';
+ const opts=['eBay','Whatnot','card show','break','card store','trade','pack pull','gift','other'];
+ const sel=`<select id="pb_via"><option value="">where?</option>${opts.map(o=>`<option ${via.toLowerCase()===o.toLowerCase()?'selected':''}>${o}</option>`).join('')}</select>`;
+ const date=`<input id="pb_date" type="date" value="${dt||''}">`;
+ if(c.cost_basis==null){
+  el.innerHTML=`<div class="paidbox missing"><div class="l" style="color:var(--accent);font-weight:700">What did you pay? (not recorded yet)</div>
+   <div class="edrow"><span>$</span><input id="pb_cost" type="number" inputmode="decimal" step="0.01" placeholder="price paid" onkeydown='if(event.key==="Enter")saveCostFull("${c.id}")'>${sel}${date}<button onclick='saveCostFull("${c.id}")'>Save</button></div>
+   <div class="meta">Value today: <b>${money(c.current_value)}</b>${meta?' · '+meta:''}</div></div>`;
+  return;
+ }
  const pnl=(c.current_value!=null)?(c.current_value-c.cost_basis):null;
- const pct=(pnl!=null&&c.cost_basis)?Math.round(pnl/c.cost_basis*100):null;
+ const pct=pnlPct(c);
  const col=pnl==null?'var(--mut)':(pnl>=0?'var(--green)':'var(--accent)');
- el.innerHTML=`<div class="pnlbox">
-   <div class="pnlc"><div class="l">Paid${costTag(c)}</div><div class="n">${money(c.cost_basis)}</div></div>
-   <div class="pnlc"><div class="l">Unrealized P/L</div><div class="n" style="color:${col}">${pnl==null?'--':(pnl>=0?'+':'')+money(pnl)}${pct!=null?` <span style="font-size:11px">(${pct>=0?'+':''}${pct}%)</span>`:''}</div></div>
-  </div>`;
+ el.innerHTML=`<div class="paidbox"><div class="pgrid">
+   <div><div class="l">Paid${costTag(c)}<span class="lnk" onclick='editPaid("${c.id}")'>edit</span></div><div class="n">${money(c.cost_basis)}</div></div>
+   <div><div class="l">Value today</div><div class="n">${money(c.current_value)}</div></div>
+   <div><div class="l">Gain / loss</div><div class="n" style="color:${col}">${pnl==null?'--':(pnl>=0?'+':'-')+money(Math.abs(pnl))}${pct!=null?` <span style="font-size:11px">(${pct>=0?'+':''}${pct}%)</span>`:''}</div></div>
+  </div>${meta||c._cm==='allocated'?`<div class="meta">${meta}${c._cm==='allocated'?(meta?' · ':'')+'cost is this card\'s share of a pooled purchase (break or lot)':''}</div>`:''}
+  <div id="pb_edit"></div></div>`;
+}
+function editPaid(id){
+ const c=CARDS.find(x=>x.id===id);const el=document.getElementById('pb_edit');if(!c||!el)return;
+ const via=c.acquired_via||'',dt=c.acquired_date||'';
+ const opts=['eBay','Whatnot','card show','break','card store','trade','pack pull','gift','other'];
+ el.innerHTML=`<div class="edrow"><span>$</span><input id="pb_cost" type="number" inputmode="decimal" step="0.01" value="${c._cm==='direct'?c.cost_basis:''}" placeholder="price paid" onkeydown='if(event.key==="Enter")saveCostFull("${id}")'><select id="pb_via"><option value="">where?</option>${opts.map(o=>`<option ${via.toLowerCase()===o.toLowerCase()?'selected':''}>${o}</option>`).join('')}</select><input id="pb_date" type="date" value="${dt}"><button onclick='saveCostFull("${id}")'>Save</button></div>`;
+ const i=document.getElementById('pb_cost');if(i)i.focus();
 }
 function renderRange(stats){
  const el=document.getElementById('cvrange');if(!el)return;
