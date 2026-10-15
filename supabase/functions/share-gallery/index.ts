@@ -2,9 +2,26 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SECRET = 'cv_ingest_7Kq2mZ';
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ingest-secret',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ingest-secret, x-agent-pass',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
+// ---- access gate (Oct 15 2026): Drew's passcode (from the app) or the private automation key (runner, Claude sessions).
+// The old shared secret is accepted only until Drew sets his passcode. Fails closed if the settings can't be read.
+async function vaultAuthorized(req: Request): Promise<boolean> {
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data, error } = await db.from('agent_settings').select('key,value').in('key', ['passcode_hash', 'automation_key']);
+  if (error) return false;
+  const m: Record<string, any> = {}; (data || []).forEach((r: any) => { m[r.key] = r.value; });
+  const pass = req.headers.get('x-agent-pass') || '';
+  if (pass && m.passcode_hash) {
+    const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('cv-agent-v1:' + pass)))).map((x) => x.toString(16).padStart(2, '0')).join('');
+    if (h === m.passcode_hash) return true;
+  }
+  const sec = req.headers.get('x-ingest-secret') || '';
+  if (m.automation_key && sec === m.automation_key) return true;
+  if (!m.passcode_hash && sec === SECRET) return true;
+  return false;
+}
 function j(o: unknown, s = 200, extra: Record<string, string> = {}) {
   return new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json', ...extra } });
 }
@@ -109,7 +126,7 @@ async function resolveCards(db: any, link: any) {
       if (error) throw error;
       rows = rows.concat(data || []);
     }
-    rows = rows.filter((c) => c.status !== 'duplicate');
+    rows = rows.filter((c) => c.status !== 'duplicate' && c.status !== 'sold');
     rows.sort((a, b) => (+b.current_value || 0) - (+a.current_value || 0));
   }
   return rows;
@@ -178,7 +195,7 @@ Deno.serve(async (req) => {
       if (!s) return j({ error: 'missing link' }, 400);
       return await publicView(s);
     }
-    if (req.headers.get('x-ingest-secret') !== SECRET) return j({ error: 'unauthorized' }, 401);
+    if (!(await vaultAuthorized(req))) return j({ error: 'locked' }, 401);
     const b = await req.json();
     const db = supa();
     const op = b.op;
