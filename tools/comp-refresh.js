@@ -15,7 +15,9 @@
 (()=>{
 const SUPA='https://kcmrmswazprkizbzewpm.supabase.co';
 const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbXJtc3dhenBya2l6Ynpld3BtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NTEzMzAsImV4cCI6MjEwNDEyNzMzMH0.EuB77E8I0b6HzdK8zfDG1qlg-q_k0FUej6pYLyEFiJI';
-const SECRET='cv_ingest_7Kq2mZ';
+// Oct 15 2026: the edge functions need the private automation key (agent_settings.automation_key, read via Supabase MCP)
+// once Drew's passcode is set. Set window.CV_KEY before loading this runner. The old shared secret is the fallback until then.
+const SECRET=(typeof window!=='undefined'&&window.CV_KEY)||'cv_ingest_7Kq2mZ';
 const money=t=>{const m=(t||'').replace(/,/g,'').match(/\$\s?([0-9]+(?:\.[0-9]{2})?)/);return m?parseFloat(m[1]):null;};
 const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);const m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
 function lastname(p){if(!p)return '';let w=(p+'').toLowerCase().replace(/[^a-z0-9\s'-]/g,' ').trim().split(/\s+/);const stop=['jr','sr','ii','iii','psa','sgc','bgs','cgc','rc','hof'];while(w.length>1&&stop.includes(w[w.length-1]))w.pop();return w[w.length-1]||'';}
@@ -120,12 +122,12 @@ async function patchReq(id,body){await fetch(SUPA+'/rest/v1/comp_requests?id=eq.
     if (opts.dry) return { total, scraped: items.length, complete, pages: log };
     const res = [];
     for (let k = 0; k < items.length; k += 150) {
-      const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': 'cv_ingest_7Kq2mZ' },
+      const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': SECRET },
         body: JSON.stringify({ op: 'watchlist_ingest', items: items.slice(k, k + 150), mark_missing: false }) });
       res.push(await r.json());
     }
     if (complete) { // second pass only to retire items no longer on the watchlist
-      const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': 'cv_ingest_7Kq2mZ' },
+      const r = await fetch(WL_FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-ingest-secret': SECRET },
         body: JSON.stringify({ op: 'watchlist_retire', ids: items.map((i) => i.item_id) }) });
       res.push(await r.json());
     }
