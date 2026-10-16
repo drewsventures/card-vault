@@ -640,7 +640,7 @@ body{font-variant-numeric:tabular-nums}
 <header>
  <div class="hrow">
   <div class="brand"><h1>Card Vault</h1><span class="owner">Drew Austin&nbsp;·&nbsp;<b id="hsum">—</b></span></div>
-  <div style="display:flex;align-items:center;gap:4px"><div class="as" id="asof"></div><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div>
+  <div style="display:flex;align-items:center;gap:4px"><div class="as" id="asof"></div><button class="hask" onclick="askOpen()" title="Ask the Vault assistant"><span class="spark"></span>Ask AI</button><button class="gear" onclick="openSettings()" title="Sale settings">&#9881;</button></div>
  </div>
  <div class="hsearchwrap"><span class="si">&#9906;</span><input id="q" placeholder="Search name, set, year, or ID…" autocomplete="off" oninput="onSearchInput()" onfocus="onSearchFocus()"></div>
 </header>
@@ -676,6 +676,7 @@ body{font-variant-numeric:tabular-nums}
   <button id="nav-portfolio" onclick="show('portfolio');renderPortfolio()"><span class="ic">&#8599;</span>Portfolio</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
   <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#10150;</span>Share</button>
+  <button id="nav-ask" class="sec" onclick="askOpen()"><span class="ic">&#10022;</span>Ask AI</button>
   <button id="nav-insights" class="sec" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
   <button id="nav-watch" class="sec" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
   <button id="nav-review" class="sec" onclick="show('review');renderReview()"><span class="ic">&#9998;</span>Review</button>
@@ -2746,6 +2747,8 @@ async function rvLoadQueue(){
 <!-- ===== Ask Claude (Oct 15 2026): Drew's private in-app assistant ===== -->
 <style>
 #askfab{position:fixed;right:16px;bottom:calc(70px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:none;border-radius:999px;padding:11px 16px 11px 13px;font:700 13.5px var(--ui);box-shadow:0 6px 20px rgba(32,29,22,.25);cursor:pointer}
+.hask{display:inline-flex;align-items:center;gap:6px;border:none;background:var(--ink);color:#fff;border-radius:999px;padding:6px 12px 6px 8px;font:700 12.5px var(--ui);cursor:pointer;white-space:nowrap}
+.hask .spark{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
 #askfab .spark{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
 body:has(#sheet .sheet) #askfab,body:has(#askpanel.on) #askfab{display:none}
 #askfab.busy .spark{animation:askpulse 1s ease-in-out infinite}
@@ -2813,7 +2816,7 @@ body:has(#sheet .sheet) #askfab,body:has(#askpanel.on) #askfab{display:none}
 .askcardbtn .spark{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f3d48a,#c19542);display:inline-block}
 @media (min-width:900px){#askfab{bottom:24px;right:24px}}
 </style>
-<button id="askfab" onclick="askOpen()" aria-label="Ask the Vault assistant"><span class="spark"></span>Ask</button>
+<button id="askfab" onclick="askOpen()" aria-label="Ask the Vault assistant"><span class="spark"></span>Ask AI</button>
 <div id="askpanel" onclick="if(event.target===this)askClose()"><div id="askbox" role="dialog" aria-label="Vault assistant">
  <div class="askhd"><h3 id="asktitle">Vault assistant</h3><button onclick="askShowModels()" id="askmodelbtn">Model</button><button onclick="askShowChats()">Chats</button><button onclick="askNew()">New</button><button class="x" onclick="askClose()" aria-label="Close">&times;</button></div>
  <div id="askmsgs"></div>
