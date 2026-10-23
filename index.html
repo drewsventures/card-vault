@@ -175,6 +175,15 @@ nav button .ic{font-size:17px;line-height:1}
 .srow[onclick]{cursor:pointer}
 .segbanner{display:inline-flex;align-items:center;background:var(--goldsoft);border:1px solid var(--line2);border-radius:20px;padding:5px 7px 5px 12px;margin-right:9px;font-size:12.5px;color:var(--ink);font-weight:600}
 .segbanner b{color:var(--gold);cursor:pointer;margin-left:8px;font-weight:700}
+.soldbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 4px;margin-top:10px}
+.soldbar input{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:16px var(--ui);background:var(--card);color:var(--ink)}
+.soldbar input:focus{outline:none;border-color:var(--ink)}
+.soldbar .chips{margin-top:8px}
+.soldbar .ctrlrow{justify-content:space-between}
+.soldbar select{height:34px;border:1px solid var(--line);border-radius:999px;padding:0 10px;font:600 12.5px var(--ui);background:var(--card);color:var(--ink)}
+.soldcount{font-size:12.5px;color:var(--mut);font-weight:600}
+.soldhint{margin:8px 0 0;font-size:12.5px;color:var(--mut)}
+.soldhint a{color:var(--ink);font-weight:700;cursor:pointer;text-decoration:underline}
 .soldrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .soldrow .sthumb{width:44px;height:58px;border-radius:8px;overflow:hidden;background:var(--track);flex:none;display:flex;align-items:center;justify-content:center}
 .soldrow .sthumb img{width:100%;height:100%;object-fit:cover}
@@ -311,15 +320,15 @@ nav button.on{color:var(--ink)}
 .herov .n{font-size:38px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:2px}
 .herov .s{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
 .herov .s b{color:var(--ink);font-weight:700}
-.kpis{display:grid;grid-template-columns:1fr;gap:12px;margin:6px 0 4px}
-@media(min-width:760px){.kpis{grid-template-columns:1fr 1fr}}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;min-width:0}
-.kpi .kl{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);font-weight:700}
-.kpi .kl a{color:var(--ink);font-weight:700;cursor:pointer;font-size:12.5px}
-.kpi .kn{font-size:36px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:4px}
-@media(min-width:1000px){.kpi .kn{font-size:42px}}
-.kpi .ks{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
-.kpi .ks b{color:var(--ink);font-weight:700}
+.hkpis{display:grid;grid-template-columns:1fr;gap:12px;margin:6px 0 4px}
+@media(min-width:760px){.hkpis{grid-template-columns:1fr 1fr}}
+.hkpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;min-width:0}
+.hkpi .kl{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);font-weight:700}
+.hkpi .kl a{color:var(--ink);font-weight:700;cursor:pointer;font-size:12.5px}
+.hkpi .kn{font-size:36px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin-top:4px}
+@media(min-width:1000px){.hkpi .kn{font-size:42px}}
+.hkpi .ks{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--mut)}
+.hkpi .ks b{color:var(--ink);font-weight:700}
 .kchg{display:inline-block;line-height:1.4;margin-top:8px;padding:5px 10px;border-radius:9px;font-size:13.5px;font-weight:700;background:var(--bg);color:var(--ink2)}
 .kchg.up{background:var(--upsoft);color:var(--up)}.kchg.dn{background:var(--dnsoft);color:var(--dn)}
 .kchg span{font-weight:600;opacity:.85;margin-left:4px}
@@ -837,8 +846,11 @@ function runSearch(){
  LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
  el.innerHTML='';
- if(!list.length){el.innerHTML='<div class="spin">No cards match.</div>';return;}
+ const soldN=q?CARDS.filter(c=>c.status==='sold'&&soldMatches(c,q)).length:0;
+ const soldNote=soldN?`<div class="soldhint">${soldN} sold card${soldN===1?'':'s'} also match${soldN===1?'es':''}. <a onclick="openSoldSearch(document.getElementById('q').value)">See ${soldN===1?'it':'them'} in Sold &rsaquo;</a></div>`:'';
+ if(!list.length){el.innerHTML='<div class="spin">No cards match.</div>'+soldNote;return;}
  renderMore();
+ if(soldNote)el.insertAdjacentHTML('afterbegin',soldNote);
 }
 function searchTile(c,inSet){
    const u=primary(c);const dup=DUPE[c.dupe_key]&&DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length>1;
@@ -1288,37 +1300,78 @@ function soldBlock(c){
  if(mk!=null)h+=`<div class="sbrow"><span>Worth now (comp)</span><b>${money(mk)}</b></div><div class="sbrow"><span>Your call</span><b style="color:${hind>=0?'var(--green)':'var(--gold)'}">${hind>=0?'Good sell (at/above market)':'Left '+money(-hind)+' on the table'}</b></div>`;
  h+=`</div>`;return h;
 }
+// Sold page: search, venue/date filters and sort. Search covers player, set, year, number, parallel,
+// serial, grade, team, card ID, venue and buyer, so a past sale can be found by any of them.
+let SOLDQ='',SOLDVEN='',SOLDWHEN='all',SOLDSORT='new';
+function soldHay(c){return [c.player,c.set_name,c.year,c.card_number,c.variation,c.serial,c.grade,c.grader,c.team,c.ref,c.sold_venue,c.sold_to,c.sold_date,c.notes].filter(Boolean).join(' ').toLowerCase().replace(/#/g,'');}
+// "#8" means card number 8 exactly; every other word just has to appear somewhere.
+function soldMatches(c,q){if(!q)return true;const t=q.toLowerCase().split(/\s+/).filter(Boolean);const h=soldHay(c),num=String(c.card_number||'').replace(/^#/,'').toLowerCase();
+ return t.every(w=>w.startsWith('#')&&w.length>1?num===w.slice(1):h.includes(w.replace(/#/g,'')));}
+function soldList(){
+ let list=CARDS.filter(c=>c.status==='sold');
+ if(SOLDVEN)list=list.filter(c=>(c.sold_venue||'Unknown')===SOLDVEN);
+ if(SOLDWHEN!=='all'){const now=new Date(),cut=SOLDWHEN==='year'?`${now.getFullYear()}-01-01`:new Date(now.getTime()-(+SOLDWHEN)*864e5).toISOString().slice(0,10);list=list.filter(c=>c.sold_date&&String(c.sold_date)>=cut);}
+ list=list.filter(c=>soldMatches(c,SOLDQ));
+ const d=c=>''+(c.sold_date||''),p=c=>+c.sale_price||0,r=c=>{const x=realizedPL(c);return x==null?null:x;};
+ const by={new:(a,b)=>d(b).localeCompare(d(a)),old:(a,b)=>(d(a)||'9').localeCompare(d(b)||'9'),hi:(a,b)=>p(b)-p(a),lo:(a,b)=>p(a)-p(b),
+  best:(a,b)=>(r(b)??-1e12)-(r(a)??-1e12),worst:(a,b)=>(r(a)??1e12)-(r(b)??1e12)};
+ return list.sort(by[SOLDSORT]||by.new);
+}
 function renderSold(){
  const el=document.getElementById('sold');
- const list=CARDS.filter(c=>c.status==='sold').sort((a,b)=>(''+(b.sold_date||'')).localeCompare(''+(a.sold_date||'')));
+ const hq=document.getElementById('q');if(hq)hq.value=SOLDQ;
+ const all=CARDS.filter(c=>c.status==='sold');
+ const ven={};all.forEach(c=>{const v=c.sold_venue||'Unknown';ven[v]=(ven[v]||0)+1;});
+ const vk=Object.keys(ven).sort((a,b)=>ven[b]-ven[a]);
+ let h=`<h2 style="margin:16px 0 4px">Sold</h2>
+  <div class="stat-note">Cards you&#39;ve sold stay here so you can judge the call. We keep comping them, so &quot;worth now&quot; updates over time.</div>
+  <div class="soldbar">
+   <input id="soldq" type="search" placeholder="Search sold cards: player, set, year, grade, buyer, card ID…" value="${esc(SOLDQ)}" autocomplete="off" enterkeyhint="search" oninput="SOLDQ=this.value;const hq=document.getElementById('q');if(hq)hq.value=SOLDQ;clearTimeout(window._sq);window._sq=setTimeout(renderSoldList,120)">
+   ${vk.length>1?`<div class="chips">${['',...vk].map(v=>`<div class="chip ${SOLDVEN===v?'on':''}" data-v="${esc(v)}" onclick="SOLDVEN=this.dataset.v;renderSold()">${v?esc(v)+` <small style="opacity:.6">${ven[v]}</small>`:'All venues'}</div>`).join('')}</div>`:''}
+   <div class="ctrlrow"><div class="chips" style="margin:0">${[['all','All time'],['30','30 days'],['90','90 days'],['year','This year']].map(([k,t])=>`<div class="chip ${SOLDWHEN===k?'on':''}" onclick="SOLDWHEN='${k}';renderSold()">${t}</div>`).join('')}</div>
+    <select aria-label="Sort sold cards" onchange="SOLDSORT=this.value;renderSoldList()">${[['new','Newest sale'],['old','Oldest sale'],['hi','Highest price'],['lo','Lowest price'],['best','Best profit'],['worst','Worst profit']].map(([k,t])=>`<option value="${k}"${SOLDSORT===k?' selected':''}>${t}</option>`).join('')}</select></div>
+  </div>
+  <div class="soldcount" id="soldcount"></div>
+  <div id="soldkpis"></div>
+  <div class="panel" id="soldlist" style="margin-top:8px;padding:2px 12px"></div>`;
+ el.innerHTML=h;
+ renderSoldList();
+}
+// Re-renders only the totals and rows, so typing in the search box keeps focus.
+function renderSoldList(){
+ const all=CARDS.filter(c=>c.status==='sold'), list=soldList(), filtered=list.length!==all.length;
  let proceeds=0,real=0,realN=0,above=0,below=0;
  list.forEach(c=>{proceeds+=saleNet(c);const rl=realizedPL(c);if(rl!=null){real+=rl;realN++;}
   if(c.sale_price!=null&&c.current_value!=null){if(+c.sale_price>=+c.current_value)above++;else below++;}});
- let h=`<h2 style="margin:16px 0 4px">Sold</h2>
-  <div class="stat-note">Cards you&#39;ve sold stay here so you can judge the call. We keep comping them, so &quot;worth now&quot; updates over time.</div>
-  <div class="kpis" style="margin-top:10px">
-   <div class="kpi"><div class="n">${list.length}</div><div class="l">Cards sold</div></div>
+ const k=document.getElementById('soldkpis');
+ if(k)k.innerHTML=`<div class="kpis" style="margin-top:10px">
+   <div class="kpi"><div class="n">${list.length}</div><div class="l">Cards sold${filtered?' (filtered)':''}</div></div>
    <div class="kpi"><div class="n">${money(proceeds)}</div><div class="l">Net proceeds</div></div>
    <div class="kpi"><div class="n" style="color:${real>=0?'var(--green)':'var(--accent)'}">${real>=0?'+':'-'}${money(Math.abs(real))}</div><div class="l">Realized P/L</div><div class="d" style="color:var(--mut)">${realN} with cost basis</div></div>
    <div class="kpi"><div class="n">${above}/${(above+below)||0}</div><div class="l">Good-timing sells</div><div class="d" style="color:var(--mut)">at/above today&#39;s market</div></div>
-  </div>
-  <div class="panel" style="margin-top:12px;padding:2px 12px">`;
- if(!list.length)h+=`<div class="spin">No sold cards yet. Open any card and tap &quot;Mark as sold.&quot;</div>`;
+  </div>`;
+ const cn=document.getElementById('soldcount');
+ if(cn)cn.innerHTML=filtered?`${list.length} of ${all.length} sold cards <a class="linkish" style="cursor:pointer;text-decoration:underline;color:var(--ink);margin-left:6px" onclick="SOLDQ='';SOLDVEN='';SOLDWHEN='all';renderSold()">Clear</a>`:`${all.length} sold cards`;
+ let h='';
+ if(!all.length)h=`<div class="spin">No sold cards yet. Open any card and tap &quot;Mark as sold.&quot;</div>`;
+ else if(!list.length)h=`<div class="spin">No sold cards match${SOLDQ?` &ldquo;${esc(SOLDQ)}&rdquo;`:''}.${SOLDQ&&CARDS.some(c=>c.status!=='sold'&&soldMatches(c,SOLDQ))?` It&#39;s in your collection, not sold: <a style="cursor:pointer;text-decoration:underline" onclick="soldToBrowse()">search the vault</a>.`:''}</div>`;
  list.forEach(c=>{
   const rl=realizedPL(c),mk=c.current_value;
   const hind=(c.sale_price!=null&&mk!=null)?(+c.sale_price-+mk):null;
+  const sub=[c.year&&!String(c.set_name||'').startsWith(String(c.year))?c.year:'',c.set_name,c.card_number?'#'+String(c.card_number).replace(/^#/,''):'',c.grade&&!/^raw/i.test(c.grade)?c.grade:''].filter(Boolean).join(' ');
   h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
    <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
    <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div>
-    <div class="st">${esc(c.set_name||'')}${c.sold_date?' &middot; '+c.sold_date:''}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}</div>
+    <div class="st">${esc(sub)}${c.sold_date?' &middot; '+c.sold_date:' &middot; no date'}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}${c.sold_to?' &middot; to '+esc(c.sold_to):''}</div>
     <div class="sdec">${rl!=null?`<span style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))} realized</span>`:`<span style="color:var(--mut)">no cost basis</span>`}${hind!=null?` &middot; <span style="color:${hind>=0?'var(--green)':'var(--gold)'}">${hind>=0?'sold above market':'market up '+money(-hind)}</span>`:''}</div>
    </div>
    <div class="sprice">${money(c.sale_price)}<div class="sub">sold</div></div>
   </div>`;
  });
- h+=`</div>`;
- el.innerHTML=h;
+ const el=document.getElementById('soldlist');if(el)el.innerHTML=h;
 }
+function soldToBrowse(){const q=SOLDQ;show('search');const i=document.getElementById('q');if(i){i.value=q;}runSearch();}
+function openSoldSearch(q){SOLDQ=q;SOLDVEN='';SOLDWHEN='all';show('sold');renderSold();}
 function sellCard(id){
  const c=CARDS.find(x=>x.id===id);if(!c)return;
  const today=new Date().toISOString().slice(0,10);
@@ -1673,8 +1726,10 @@ function openSeg(name){VALONLY=false;SEGFILTER=name;SUBJ=null;const sq=document.
 function openAll(mode){VALONLY=(mode==='value');if(mode==='value')SORT='value';SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
 function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
 function clearSeg(){VALONLY=false;SEGFILTER=null;SUBJ=null;runSearch();}
-function onSearchInput(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');}runSearch();}
-function onSearchFocus(){if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}}
+// On the Sold page the header search filters sold cards instead of jumping to Browse.
+const onSoldPage=()=>!document.getElementById('sold').classList.contains('hide');
+function onSearchInput(){if(onSoldPage()){SOLDQ=document.getElementById('q').value;const sq=document.getElementById('soldq');if(sq)sq.value=SOLDQ;renderSoldList();return;}if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');}runSearch();}
+function onSearchFocus(){if(onSoldPage())return;if(document.getElementById('search').classList.contains('hide')){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}}
 /* ================= v8: trends, population counts, subject filters, watchlist ================= */
 const fmtDay=d=>d?fmtD(String(d).length===10?d+"T12:00:00":d):"";
 let TREND={}, POPS={}, SKCHAR={}, SUBJ=null, SORT='value', WATCH=null, WLSORT='up', WLCAT='all', WLFIXED=true;
@@ -1767,12 +1822,12 @@ function renderDash(){
  const mchg=mk.reduce((s,[c,t])=>s+(+t.chg),0), mbase=mk.reduce((s,[c,t])=>s+(+t.value_then||0),0);
  const since=mk.length?mk.map(([c,t])=>t.then_date).sort()[0]:null;
  const sales=dashSales(soldCards);
- let h=`<div class="kpis">
-  <div class="kpi" id="kpiv" data-val="${Math.round(val)}"><div class="kl"><span>Collection value</span><a onclick="show('portfolio');renderPortfolio()">Portfolio &rsaquo;</a></div>
+ let h=`<div class="hkpis">
+  <div class="hkpi" id="kpiv" data-val="${Math.round(val)}"><div class="kl"><span>Collection value</span><a onclick="show('portfolio');renderPortfolio()">Portfolio &rsaquo;</a></div>
    <div class="kn">${money(val)}</div><div id="kpiv-chg"></div>
    <div class="ks"><span><b>${own.length.toLocaleString()}</b> cards</span><span>Cost <b>${money(cost)}</b></span><span style="color:${gain>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${gain>=0?'+':'-'}${money(Math.abs(gain))}</b> vs cost</span></div>
    <div id="kpiv-chart"></div></div>
-  <div class="kpi" id="kpis"><div class="kl"><span>Sold</span><a onclick="show('sold');renderSold()">Sales &rsaquo;</a></div>
+  <div class="hkpi" id="kpis"><div class="kl"><span>Sold</span><a onclick="show('sold');renderSold()">Sales &rsaquo;</a></div>
    <div class="kn">${money(sales.gross)}</div>
    <div class="kchg ${sales.mNow>=sales.mPrev&&sales.mNow>0?'up':''}">${money(sales.mNow)} last 30 days <span>&middot; ${sales.nNow} card${sales.nNow===1?'':'s'}${sales.mPrev||sales.nPrev?` &middot; ${money(sales.mPrev)} the 30 before`:''}</span></div>
    <div class="ks"><span><b>${soldCards.length.toLocaleString()}</b> cards sold</span><span style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b> profit</span>${sales.avg?`<span>Avg <b>${money(sales.avg)}</b>/card</span>`:''}</div>
