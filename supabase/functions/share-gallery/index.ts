@@ -168,14 +168,22 @@ async function publicView(slug: string) {
     const sold = c.status === 'sold';
     const nfs = !!c.not_for_sale;
     const { price, list, comp } = cardPrice(link, c, disc);
+    // Card-type tags (fixed Oct 26 2026): Numbered only for a real print run (x/y), not codes like SP or M-JW;
+    // Sketch covers sketch cards and original art so buyers can hide or isolate them.
     const tags: string[] = [];
+    const ser = String(c.serial || '').trim();
+    const numbered = /\d\s*\/\s*\d/.test(ser) || /^\/\s*\d+$/.test(ser) || (+c.serial_den > 0);
+    // "Original Art" alone is a printed Galaxy insert name, so it only counts as art when the card is a 1/1.
+    const sketch = /sketch|hand[- ]?drawn|hand[- ]?painted|art 1\/1/i.test([c.player, c.set_name, c.variation, c.category].join(' ')) || (ser === '1/1' && /original art/i.test(c.variation || ''));
     if (c.is_rookie) tags.push('RC');
     if (c.is_auto) tags.push('Auto');
     if (c.is_relic) tags.push('Relic');
+    if (numbered) tags.push('Numbered');
+    if (sketch) tags.push('Sketch');
     return {
       id: c.ref, player: cleanPlayer(c.player), year: c.year || '', set: c.set_name || '',
-      num: c.card_number ? String(c.card_number).replace(/^#/, '') : '', variation: c.variation && !/^base$/i.test(c.variation) ? c.variation : '',
-      serial: c.serial && c.serial !== '-' ? c.serial : '', grade: cleanGrade(c.grade, c.grader), cert: c.cert_number || null,
+      num: c.card_number ? String(c.card_number).replace(/^#/, '') : (ser && !numbered && !/^(sp|ssp|base|-)$/i.test(ser) ? ser : ''), variation: c.variation && !/^(base|parallel|insert)$/i.test(c.variation) ? String(c.variation).replace(/^printing_plate$/i, 'Printing plate') : '',
+      serial: numbered ? ser : (/^s?sp$/i.test(ser) ? ser.toUpperCase() : ''), grade: cleanGrade(c.grade, c.grader), cert: c.cert_number || null,
       team: c.team || '', tags, seg: segKey(c), price, list, comp, hold: !!c.hold_offer_id, nfs, sold, photos: pickPhotos(c.photos), comps: comps[c.id] || undefined,
     };
   });
