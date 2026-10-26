@@ -478,6 +478,36 @@ nav button.on{color:var(--ink)}
 @media(max-width:620px){.pfmcols{grid-template-columns:1fr}.pflegend{grid-template-columns:1fr}.pfdrow{grid-template-columns:1fr 1.2fr 62px}}
 /* share links */
 .shsub{color:var(--mut);font-size:13.5px;margin-bottom:12px;max-width:620px}
+.offhd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px}
+.offhd h3{margin:0;font-size:16px}
+.offtabs{display:flex;gap:6px}
+.offtabs button{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:5px 12px;font:600 12.5px var(--ui);color:var(--ink2);cursor:pointer}
+.offtabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.offer{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.offer.newo{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}
+.offer .ot{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.offer .on1{font-weight:750;font-size:15px}
+.offer .om{color:var(--mut);font-size:12.5px;margin-top:2px}
+.offer .oamt{text-align:right;font-weight:800;font-size:20px;letter-spacing:-.02em;white-space:nowrap}
+.offer .oamt small{display:block;font-size:11.5px;font-weight:600;color:var(--mut);letter-spacing:0}
+.ostp{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-left:6px;vertical-align:2px}
+.ostp.new{background:#eef2ff;color:#3346a8}.ostp.countered{background:#fff4dc;color:#7a5200}.ostp.accepted,.ostp.sold{background:var(--upsoft);color:var(--up)}.ostp.declined,.ostp.withdrawn{background:var(--track);color:var(--mut)}
+.ogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 4px}
+.ogrid div{background:var(--bg);border-radius:10px;padding:7px 9px;font-size:11.5px;color:var(--mut)}
+.ogrid b{display:block;font-size:14px;color:var(--ink)}
+@media(max-width:420px){.ogrid{grid-template-columns:repeat(2,1fr)}}
+.oitems{margin-top:8px;border-top:1px solid var(--line)}
+.oitem{display:grid;grid-template-columns:auto 36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.oitem img,.oitem .ph0{width:36px;height:46px;border-radius:6px;object-fit:cover;background:var(--track)}
+.oitem .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oitem .nm small{display:block;color:var(--mut);font-size:11.5px}
+.oitem.out{opacity:.45}
+.onote{background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px;margin-top:8px}
+.ohist{font-size:12.5px;color:var(--mut);margin-top:8px;line-height:1.6}
+.ocounter{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ocounter input{flex:1;min-width:120px;height:40px;border:1px solid var(--line2);border-radius:10px;padding:0 10px;font-size:16px;background:var(--card);color:var(--ink)}
+#nav-share{position:relative}
+.navbadge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px}
 .shrow{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:11px}
 .shrow.off{opacity:.6}
 .shrow .ln{font-weight:750;font-size:15.5px}
@@ -684,7 +714,7 @@ body{font-variant-numeric:tabular-nums}
   <button id="nav-search" onclick="navSearch()"><span class="ic">&#9906;</span>Browse</button>
   <button id="nav-portfolio" onclick="show('portfolio');renderPortfolio()"><span class="ic">&#8599;</span>Portfolio</button>
   <button id="nav-lots" onclick="show('lots');renderLots()"><span class="ic">&#9707;</span>Lots</button>
-  <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#10150;</span>Share</button>
+  <button id="nav-share" onclick="show('share');renderShare()"><span class="ic">&#10150;</span>Share<span class="navbadge" id="offbadge" hidden></span></button>
   <button id="nav-ask" class="sec" onclick="askOpen()"><span class="ic">&#10022;</span>Ask AI</button>
   <button id="nav-insights" class="sec" onclick="show('insights');renderInsights()"><span class="ic">&#10022;</span>Insights</button>
   <button id="nav-watch" class="sec" onclick="show('watch');renderWatch()"><span class="ic">&#9737;</span>Watchlist</button>
@@ -2434,12 +2464,88 @@ function shareCount(l){
 }
 async function copyText(t,btn,label){try{await navigator.clipboard.writeText(t);}catch(e){prompt('Copy this link',t);}if(btn){const o=btn.textContent;btn.textContent=label||'Copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent=o;btn.classList.remove('ok');},1600);}}
 async function nativeShare(id){const l=(SHARES||[]).find(x=>x.id===id);if(!l)return;const url=shareUrl(l);if(navigator.share){try{await navigator.share({title:l.title,url});}catch(e){}}else copyText(url);}
+/* ---- Offers inbox: buyers' claims and offers from share links ---- */
+let OFFERS=null, OFFTAB='open', OFFOPEN={};
+async function loadOffers(){const r=await shareOp({op:'list_offers'});if(r&&r.offers){OFFERS=r.offers;offerBadge();}return OFFERS||[];}
+function offerBadge(){const n=(OFFERS||[]).filter(o=>o.turn==='seller'&&o.status==='new').length;const b=document.getElementById('offbadge');if(b){b.hidden=!n;b.textContent=n;}}
+const OFF_OPEN=o=>['new','countered','accepted'].includes(o.status);
+function offerBuyerMsg(o,kind){
+ const first=(o.buyer_name||'').split(' ')[0]||'there';
+ if(kind==='counter')return `Hi ${first}, thanks for the offer of ${money(o.total_offer)}. I can do ${money(o.counter_total)} for the ${o.items.filter(x=>x.included).length} cards. Accept or counter here: ${o.status_url}`;
+ if(kind==='accept')return `Hi ${first}, deal at ${money(o.total_offer)}! ${'I\'ll send payment details shortly.'} Your order: ${o.status_url}`;
+ if(kind==='decline')return `Hi ${first}, thanks for the offer of ${money(o.total_offer)}. I'm going to pass this time. ${o.status_url}`;
+ return `Hi ${first}, about your offer: ${o.status_url}`;
+}
+function offerContactBtn(o,kind){
+ const msg=offerBuyerMsg(o,kind), c=(o.buyer_contact||'').trim();
+ if(o.buyer_via==='email')return `<a class="btnlink" href="mailto:${esc(c)}?subject=${encodeURIComponent('Your card offer')}&body=${encodeURIComponent(msg)}">Email ${esc((o.buyer_name||'').split(' ')[0])}</a>`;
+ if(o.buyer_via==='ig')return `<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied for IG');window.open('https://ig.me/m/${encodeURIComponent(c.replace(/^@/,''))}','_blank')">DM on Instagram</button>`;
+ const d=c.replace(/[^\d+]/g,'');return `<a class="btnlink" href="sms:${esc(d)}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}">Text ${esc((o.buyer_name||'').split(' ')[0])}</a>`;
+}
+function offersHTML(){
+ if(!OFFERS)return '';
+ const open=OFFERS.filter(OFF_OPEN), closed=OFFERS.filter(o=>!OFF_OPEN(o)), list=OFFTAB==='open'?open:closed;
+ const waiting=open.filter(o=>o.turn==='seller'&&o.status==='new').length;
+ let h=`<div class="offhd"><h3>Offers${waiting?` <span class="ostp new">${waiting} waiting on you</span>`:''}</h3><div class="offtabs"><button class="${OFFTAB==='open'?'on':''}" onclick="OFFTAB='open';renderShare()">Open ${open.length}</button><button class="${OFFTAB==='closed'?'on':''}" onclick="OFFTAB='closed';renderShare()">Closed ${closed.length}</button></div></div>`;
+ if(!list.length)h+=`<div class="stat-note" style="margin-bottom:12px">${OFFTAB==='open'?'No open offers. When a buyer sends a claim or offer from a link, it lands here and on your phone by email if alerts are set up.':'Nothing closed yet.'}</div>`;
+ list.forEach(o=>{
+  const inc=o.items.filter(x=>x.included), cost=inc.reduce((t,x)=>t+(x.cards&&x.cards.cost_basis!=null?+x.cards.cost_basis:0),0), hasCost=inc.some(x=>x.cards&&x.cards.cost_basis!=null);
+  const pct=o.total_comp?Math.round(o.total_offer/o.total_comp*100):null, prof=hasCost?o.total_offer-cost:null;
+  const isNew=o.turn==='seller'&&o.status==='new', exp=OFFOPEN[o.id]||isNew;
+  const when=new Date(o.updated_at||o.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const lastBuyer=[...o.events].reverse().find(e=>e.actor==='buyer');
+  h+=`<div class="offer${isNew?' newo':''}" id="off-${o.id}">
+   <div class="ot"><div style="min-width:0"><div class="on1">${esc(o.buyer_name)}<span class="ostp ${esc(o.status)}">${o.status==='new'?(o.events.length>1?'countered you':o.kind==='claim'?'claim':'new'):o.status==='countered'?'waiting on buyer':esc(o.status)}</span></div>
+    <div class="om">${esc(o.link?o.link.title:'Share link')} · ${inc.length} card${inc.length===1?'':'s'} · ${when} · ${esc(o.buyer_via)}: ${esc(o.buyer_contact)}</div></div>
+    <div class="oamt">${money(o.total_offer)}<small>${o.status==='countered'?'you countered '+money(o.counter_total):o.kind==='claim'?'claim at price':o.kind==='per_card'?'per-card offer':'lot offer'}</small></div></div>
+   <div class="ogrid"><div>Comp<b>${money(o.total_comp)}</b></div><div>Priced at<b>${money(o.total_shown)}</b></div><div>Offer vs comp<b style="color:${pct==null?'inherit':pct>=100?'var(--up)':pct>=80?'var(--ink)':'var(--dn)'}">${pct==null?'--':pct+'%'}</b></div><div>Profit vs cost<b style="color:${prof==null?'inherit':prof>=0?'var(--up)':'var(--dn)'}">${prof==null?'--':(prof>=0?'+':'-')+money(Math.abs(prof))}</b></div></div>
+   ${lastBuyer&&lastBuyer.note?`<div class="onote">“${esc(lastBuyer.note)}”</div>`:''}
+   ${exp?`<div class="oitems">${o.items.map(x=>`<div class="oitem${x.included?'':' out'}">${isNew&&o.items.length>1?`<input type="checkbox" class="oinc" data-o="${o.id}" value="${x.card_id}" ${x.included?'checked':''} aria-label="Include ${esc(x.title)}">`:'<span></span>'}${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy">`:'<span class="ph0"></span>'}<div class="nm">${esc(x.title||x.ref)}<small>${esc(x.ref||'')} · comp ${money(x.comp)}${x.cards&&x.cards.cost_basis!=null?' · cost '+money(x.cards.cost_basis):''}</small></div><b>${money(x.offer_price)}</b></div>`).join('')}</div>
+   <div class="ohist">${o.events.map(e=>`${e.actor==='buyer'?esc((o.buyer_name||'Buyer').split(' ')[0]):'You'} ${({offer:o.kind==='claim'?'claimed':'offered',counter:'countered',accept:'accepted',decline:'declined',withdraw:'withdrew',sold:'marked sold',release:'released'})[e.action]||e.action}${e.amount!=null?' '+money(e.amount):''} · ${new Date(e.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`).join('<br>')}</div>`:`<button class="linkish" style="background:none;border:0;padding:6px 0;color:var(--ink);text-decoration:underline;cursor:pointer;font-weight:600" onclick="OFFOPEN['${o.id}']=1;renderShare()">Show ${inc.length} card${inc.length===1?'':'s'} &amp; history</button>`}`;
+  if(o.status==='new')h+=`<div class="ocounter"><input type="number" inputmode="decimal" id="oc-${o.id}" placeholder="Counter amount ($)"><input id="on-${o.id}" placeholder="Note to buyer (optional)"></div>
+   <div class="lotact" style="margin-top:8px"><button class="primary" onclick="offerAct('${o.id}','accept')">Accept ${money(o.total_offer)}</button><button onclick="offerAct('${o.id}','counter')">Counter</button><button onclick="offerAct('${o.id}','decline')">Decline</button>${offerContactBtn(o,'')}<a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
+  else if(o.status==='countered')h+=`<div class="lotact" style="margin-top:8px">${offerContactBtn(o,'counter')}<button onclick="offerAct('${o.id}','accept')">Accept their ${money(o.total_offer)} instead</button><button onclick="offerAct('${o.id}','decline')">Withdraw counter</button><a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
+  else if(o.status==='accepted')h+=`<div class="lotact" style="margin-top:8px"><button class="primary" onclick="offerSold('${o.id}')">Paid · mark ${inc.length} sold</button>${offerContactBtn(o,'accept')}<button onclick="offerAct('${o.id}','release')">Fell through · release</button><a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
+  h+=`</div>`;
+ });
+ return h;
+}
+async function offerAct(id,action){
+ const o=(OFFERS||[]).find(x=>x.id===id);if(!o)return;
+ const body={op:'offer_respond',id,action,note:(document.getElementById('on-'+id)||{}).value||''};
+ if(action==='counter'){const v=+(document.getElementById('oc-'+id)||{}).value;if(!(v>0)){alert('Enter your counter amount first.');document.getElementById('oc-'+id).focus();return;}body.amount=v;}
+ if(action==='accept'){const ex=[...document.querySelectorAll(`.oinc[data-o="${id}"]`)].filter(x=>!x.checked).map(x=>x.value);if(ex.length)body.exclude=ex;
+  if(!confirm(ex.length?`Accept ${o.items.length-ex.length} of ${o.items.length} cards from ${o.buyer_name}? They'll be put on hold.`:`Accept ${money(o.total_offer)} from ${o.buyer_name}? The cards go on hold until you mark them sold.`))return;}
+ if(action==='decline'&&!confirm(o.status==='countered'?'Withdraw your counter and close this offer?':`Decline ${o.buyer_name}'s offer?`))return;
+ if(action==='release'&&!confirm('Release the hold and close this deal? The cards go back to available.'))return;
+ const r=await shareOp(body);
+ if(!r||!r.ok){alert('Could not update the offer: '+((r&&r.error)||'unknown'));return;}
+ await loadOffers();OFFOPEN[id]=1;await renderShare();
+ // let Drew send the update from his own phone right away (email goes automatically when set up)
+ if(['counter','accept','decline'].includes(action)&&!r.emailed){const no=(OFFERS||[]).find(x=>x.id===id);const el=document.getElementById('off-'+id);
+  if(no&&el)el.insertAdjacentHTML('beforeend',`<div class="onote" style="margin-top:10px">Let ${esc(no.buyer_name.split(' ')[0])} know: ${offerContactBtn(no,action)}</div>`);}
+}
+// Paid: record each card's sale (price split by the offer's per-card amounts), then close the offer.
+async function offerSold(id){
+ const o=(OFFERS||[]).find(x=>x.id===id);if(!o)return;
+ const inc=o.items.filter(x=>x.included);const base=inc.reduce((t,x)=>t+(+x.offer_price||0),0)||1;
+ const venue=prompt(`Mark ${inc.length} card${inc.length===1?'':'s'} sold to ${o.buyer_name} for ${money(o.total_offer)}.\n\nWhere was it paid? (e.g. Venmo, PayPal, In person)`,'Direct');if(venue===null)return;
+ const today=new Date().toISOString().slice(0,10);let done=0;
+ for(const x of inc){const price=Math.round((+x.offer_price||0)/base*o.total_offer*100)/100;
+  const r=await lotOp({op:'sell_card',card_id:x.card_id,sale_price:price,sold_venue:venue||'Direct',sold_date:today,sold_to:o.buyer_name});if(r&&r.ok)done++;}
+ if(done<inc.length&&!confirm(`${done} of ${inc.length} cards were recorded as sold. Close the offer anyway?`))return;
+ await shareOp({op:'offer_respond',id,action:'sold'});
+ if(typeof refreshData==='function')await refreshData();
+ await loadOffers();OFFTAB='open';await renderShare();
+}
 async function renderShare(){
  const el=document.getElementById('share');
  el.innerHTML='<h2 style="margin:16px 0 8px">Share</h2><div class="spin">Loading…</div>';
  if(typeof loadLots==='function')await loadLots();
- await loadShares(true);
+ await Promise.all([loadShares(true),loadOffers().catch(()=>null)]);
  let h=`<div class="shhead"><h2 style="margin:16px 0 2px">Share</h2><div class="shsub">Send a buyer or friend a clean, swipeable gallery. They see photos, grades and your asking price. Never your cost, P&amp;L or notes.</div></div>`;
+ h+=offersHTML();
+ h+=`<h3 style="margin:18px 0 8px;font-size:16px">Links</h3>`;
  h+=`<button class="newlot" onclick="shareForm()">+ New share link</button>`;
  if(SHAREFORM)h+=shareFormHTML(SHAREFORM);
  if(!SHARES.length&&!SHAREFORM)h+=`<div class="stat-note">No links yet. Start with your whole collection, a lot you're selling, or one collection like Star Wars.</div>`;
@@ -2536,7 +2642,8 @@ async function saveCardShare(id,btn){
  if(r&&r.ok){const c=CARDS.find(x=>x.id===id);if(c){c.ask_price=body.ask_price;c.not_for_sale=body.not_for_sale;c.share_hidden=body.share_hidden;}btn.textContent='Saved';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Save';btn.classList.remove('ok');},1500);}
  else alert('Could not save: '+((r&&r.error)||'unknown'));
 }
-setTimeout(()=>loadShares().catch(()=>{}),1500);
+setTimeout(()=>{loadShares().catch(()=>{});loadOffers().catch(()=>{});},1500);
+setInterval(()=>{if(document.visibilityState==='visible')loadOffers().then(()=>{const sh=document.getElementById('share');if(sh&&!sh.classList.contains('hide')&&!document.activeElement.closest('#share input'))renderShare();}).catch(()=>{});},120000);
 
 
 function toggleMore(force){const sh=document.getElementById('moresheet');if(!sh)return;const open=force===undefined?sh.classList.contains('hide'):force;
