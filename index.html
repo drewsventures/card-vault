@@ -605,7 +605,8 @@ body{font-variant-numeric:tabular-nums}
 .rvitem{border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--bg2)}
 .rvk{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 .rvq{font-size:14.5px;font-weight:700;color:var(--ink);margin-top:3px;line-height:1.35}
-.rvd{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.45;overflow-wrap:anywhere}
+.rvd{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.45;overflow-wrap:anywhere;white-space:pre-line}
+.rvbulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0 2px;font-size:13px;color:var(--ink2)}
 .rvacts{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center}
 .rvb{padding:8px 13px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;min-height:38px}
 .rvb.ok{background:var(--green);color:#fff;border-color:transparent}
@@ -2784,8 +2785,10 @@ function gqExport(){
 /* ---- Review inbox (Oct 10 2026): one card at a time, specific questions, confirm or fix, then next ---- */
 const FN_REV=SB+"/functions/v1/review-ops";
 let RV={items:null,filter:'all',pos:0,skipped:new Set(),done:0,busy:false,edit:null,side:'front',threads:[],msgs:{}};
-const RVKIND={identity:['Card info','#2f6ad6'],copies:['Copies','#7a49c9'],value_hold:['Value','#a67c2e'],estimate:['Value','#a67c2e'],no_value:['Value','#a67c2e'],cost:['Cost','#1e9a54']};
-const RVGROUP={identity:'identity',copies:'copies',value_hold:'value',estimate:'value',no_value:'value',cost:'cost'};
+const RVKIND={identity:['Card info','#2f6ad6'],copies:['Copies','#7a49c9'],value_hold:['Value','#a67c2e'],estimate:['Value','#a67c2e'],no_value:['Value','#a67c2e'],cost:['Cost','#1e9a54'],value_change:['Value changed','#c0602a'],value_small:['Small value change','#9a8f7a']};
+const RVGROUP={identity:'identity',copies:'copies',value_hold:'value',estimate:'value',no_value:'value',cost:'cost',value_change:'value',value_small:'value'};
+const RVNEWDAYS=7;function rvIsNew(i){return i.created_at&&(Date.now()-new Date(i.created_at).getTime())<RVNEWDAYS*864e5;}
+function rvInFilter(i){return RV.filter==='all'||(RV.filter==='new'?rvIsNew(i):RVGROUP[i.kind]===RV.filter);}
 function rvMoney(v){if(v==null||v==='')return '--';v=Number(v);return '$'+(v<100?v.toFixed(2).replace(/\.00$/,''):v.toLocaleString(undefined,{maximumFractionDigits:0}));}
 async function revOp(body){const r=await fetch(FN_REV,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify(Object.assign({op:'review_resolve'},body))});return await r.json();}
 function rvThread(cardId){return (RV.threads||[]).find(t=>t.card_id===cardId)||null;}
@@ -2800,7 +2803,7 @@ function rvCards(){
   ids.forEach(id=>{by[id]=allOpen.filter(i=>i.card_id===id);});
   return {ids,by};
  }
- allOpen.filter(i=>RV.filter==='all'||RVGROUP[i.kind]===RV.filter).forEach(i=>{(by[i.card_id]=by[i.card_id]||[]).push(i);});
+ allOpen.filter(rvInFilter).forEach(i=>{(by[i.card_id]=by[i.card_id]||[]).push(i);});
  if(RV.filter==='all')(RV.threads||[]).filter(t=>t.status==='with_drew').forEach(t=>{if(!by[t.card_id])by[t.card_id]=[];});
  const ids=Object.keys(by).filter(id=>{if(!live(id))return false;const t=rvThread(id);return !(t&&t.status==='with_claude');});
  const rank=id=>{const t=rvThread(id);return t&&t.status==='with_drew'?0:1;};
@@ -2836,12 +2839,14 @@ async function renderReview(force){
   await rvLoadThreads();}
  const {ids,by}=rvCards();
  const all=(RV.items||[]).filter(i=>i.status==='open');
- const cnt=g=>g==='replied'?(RV.threads||[]).filter(t=>t.status==='with_drew').length:g==='claude'?(RV.threads||[]).filter(t=>t.status==='with_claude').length:g==='all'?new Set(all.map(i=>i.card_id).concat((RV.threads||[]).filter(t=>t.status==='with_drew').map(t=>t.card_id))).size:new Set(all.filter(i=>RVGROUP[i.kind]===g).map(i=>i.card_id)).size;
+ const cnt=g=>g==='replied'?(RV.threads||[]).filter(t=>t.status==='with_drew').length:g==='claude'?(RV.threads||[]).filter(t=>t.status==='with_claude').length:g==='all'?new Set(all.map(i=>i.card_id).concat((RV.threads||[]).filter(t=>t.status==='with_drew').map(t=>t.card_id))).size:g==='new'?new Set(all.filter(rvIsNew).map(i=>i.card_id)).size:new Set(all.filter(i=>RVGROUP[i.kind]===g).map(i=>i.card_id)).size;
  if(RV.pos>=ids.length)RV.pos=Math.max(0,ids.length-1);
  let h=sketchEntryHTML()+`<div class="sechd" style="margin-top:8px"><h2>Review</h2><a onclick="RV.skipped.clear();renderReview(true)">Refresh &#8635;</a></div>
  <div class="rvtop"><div><b>${cnt('all')}</b> card${cnt('all')===1?'':'s'} left · ${all.length} question${all.length===1?'':'s'}</div><div class="rvdone">${RV.done?`${RV.done} cleared this session`:''}</div></div>
  <div class="rvhow">Each card shows exactly what to check. Answer it with the buttons under the question, tap <b>Looks right, next</b> to confirm everything and move on, or <b>Skip</b> to come back later. Answered cards drop off the list. Want Claude to dig in or fix something? Type it in the message box and hit <b>Send to Claude</b>: the card moves to <b>With Claude</b>, Claude does the work and replies on the card, and it comes back under <b>Claude replied</b> for you to approve.</div>
- <div class="chips">${[['replied','Claude replied'],['all','All'],['identity','Card info'],['copies','Copies'],['value','Value'],['cost','Cost'],['claude','With Claude']].filter(([k])=>!((k==='replied'||k==='claude')&&!cnt(k))).map(([k,t])=>`<div class="chip ${RV.filter===k?'on':''} ${k==='replied'?'hot':''}" onclick="RV.filter='${k}';RV.pos=0;RV.edit=null;renderReview()">${t} <span style="opacity:.55">${cnt(k)}</span></div>`).join('')}</div>`;
+ <div class="chips">${[['replied','Claude replied'],['new','New this week'],['all','All'],['identity','Card info'],['copies','Copies'],['value','Value'],['cost','Cost'],['claude','With Claude']].filter(([k])=>!((k==='replied'||k==='claude'||k==='new')&&!cnt(k))).map(([k,t])=>`<div class="chip ${RV.filter===k?'on':''} ${k==='replied'?'hot':''}" onclick="RV.filter='${k}';RV.pos=0;RV.edit=null;renderReview()">${t} <span style="opacity:.55">${cnt(k)}</span></div>`).join('')}</div>`;
+ const smalls=all.filter(i=>i.kind==='value_small'&&rvInFilter(i));
+ if(smalls.length)h+=`<div class="rvbulk"><span><b>${smalls.length}</b> small value change${smalls.length===1?'':'s'} from the latest comp run (each under about $10 or under 15%). Spot-check a few, or accept them all in one tap.</span><button class="rvb ok" id="rvbulkbtn" onclick="rvAcceptSmall()">Accept all ${smalls.length}</button></div>`;
  if(!ids.length){h+=`<div class="rvempty"><div style="font-size:30px">&#10003;</div><b>Inbox zero${RV.filter!=='all'?' for this filter':''}.</b><div class="dnote">Nothing left to check here.</div></div>`;el.innerHTML=h+rvQueueHTML();rvLoadQueue();return;}
  const id=ids[RV.pos];const c=CARDS.find(x=>x.id===id)||{};const its=by[id];
  const ph=(c.photos||[]);const front=ph.find(p=>p.side==='front')||ph.find(p=>p.is_primary)||ph[0];const back=ph.find(p=>p.side==='back');
@@ -2883,6 +2888,10 @@ function rvItemHTML(i,c){
   act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Estimate accepted')">Keep ${rvMoney(c.current_value)}</button>${vin('Your value $')}<button class="rvb" onclick="rvSetVal('${i.id}')">Set</button></div>`;
  } else if(i.kind==='no_value'){
   act=`<div class="rvacts">${vin('Value $')}<button class="rvb main" onclick="rvSetVal('${i.id}')">Set value</button><button class="rvb ghost" onclick="rvComp('${c.id}')">Fresh comp</button><button class="rvb ghost" onclick="rvResolve('${i.id}','dismissed',null,'Leave unvalued')">Leave unvalued</button></div>`;
+ } else if(i.kind==='value_change'||i.kind==='value_small'){
+  const back=i.current!=null&&i.current!==''?`<button class="rvb" onclick="rvResolve('${i.id}','edited',{current_value:'${i.current}',value_source:'${esc(i.field||'owner-estimate')}'},'Went back to the old value')">Go back to ${rvMoney(i.current)}</button>`:'';
+  act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'New value accepted')">&#10003; Keep ${rvMoney(c.current_value)}</button>${back}
+   ${vin('Other $')}<button class="rvb" onclick="rvSetVal('${i.id}')">Set</button><button class="rvb ghost" onclick="rvComp('${c.id}')">Fresh comp</button></div>`;
  } else if(i.kind==='cost'){
   act=`<div class="rvacts"><button class="rvb ok" onclick="rvResolve('${i.id}','confirmed',null,'Cost confirmed')">&#10003; Right card</button>${`<input class="rvin" id="rv_v_${i.id}" type="number" inputmode="decimal" step="0.01" placeholder="Fix cost $">`}<button class="rvb" onclick="rvSetCost('${i.id}')">Set cost</button><button class="rvb warn" onclick="rvResolve('${i.id}','edited',{cost_basis:''},'Wrong card: Whatnot cost removed, re-match the order')">Wrong card</button></div>`;
  }
@@ -2911,6 +2920,13 @@ async function rvConfirmAll(cardId){
  }catch(e){alert('Could not save: '+e.message);} finally{RV.busy=false;}
  rvNext(cardId);
 }
+async function rvAcceptSmall(){
+ if(RV.busy)return;const its=(RV.items||[]).filter(i=>i.status==='open'&&i.kind==='value_small'&&rvInFilter(i));if(!its.length)return;
+ const b=document.getElementById('rvbulkbtn');if(b&&!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to accept '+its.length;return;}
+ RV.busy=true;const by={};its.forEach(i=>{(by[i.card_id]=by[i.card_id]||[]).push(i);});const ids=Object.keys(by);let n=0,bad=0;
+ for(const cid of ids){try{const r=await revOp({card_id:cid,item_ids:by[cid].map(i=>i.id),status:'confirmed',note:'Small comp-run change accepted (bulk)'});if(!r||!r.ok)throw new Error('x');by[cid].forEach(i=>i.status='confirmed');const c=CARDS.find(x=>x.id===cid);if(c&&!r.open_left){c.needs_review=false;RV.done++;}n++;}catch(e){bad++;}
+  if(b)b.textContent='Accepting '+(n+bad)+' of '+ids.length+'…';}
+ RV.busy=false;if(bad)alert(bad+' card(s) could not be saved. They are still on the list.');RV.pos=0;renderReview();}
 function rvSetVal(itemId){const el=document.getElementById('rv_v_'+itemId);const v=el?el.value.trim():'';if(v===''||isNaN(+v)){el&&el.focus();return;}rvResolve(itemId,'edited',{current_value:v},'Owner set value');}
 function rvSetCost(itemId){const el=document.getElementById('rv_v_'+itemId);const v=el?el.value.trim():'';if(v===''||isNaN(+v)){el&&el.focus();return;}rvResolve(itemId,'edited',{cost_basis:v},'Owner fixed cost');}
 function rvSaveId(itemId){const it=(RV.items||[]).find(x=>x.id===itemId);const c=CARDS.find(x=>x.id===it.card_id)||{};const patch={};
