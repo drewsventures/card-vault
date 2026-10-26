@@ -387,6 +387,14 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const money=v=>{if(v==null)return '';const n=Number(v),c=n<100&&Math.round(n)!==n;return '$'+n.toLocaleString(undefined,{minimumFractionDigits:c?2:0,maximumFractionDigits:c?2:0});};
 const store={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 let D=null, ALL=[], VIEW=[], BYID={}, q='', shown=0, sort='feat', SLUG='';
+/* Oct 26 2026: Supabase storage answers some photo requests with 429 (rate limited) when a page asks for many at once.
+   Retry failed storage photos a few times with backoff instead of leaving them blank. */
+(function(){
+ document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG')return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
+  const n=+(i.dataset.rt||0);if(n>=5)return;i.dataset.rt=n+1;const base=s.replace(/[?&]rt=\d+$/,'');
+  setTimeout(function(){i.src=base+(base.indexOf('?')<0?'?':'&')+'rt='+(n+1);},700*Math.pow(2,n)+Math.random()*700);},true);
+ document.addEventListener('load',function(e){const i=e.target;if(i&&i.tagName==='IMG'&&i.dataset.rt)i.style.visibility='';},true);
+})();
 const PAGE=40;
 const F={seg:new Set(),team:new Set(),grader:new Set(),tag:new Set(),cond:'any',grade:'any',sk:'any',min:'',max:''};
 let SEL=new Set();

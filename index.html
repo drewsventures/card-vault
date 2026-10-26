@@ -690,7 +690,7 @@ body{font-variant-numeric:tabular-nums}
   <div id="dash"><div class="spin">Loading your collection...</div></div>
   <div id="search" class="hide">
     <div class="chips" id="chips" style="margin-top:12px"></div>
-    <div class="ctrlrow"><select id="segsel" onchange="SEGFILTER=this.value||null;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';runSearch()" aria-label="Category"><option value="">All categories</option></select><select id="sortsel" onchange="SORT=this.value;runSearch()"><option value="value">Highest value</option><option value="move">Biggest value change</option><option value="up">Top gainers</option><option value="down">Top decliners</option><option value="pop">Lowest graded pop</option><option value="new">Recently added</option><option value="low">Lowest value</option></select><input id="subjq" placeholder="Filter by player, character or team" oninput="renderSubjBar()" autocomplete="off"></div>
+    <div class="ctrlrow"><select id="segsel" onchange="clearQ();SEGFILTER=this.value||null;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';runSearch()" aria-label="Category"><option value="">All categories</option></select><select id="sortsel" onchange="SORT=this.value;runSearch()"><option value="value">Highest value</option><option value="move">Biggest value change</option><option value="up">Top gainers</option><option value="down">Top decliners</option><option value="pop">Lowest graded pop</option><option value="new">Recently added</option><option value="low">Lowest value</option></select><input id="subjq" placeholder="Filter by player, character or team" oninput="renderSubjBar()" autocomplete="off"></div>
     <div class="subjbar" id="subjbar"></div>
     <div class="count" id="scount"></div>
     <div class="grid" id="results"></div>
@@ -734,6 +734,14 @@ body{font-variant-numeric:tabular-nums}
 <script>
 const SB="https://kcmrmswazprkizbzewpm.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbXJtc3dhenBya2l6Ynpld3BtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NTEzMzAsImV4cCI6MjEwNDEyNzMzMH0.EuB77E8I0b6HzdK8zfDG1qlg-q_k0FUej6pYLyEFiJI";
+/* Oct 26 2026: Supabase storage answers some photo requests with 429 (rate limited) when a page asks for many at once.
+   Retry failed storage photos a few times with backoff instead of leaving them blank. */
+(function(){
+ document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG')return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
+  const n=+(i.dataset.rt||0);if(n>=5)return;i.dataset.rt=n+1;const base=s.replace(/[?&]rt=\d+$/,'');
+  setTimeout(function(){i.src=base+(base.indexOf('?')<0?'?':'&')+'rt='+(n+1);},700*Math.pow(2,n)+Math.random()*700);},true);
+ document.addEventListener('load',function(e){const i=e.target;if(i&&i.tagName==='IMG'&&i.dataset.rt)i.style.visibility='';},true);
+})();
 let CARDS=[], DUPE={}, SEGFILTER=null;
 /* Oct 15 2026: every call to the Vault's edge functions carries Drew's passcode (set in the Ask panel, kept per device).
    The functions reject writes without it once the passcode exists. A "locked" reply opens the passcode prompt. */
@@ -851,7 +859,7 @@ async function load(){
  }
 }
 let FILT='all';
-let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
+let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=80;
 function buildChips(){
  const c=['all','no cost','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
@@ -893,7 +901,7 @@ function runSearch(){
  if(VALONLY)list=list.filter(c=>c.current_value!=null);
  const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY&&!SUBJ;
  sortList(list,neutral); const ss=document.getElementById('sortsel');if(ss)ss.value=SORT; const sg=document.getElementById('segsel');if(sg&&sg.value!==(SEGFILTER||''))sg.value=SEGFILTER||''; renderSubjBar();
- document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards'+(()=>{if(!BUILDLOT)return '';const set=LOTMEM[BUILDLOT]||new Set();const m=list.filter(c=>!set.has(c.id)).length;return m?` <button class="addallbtn" onclick="addShownToLot()">+ Add all ${m.toLocaleString()} shown to lot</button>`:(list.length?' <span style="color:var(--green);font-weight:700">&middot; all shown are in the lot</span>':'');})();
+ document.getElementById('scount').innerHTML=(q?`<span class="segbanner">&ldquo;${esc(q)}&rdquo;<b onclick="clearQ();runSearch()">clear &times;</b></span>`:'')+(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards'+(()=>{if(!BUILDLOT)return '';const set=LOTMEM[BUILDLOT]||new Set();const m=list.filter(c=>!set.has(c.id)).length;return m?` <button class="addallbtn" onclick="addShownToLot()">+ Add all ${m.toLocaleString()} shown to lot</button>`:(list.length?' <span style="color:var(--green);font-weight:700">&middot; all shown are in the lot</span>':'');})();
  LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
  el.innerHTML='';
@@ -1720,7 +1728,7 @@ async function removeFromLot(lotId,cardId){(LOTMEM[lotId]||new Set()).delete(car
 async function addToLotId(lotId,cardId){(LOTMEM[lotId]=LOTMEM[lotId]||new Set()).add(cardId);await lotOp({op:'add_item',lot_id:lotId,card_id:cardId});}
 /* builder mode: browse Search, tap toggles membership */
 function startBuild(id){BUILDLOT=id;show('search');navSearchKeep();updateBuildBar();}
-function navSearchKeep(){VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
+function navSearchKeep(){clearQ();VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function updateBuildBar(){
  const bar=document.getElementById('buildbar');
  if(!BUILDLOT){bar.classList.add('hide');return;}
@@ -1772,10 +1780,11 @@ function copyLotPost(id){
  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,done);else{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}
 }
 function setChip(f){document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.f===f));}
-function navSearch(){VALONLY=false;SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
-function openSeg(name){VALONLY=false;SEGFILTER=name;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';FILT='all';setChip('all');show('search');runSearch();}
-function openAll(mode){VALONLY=(mode==='value');if(mode==='value')SORT='value';SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
-function openDupes(){SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
+function clearQ(){const q=document.getElementById('q');if(q)q.value='';}
+function navSearch(){clearQ();VALONLY=false;SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
+function openSeg(name){clearQ();VALONLY=false;SEGFILTER=name;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';FILT='all';setChip('all');show('search');runSearch();}
+function openAll(mode){clearQ();VALONLY=(mode==='value');if(mode==='value')SORT='value';SEGFILTER=null;SUBJ=null;FILT='all';setChip('all');show('search');runSearch();}
+function openDupes(){clearQ();SEGFILTER=null;FILT='duplicates';setChip('duplicates');show('search');runSearch();}
 function clearSeg(){VALONLY=false;SEGFILTER=null;SUBJ=null;runSearch();}
 // On the Sold page the header search filters sold cards instead of jumping to Browse.
 const onSoldPage=()=>!document.getElementById('sold').classList.contains('hide');
