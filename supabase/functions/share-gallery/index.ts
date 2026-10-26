@@ -208,22 +208,9 @@ async function sendEmail(to: string, subject: string, text: string) {
     return r.ok;
   } catch (_) { return false; }
 }
-// Drew's alerts (Oct 26 2026): a free ntfy push to his phone. The private topic lives in agent_settings
-// (key ntfy_topic) so it isn't in the code; email still goes out too if Resend is ever configured.
-const HUB = 'https://card-vault-orpin.vercel.app';
-async function pushDrew(title: string, body: string, click?: string) {
-  try {
-    const { data } = await supa().from('agent_settings').select('value').eq('key', 'ntfy_topic').maybeSingle();
-    const topic = data && data.value ? String(data.value).replace(/^"|"$/g, '') : '';
-    if (!topic) return false;
-    const r = await fetch('https://ntfy.sh/' + encodeURIComponent(topic), { method: 'POST', body: body.slice(0, 3500),
-      headers: { Title: title.replace(/[^\x20-\x7E]/g, ''), Click: click || HUB, Tags: 'moneybag', Priority: '4' } });
-    return r.ok;
-  } catch (_) { return false; }
-}
-const notifyDrew = async (subject: string, text: string) => {
-  await Promise.all([pushDrew(subject, text), sendEmail(Deno.env.get('NOTIFY_EMAIL') || '', subject, text)]);
-};
+// No automatic alerts (Drew, Oct 26 2026): buyer and seller pass the offer link back and forth in whatever
+// messaging app they already use. Email still goes out if Resend is ever configured.
+const notifyDrew = (subject: string, text: string) => sendEmail(Deno.env.get('NOTIFY_EMAIL') || '', subject, text);
 async function notifyBuyer(o: any, subject: string, text: string) {
   if (o.buyer_via !== 'email' || !Deno.env.get('RESEND_FROM')) return false;
   return sendEmail(o.buyer_contact, subject, text);
@@ -247,11 +234,11 @@ async function submitOffer(b: any) {
   const { data: link } = await db.from('share_links').select('*').eq('slug', slug).maybeSingle();
   if (!link || !link.active) return j({ error: 'This link is no longer active.' }, 404);
   const name = String(b.name || '').trim().slice(0, 80), contact = String(b.contact || '').trim().slice(0, 120);
-  // everything runs over text: a 10-digit US mobile number is required
-  const via = 'text';
-  const digits = contact.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
-  if (!name) return j({ error: 'Add your name.' }, 400);
-  if (digits.length !== 10) return j({ error: 'Add a 10-digit mobile number so I can text you.' }, 400);
+  // name/username and a contact are required so Drew knows who's who; contact is free-form (phone, @handle,
+  // email) because the conversation happens wherever they already talk
+  const via = /^@/.test(contact) ? 'ig' : /\S+@\S+\.\S+/.test(contact) ? 'email' : 'text';
+  if (!name) return j({ error: 'Add your name or username.' }, 400);
+  if (contact.length < 3) return j({ error: 'Add a way to reach you (phone, @handle or email).' }, 400);
   const since = new Date(Date.now() - 10 * 60e3).toISOString();
   const { count } = await db.from('offers').select('id', { count: 'exact', head: true }).eq('link_id', link.id).gte('created_at', since);
   if ((count || 0) >= 15) return j({ error: 'Too many offers on this link just now. Try again in a few minutes.' }, 429);
@@ -295,7 +282,7 @@ async function submitOffer(b: any) {
   return j({ ok: true, token: tok, status_url: url, kind, total });
 }
 
-async function offerView(tok: string) {
+async function offerView(tok: string, seller = false) {
   const db = supa();
   const { data: o } = await db.from('offers').select('*').eq('token', tok).maybeSingle();
   if (!o) return j({ error: 'Offer not found.' }, 404);
@@ -308,6 +295,7 @@ async function offerView(tok: string) {
     status: o.status, turn: o.turn, kind: o.kind, buyer_name: o.buyer_name, created_at: o.created_at,
     total_list: o.total_list, total_shown: o.total_shown, total_comp: o.total_comp, total_offer: o.total_offer, counter_total: o.counter_total,
     items: items || [], events: ev || [], link: link ? { slug: link.slug, title: link.title, terms: link.terms } : null,
+    ...(seller ? { seller: true, buyer_contact: o.buyer_contact, buyer_via: o.buyer_via } : {}),
   });
 }
 
@@ -367,7 +355,8 @@ async function listOffers(db: any) {
 }
 
 async function sellerRespond(db: any, b: any) {
-  const { data: o } = await db.from('offers').select('*').eq('id', b.id).maybeSingle();
+  const q = db.from('offers').select('*');
+  const { data: o } = await (b.token ? q.eq('token', String(b.token)) : q.eq('id', b.id)).maybeSingle();
   if (!o) return j({ error: 'Offer not found.' }, 404);
   const note = String(b.note || '').slice(0, 1000) || null, now = new Date().toISOString(), act = b.action;
   const url = `${GALLERY}/o/${o.token}`;
@@ -431,7 +420,7 @@ Deno.serve(async (req) => {
     const u = new URL(req.url);
     if (req.method === 'GET') {
       const ot = (u.searchParams.get('o') || '').replace(/[^a-z0-9]/gi, '');
-      if (ot) return await offerView(ot);
+      if (ot) return await offerView(ot, !!req.headers.get('x-agent-pass') && await vaultAuthorized(req));
       const s = (u.searchParams.get('s') || '').replace(/[^a-z0-9-]/gi, '');
       if (!s) return j({ error: 'missing link' }, 400);
       return await publicView(s);
@@ -445,6 +434,7 @@ Deno.serve(async (req) => {
     const op = b.op;
     const fields = ['title', 'intro', 'scope_type', 'lot_id', 'segment', 'card_ids', 'price_mode', 'markup_pct', 'show_comps', 'terms', 'contact', 'active', 'recipient', 'discount_pct', 'discount_ends_at', 'allow_offers'];
     const pick = (o: any) => { const r: any = {}; for (const k of fields) if (o[k] !== undefined) r[k] = o[k]; return r; };
+    if (op === 'whoami') return j({ ok: true, seller: true });
     if (op === 'list_offers') return await listOffers(db);
     if (op === 'offer_respond') return await sellerRespond(db, b);
     if (op === 'list_links') {

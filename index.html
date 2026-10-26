@@ -2476,11 +2476,16 @@ function offerBuyerMsg(o,kind){
  if(kind==='decline')return `Hi ${first}, thanks for the offer of ${money(o.total_offer)}. I'm going to pass this time. ${o.status_url}`;
  return `Hi ${first}, about your offer: ${o.status_url}`;
 }
+// Updates go to the buyer through whatever app they talk in: copy the message (with the offer link) anywhere,
+// or one tap to Messages / Instagram / email when their contact looks like a phone, @handle or address.
 function offerContactBtn(o,kind){
- const msg=offerBuyerMsg(o,kind), c=(o.buyer_contact||'').trim();
- if(o.buyer_via==='email')return `<a class="btnlink" href="mailto:${esc(c)}?subject=${encodeURIComponent('Your card offer')}&body=${encodeURIComponent(msg)}">Email ${esc((o.buyer_name||'').split(' ')[0])}</a>`;
- if(o.buyer_via==='ig')return `<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied for IG');window.open('https://ig.me/m/${encodeURIComponent(c.replace(/^@/,''))}','_blank')">DM on Instagram</button>`;
- const d=c.replace(/[^\d+]/g,'');return `<a class="btnlink" href="sms:${esc(d)}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}">Text ${esc((o.buyer_name||'').split(' ')[0])}</a>`;
+ const msg=offerBuyerMsg(o,kind), c=(o.buyer_contact||'').trim(), first=esc((o.buyer_name||'').split(' ')[0]||'buyer'), d=c.replace(/[^\d+]/g,'');
+ let h=`<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied')">Copy message</button>`;
+ if(navigator.share)h+=`<button onclick="navigator.share({text:${esc(JSON.stringify(msg))}}).catch(()=>{})">Share…</button>`;
+ if(d.replace(/\D/g,'').length>=10)h+=`<a class="btnlink" href="sms:${esc(d)}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}">Text ${first}</a>`;
+ else if(/^@/.test(c))h+=`<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied');window.open('https://ig.me/m/${encodeURIComponent(c.replace(/^@/,''))}','_blank')">DM ${first} on Instagram</button>`;
+ else if(/\S+@\S+\.\S+/.test(c))h+=`<a class="btnlink" href="mailto:${esc(c)}?subject=${encodeURIComponent('Your card offer')}&body=${encodeURIComponent(msg)}">Email ${first}</a>`;
+ return h;
 }
 function offersHTML(){
  if(!OFFERS)return '';
@@ -2496,7 +2501,7 @@ function offersHTML(){
   const lastBuyer=[...o.events].reverse().find(e=>e.actor==='buyer');
   h+=`<div class="offer${isNew?' newo':''}" id="off-${o.id}">
    <div class="ot"><div style="min-width:0"><div class="on1">${esc(o.buyer_name)}<span class="ostp ${esc(o.status)}">${o.status==='new'?(o.events.length>1?'countered you':o.kind==='claim'?'claim':'new'):o.status==='countered'?'waiting on buyer':esc(o.status)}</span></div>
-    <div class="om">${esc(o.link?o.link.title:'Share link')} · ${inc.length} card${inc.length===1?'':'s'} · ${when} · ${esc(o.buyer_via)}: ${esc(o.buyer_contact)}</div></div>
+    <div class="om"><b style="color:var(--ink)">${esc(o.buyer_contact||'no contact')}</b> · ${esc(o.link?o.link.title:'Share link')} · ${inc.length} card${inc.length===1?'':'s'} · ${when}</div></div>
     <div class="oamt">${money(o.total_offer)}<small>${o.status==='countered'?'you countered '+money(o.counter_total):o.kind==='claim'?'claim at price':o.kind==='per_card'?'per-card offer':'lot offer'}</small></div></div>
    <div class="ogrid"><div>Comp<b>${money(o.total_comp)}</b></div><div>Priced at<b>${money(o.total_shown)}</b></div><div>Offer vs comp<b style="color:${pct==null?'inherit':pct>=100?'var(--up)':pct>=80?'var(--ink)':'var(--dn)'}">${pct==null?'--':pct+'%'}</b></div><div>Profit vs cost<b style="color:${prof==null?'inherit':prof>=0?'var(--up)':'var(--dn)'}">${prof==null?'--':(prof>=0?'+':'-')+money(Math.abs(prof))}</b></div></div>
    ${lastBuyer&&lastBuyer.note?`<div class="onote">“${esc(lastBuyer.note)}”</div>`:''}
@@ -2523,7 +2528,7 @@ async function offerAct(id,action){
  await loadOffers();OFFOPEN[id]=1;await renderShare();
  // let Drew send the update from his own phone right away (email goes automatically when set up)
  if(['counter','accept','decline'].includes(action)&&!r.emailed){const no=(OFFERS||[]).find(x=>x.id===id);const el=document.getElementById('off-'+id);
-  if(no&&el)el.insertAdjacentHTML('beforeend',`<div class="onote" style="margin-top:10px">Let ${esc(no.buyer_name.split(' ')[0])} know: ${offerContactBtn(no,action)}</div>`);}
+  if(no&&el)el.insertAdjacentHTML('beforeend',`<div class="onote" style="margin-top:10px"><b>Now send ${esc(no.buyer_name.split(' ')[0])} the link</b> (paste it wherever you two are talking):<div class="lotact" style="margin:8px 0 0">${offerContactBtn(no,action)}</div></div>`);}
 }
 // Paid: record each card's sale (price split by the offer's per-card amounts), then close the offer.
 async function offerSold(id){

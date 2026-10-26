@@ -239,6 +239,11 @@ footer b{color:var(--ink2)}
 .pricebox .cmp{font-size:13.5px;color:var(--ink2);margin-top:4px}
 .errbox{font-size:13.5px;color:var(--deal);background:var(--dealbg);border-radius:10px;padding:9px 12px;margin-top:10px}
 .linkrow{display:flex;gap:8px;margin-top:12px}
+.sendbox{background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:14px;margin-top:14px;text-align:left}
+.sendbox h3{margin:0 0 8px;font-size:15px;font-weight:800;letter-spacing:0;text-transform:none;color:var(--ink)}
+.sendbox textarea{width:100%;min-height:84px;border:1px solid var(--line);border-radius:10px;padding:10px;font:14px var(--font);background:var(--bg);color:var(--ink);resize:none}
+.sendbox .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sendbox .btn{flex:1 1 120px;height:46px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .linkrow input{flex:1;min-width:0;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:13.5px;background:var(--bg)}
 /* offer status page */
 .os{max-width:640px;margin:0 auto;padding:22px 16px calc(40px + var(--safe-b))}
@@ -656,10 +661,9 @@ function openFilters(){$('#fbody').innerHTML=filtersHTML();openSheet('#fsheet');
 /* ---------- offer ---------- */
 // O.mode: 'lot' (one number for everything) or 'each' (a price per card). O.unit: '$' or '%' (percent off the shown price).
 const O={mode:'lot',unit:'$',lot:'',each:{},msg:'',done:null,err:''};
-// Everything runs over text (Drew, Oct 26 2026): buyers must leave a mobile number.
+// Offers move by link (Drew, Oct 26 2026): after each step, whoever acted sends the offer link through
+// whatever app they already talk in. Name/username and a contact (any platform) are required so both sides know who's who.
 let BUYER=store.get('cv_buyer')||{name:'',via:'text',contact:''};
-if(BUYER.via!=='text'){BUYER.via='text';BUYER.contact='';}
-const phoneOK=v=>String(v||'').replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'').length===10;
 function offerState(){
   const cs=selCards(), s=sums(cs);
   let total=null, perCard=null, valid=true;
@@ -699,9 +703,9 @@ function offerBody(){
   }
   h+=`<div>${rows}</div>`;
   h+=`<div class="totals" id="ototals">${totalsHTML(st)}</div>`;
-  h+=`<div class="blk"><h3>Where should I text you?</h3>
-    <div class="field"><label for="bn">Your name</label><input id="bn" autocomplete="name" value="${esc(BUYER.name)}" placeholder="First and last"></div>
-    <div class="field"><label for="bc">Mobile number</label><input id="bc" value="${esc(BUYER.contact)}" type="tel" autocomplete="tel" inputmode="tel" placeholder="(555) 555-1234"><div class="note" style="margin-top:6px">I'll text you about your offer. Your number is only used for this.</div></div>
+  h+=`<div class="blk"><h3>Your info</h3>
+    <div class="field"><label for="bn">Name or username</label><input id="bn" autocomplete="name" value="${esc(BUYER.name)}" placeholder="First and last"></div>
+    <div class="field"><label for="bc">How to reach you</label><input id="bc" value="${esc(BUYER.contact)}" autocomplete="tel" placeholder="Phone, @instagram, email…"><div class="note" style="margin-top:6px">Any app is fine. The seller uses this to know who you are and reply.</div></div>
     <div class="field"><label for="bm">Note (optional)</label><textarea id="bm" placeholder="Shipping zip, payment preference, questions…">${esc(O.msg)}</textarea></div>
     <input type="text" name="website" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     ${D.terms?`<div class="note"><b>Terms:</b> ${esc(D.terms)}</div>`:''}
@@ -732,7 +736,7 @@ function totalsHTML(st){
   return h;
 }
 function renderOfferFoot(){
-  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&phoneOK(BUYER.contact);
+  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&BUYER.contact.trim().length>=3;
   const label=!st.cs.length?'Send offer':st.claim?`Claim ${st.cs.length} card${st.cs.length===1?'':'s'} · ${money(st.total)}`:`Send offer${st.total?' · '+money(st.total):''}`;
   $('#ofoot').innerHTML=`<button class="btn" id="osend" ${ok?'':'disabled'}>${label}</button>`;
 }
@@ -768,10 +772,10 @@ function offerText(st){
 function doneHTML(){
   if(O.done.url){const d=O.done;
     return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
-    <h3>${d.claim?'Claim sent':'Offer sent'}: ${money(d.total)}</h3>
-    <p>It's in my inbox now. I'll reply on your private offer page, and reach you by ${BUYER.via==='email'?'email':BUYER.via==='ig'?'Instagram':'text'} when there's news. Save this link to check back, accept a counter, or withdraw.</p>
-    <div class="linkrow"><input readonly value="${esc(d.url)}" aria-label="Your offer page" onclick="this.select()"><button class="btn sec" id="ocopylink">Copy</button></div>
-    <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px" href="${esc(d.url)}">Open my offer page</a></div>`;}
+    <h3>${d.claim?'Claim saved':'Offer saved'}: ${money(d.total)}</h3>
+    <p>Last step: send this message to the seller wherever you two are talking (text, Instagram, anywhere). They'll open the link, respond there, and send it back to you.</p>
+    ${sendBox(d.claim?`Hi! I'd like to claim ${d.n} card${d.n===1?'':'s'} for ${money(d.total)}: ${d.url}`:`Hi! I made an offer of ${money(d.total)} on ${d.n} card${d.n===1?'':'s'}: ${d.url}`,'')}
+    <a class="btn sec" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px" href="${esc(d.url)}">Open my offer page</a></div>`;}
   const how=O.done.how, where={sms:'Messages',mail:'your email app',ig:'Instagram'}[how];
   return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
     <h3>${where?'Almost there: hit send':'Offer copied'}</h3>
@@ -790,7 +794,7 @@ async function submitOffer(){
     const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
     if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||'Could not send'),{soft:r.status<500});
     const mine=store.get('cv_offers')||[];mine.unshift({t:d.token,slug:SLUG,total:d.total,at:Date.now()});store.set('cv_offers',mine.slice(0,20));
-    O.err='';O.done={url:d.status_url,claim:d.kind==='claim',total:d.total};renderOffer();renderMine();return;
+    O.err='';O.done={url:location.origin+'/o/'+d.token,claim:d.kind==='claim',total:d.total,n:st.cs.length};renderOffer();renderMine();return;
   }catch(err){
     if(err.soft){O.err=err.message;renderOffer();return;}
     if(!D.contact){O.err="Couldn't reach the server. Try again in a minute.";renderOffer();return;}
@@ -861,26 +865,48 @@ function renderMine(){
   const mine=(store.get('cv_offers')||[]).filter(x=>x.slug===SLUG);
   el.innerHTML=mine.length?`<a class="linkbtn" href="/o/${esc(mine[0].t)}">Your offer${mine.length>1?'s':''}: ${money(mine[0].total)}${mine.length>1?' and '+(mine.length-1)+' more':''} &rsaquo;</a>`:'';
 }
+// One link per offer. Buyer and seller each open it, see whose turn it is, respond, and send it back.
+// Drew signs in once per device with his passcode; the server only shows seller controls when it checks out.
+function sendBox(text,who,sms){
+  const canShare=!!navigator.share;
+  return `<div class="sendbox"><h3>${who?'Now send this to '+esc(who):'Send this message'}</h3><textarea readonly id="sendtxt" onclick="this.select()">${esc(text)}</textarea>
+    <div class="row"><button class="btn" data-copysend>Copy message</button>${canShare?'<button class="btn sec" data-sharesend>Share…</button>':''}${sms?`<a class="btn sec" href="${esc(sms)}">Text ${esc(who)}</a>`:''}</div></div>`;
+}
+document.addEventListener('click',async e=>{
+  if(e.target.closest('[data-copysend]')){const t=$('#sendtxt');try{await navigator.clipboard.writeText(t.value);toast('Copied. Paste it into your chat.');}catch(err){t.select();document.execCommand&&document.execCommand('copy');toast('Copied');}return;}
+  if(e.target.closest('[data-sharesend]')){try{await navigator.share({text:$('#sendtxt').value});}catch(err){}return;}
+});
 const ST_LBL={new:'Waiting on seller',countered:'Counter offer',accepted:'Accepted',declined:'Declined',withdrawn:'Withdrawn',sold:'Sold'};
+const ST_LBL_S={new:'Your move',countered:'Waiting on buyer',accepted:'Accepted',declined:'Declined',withdrawn:'Withdrawn',sold:'Sold'};
 const fmtWhen=d=>new Date(d).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-let OV=null, OTOK='';
+let OV=null, OTOK='', OSEND=null;
+const sellerPass=()=>{try{return localStorage.getItem('cv_seller_pass')||'';}catch(e){return '';}};
+const offerURL=()=>location.origin+'/o/'+OTOK;
 async function loadOfferPage(){
-  try{const r=await fetch(FN+'?o='+encodeURIComponent(OTOK));OV=await r.json();if(!r.ok)throw new Error(OV.error||'Not found');}
+  try{const h={};const p=sellerPass();if(p)h['x-agent-pass']=p;
+    const r=await fetch(FN+'?o='+encodeURIComponent(OTOK),{headers:h});OV=await r.json();if(!r.ok)throw new Error(OV.error||'Not found');}
   catch(e){document.getElementById('app').innerHTML=`<div class="err"><h1>Offer not found</h1><p style="color:var(--mut)">${esc(e.message)}</p></div>`;return;}
   renderOfferPage();
 }
 function renderOfferPage(msg){
-  const o=OV, inc=o.items.filter(x=>x.included!==false), out=o.items.filter(x=>x.included===false);
-  const head={new:`I have your ${o.kind==='claim'?'claim':'offer'} and will reply soon.`,countered:`I countered at ${money(o.counter_total)}. Accept it, send a different number, or pass.`,
-    accepted:`Deal at ${money(o.total_offer)}. I'll reach out with payment details${o.link&&o.link.terms?'':''}.`,declined:'This one didn\'t work out. Thanks for the offer.',withdrawn:'You withdrew this offer.',sold:`Sold for ${money(o.total_offer)}. Thank you!`}[o.status]||'';
+  const o=OV, S=!!o.seller, inc=o.items.filter(x=>x.included!==false), out=o.items.filter(x=>x.included===false);
+  const first=(o.buyer_name||'').split(' ')[0]||'the buyer';
+  const buyerHead={new:`Waiting on the seller. If you haven't yet, send them this link.`,countered:`The seller countered at ${money(o.counter_total)}. Accept it, send a different number, or pass.`,
+    accepted:`Deal at ${money(o.total_offer)}. The seller will follow up with payment details.`,declined:"This one didn't work out. Thanks for the offer.",withdrawn:'This offer was withdrawn.',sold:`Sold for ${money(o.total_offer)}. Thank you!`}[o.status]||'';
+  const sellerHead={new:`${o.buyer_name} ${o.events.length>1?'countered at':o.kind==='claim'?'claimed at':'offered'} ${money(o.total_offer)}. Accept, counter or decline, then send them the link.`,countered:`You countered at ${money(o.counter_total)}. Waiting on ${first}.`,
+    accepted:`Deal at ${money(o.total_offer)}. Send payment details, then tap Paid in your Card Vault hub (Share → Offers).`,declined:'Closed.',withdrawn:`${first} withdrew this offer.`,sold:`Sold for ${money(o.total_offer)}.`}[o.status]||'';
+  const who=a=>S?(a==='buyer'?esc(first):'You'):(a==='buyer'?'You':'Seller');
   const verb={offer:o.kind==='claim'?'claimed at':'offered',counter:'countered at',accept:'accepted',decline:'declined',withdraw:'withdrew',note:'noted',sold:'marked sold',release:'released the cards'};
   let h=`<div class="os">
-    <div class="eyebrow">${esc(o.link?o.link.title:'Your offer')}</div>
-    <h1>${o.kind==='claim'?'Your claim':'Your offer'}: ${money(o.status==='countered'?o.total_offer:o.total_offer)}</h1>
-    <span class="pillst st-${esc(o.status)}">${esc(ST_LBL[o.status]||o.status)}</span>
-    <p class="lead" style="margin-top:10px">${esc(head)}</p>
-    ${msg?`<div class="errbox">${esc(msg)}</div>`:''}`;
-  if(o.status==='countered'&&o.turn==='buyer'){
+    <div class="eyebrow">${esc(o.link?o.link.title:'Offer')}${S?' · seller view':''}</div>
+    <h1>${S?`Offer from ${esc(o.buyer_name)}`:o.kind==='claim'?'Your claim':'Your offer'}: ${money(o.total_offer)}</h1>
+    <div class="note" style="margin:-2px 0 8px">${S?'':`From <b>${esc(o.buyer_name)}</b> to <b>Drew</b>`}</div>
+    <span class="pillst st-${esc(o.status)}">${esc((S?ST_LBL_S:ST_LBL)[o.status]||o.status)}</span>
+    <p class="lead" style="margin-top:10px">${esc(S?sellerHead:buyerHead)}</p>
+    ${S?`<div class="note" style="font-size:14px">Buyer: <b>${esc(o.buyer_name)}</b>${o.buyer_contact?` · <b>${esc(o.buyer_contact)}</b>`:''}</div>`:''}
+    ${msg?`<div class="errbox">${esc(msg)}</div>`:''}
+    ${OSEND?sendBox(OSEND.text,OSEND.who,OSEND.sms):''}`;
+  if(!S&&o.status==='countered'&&o.turn==='buyer'&&!OSEND){
     h+=`<div class="card"><h3>Seller's counter</h3><div style="font-size:30px;font-weight:800;letter-spacing:-.03em">${money(o.counter_total)}</div>
       <div class="note" style="margin:2px 0 12px">Your offer was ${money(o.total_offer)}${o.total_comp?` · comp ${money(o.total_comp)}`:''}</div>
       <div class="act"><button class="btn" data-bact="accept">Accept ${money(o.counter_total)}</button>
@@ -888,15 +914,28 @@ function renderOfferPage(msg){
       <input id="bcnote" placeholder="Note (optional)" style="height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px">
       <button class="linkbtn" data-bact="decline" style="align-self:flex-start">No thanks, pass</button></div></div>`;
   }
+  if(S&&o.status==='new'&&!OSEND){
+    h+=`<div class="card"><h3>Your move</h3><div style="font-size:30px;font-weight:800;letter-spacing:-.03em">${money(o.total_offer)}</div>
+      <div class="note" style="margin:2px 0 12px">${o.total_comp?`Comp ${money(o.total_comp)} · ${Math.round(o.total_offer/o.total_comp*100)}% of comp`:''}${o.counter_total?` · you last countered ${money(o.counter_total)}`:''}</div>
+      <div class="act"><button class="btn" data-sact="accept">Accept ${money(o.total_offer)}</button>
+      <div class="row"><label class="money"><span>$</span><input id="bcamt" type="number" inputmode="decimal" min="1" placeholder="Counter amount" aria-label="Counter amount"></label><button class="btn sec" data-sact="counter">Counter</button></div>
+      <input id="bcnote" placeholder="Note to ${esc(first)} (optional)" style="height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px">
+      <button class="linkbtn" data-sact="decline" style="align-self:flex-start">Decline</button></div></div>`;
+  }
+  const mine=S?'Offer':o.status==='accepted'||o.status==='sold'?'Deal':'Your offer';
   h+=`<div class="card"><h3>${inc.length} card${inc.length===1?'':'s'}</h3>${inc.map(x=>`<div class="orow"><div class="th">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:''}</div><div style="min-width:0"><div class="nm">${esc(x.title||x.ref)}</div><div class="sb">${x.comp?'Comp '+money(x.comp):''}${x.shown!=null?(x.comp?' · ':'')+'Priced '+money(x.shown):''}</div></div><div class="rp"><b>${money(x.offer_price)}</b></div></div>`).join('')}
     ${out.length?`<div class="note" style="margin-top:8px">Not included in the deal: ${out.map(x=>esc(x.title||x.ref)).join(', ')}</div>`:''}
-    <div class="totals">${o.total_comp?`<div class="r"><span>Comp total</span><span>${money(o.total_comp)}</span></div>`:''}${o.total_shown?`<div class="r"><span>Priced at</span><span>${money(o.total_shown)}</span></div>`:''}<div class="r tot"><span>${o.status==='accepted'||o.status==='sold'?'Deal':'Your offer'}</span><span>${money(o.total_offer)}</span></div></div></div>`;
-  h+=`<div class="card"><h3>History</h3>${o.events.map(e=>`<div class="ev"><span class="who">${e.actor==='buyer'?'You':'Seller'}</span><span>${esc(verb[e.action]||e.action)}${e.amount!=null?' '+money(e.amount):''}${e.note?`<br><span style="color:var(--ink2)">“${esc(e.note)}”</span>`:''}</span><span class="when">${fmtWhen(e.created_at)}</span></div>`).join('')}</div>`;
-  if(['new','countered'].includes(o.status))h+=`<button class="linkbtn" data-bact="withdraw" style="margin-top:14px">Withdraw this offer</button>`;
-  if(o.link)h+=`<div style="margin-top:18px"><a class="btn sec" style="display:inline-flex;align-items:center;text-decoration:none;height:46px" href="/s/${esc(o.link.slug)}">&lsaquo; Back to the cards</a></div>`;
+    <div class="totals">${o.total_comp?`<div class="r"><span>Comp total</span><span>${money(o.total_comp)}</span></div>`:''}${o.total_shown?`<div class="r"><span>Priced at</span><span>${money(o.total_shown)}</span></div>`:''}<div class="r tot"><span>${mine}</span><span>${money(o.total_offer)}</span></div></div></div>`;
+  h+=`<div class="card"><h3>History</h3>${o.events.map(e=>`<div class="ev"><span class="who">${who(e.actor)}</span><span>${esc(verb[e.action]||e.action)}${e.amount!=null?' '+money(e.amount):''}${e.note?`<br><span style="color:var(--ink2)">“${esc(e.note)}”</span>`:''}</span><span class="when">${fmtWhen(e.created_at)}</span></div>`).join('')}</div>`;
+  if(!OSEND)h+=`<div class="card"><h3>Share this offer</h3><div class="linkrow" style="margin-top:0"><input readonly value="${esc(offerURL())}" onclick="this.select()" aria-label="Offer link"><button class="btn sec" style="flex:none;padding:0 16px" data-copylink>Copy link</button></div></div>`;
+  if(!S&&['new','countered'].includes(o.status))h+=`<button class="linkbtn" data-bact="withdraw" style="margin-top:14px">Withdraw this offer</button>`;
+  h+=`<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">${o.link?`<a class="btn sec" style="display:inline-flex;align-items:center;text-decoration:none;height:46px;flex:none;padding:0 16px" href="/s/${esc(o.link.slug)}">&lsaquo; Back to the cards</a>`:''}
+    ${S?`<button class="linkbtn" data-sellerout>Sign out of seller view</button>`:`<button class="linkbtn" data-sellerin style="color:var(--mut)">I'm the seller</button>`}</div>`;
   h+=`</div>`;
-  document.getElementById('app').innerHTML=h; document.title=(o.kind==='claim'?'Your claim':'Your offer')+' · '+(o.link?o.link.title:'');
+  document.getElementById('app').innerHTML=h; document.title=(S?'Offer from '+o.buyer_name:o.kind==='claim'?'Your claim':'Your offer')+' · '+(o.link?o.link.title:'');
 }
+const BMSG={accept:a=>`Deal, I accepted your ${money(a)} counter: `,counter:a=>`I can do ${money(a)}. Here's my counter: `,decline:()=>`I'm going to pass on the counter, thanks! `,withdraw:()=>`I withdrew my offer: `};
+const SMSG={accept:(a,n)=>`Deal! I accepted ${money(a)} for the ${n} card${n===1?'':'s'}. Here are the details: `,counter:(a,n)=>`Thanks for the offer! I can do ${money(a)} for the ${n} card${n===1?'':'s'}. Accept or counter here: `,decline:()=>`Thanks for the offer, I'm going to pass this time. `};
 async function buyerAct(action){
   const amt=$('#bcamt')?+$('#bcamt').value:null, note=$('#bcnote')?$('#bcnote').value.trim():'';
   if(action==='counter'&&!(amt>0)){renderOfferPage('Enter your number first.');return;}
@@ -904,9 +943,36 @@ async function buyerAct(action){
   if(action==='decline'&&!confirm('Pass on the counter?'))return;
   try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({op:'buyer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
   catch(e){renderOfferPage(e.message);return;}
-  await loadOfferPage(); toast({accept:'Accepted. I\'ll be in touch.',counter:'Counter sent',decline:'Passed',withdraw:'Offer withdrawn'}[action]);
+  OSEND={text:BMSG[action](action==='accept'?OV.counter_total:amt)+offerURL(),who:'the seller'};
+  await loadOfferPage(); window.scrollTo(0,0);
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-bact]');if(b){e.preventDefault();buyerAct(b.dataset.bact);}});
+async function sellerAct(action){
+  const amt=$('#bcamt')?+$('#bcamt').value:null, note=$('#bcnote')?$('#bcnote').value.trim():'';
+  if(action==='counter'&&!(amt>0)){renderOfferPage('Enter your counter amount first.');return;}
+  if(action==='accept'&&!confirm(`Accept ${money(OV.total_offer)} from ${OV.buyer_name}? The cards go on hold.`))return;
+  if(action==='decline'&&!confirm(`Decline ${OV.buyer_name}'s offer?`))return;
+  const n=OV.items.filter(x=>x.included!==false).length, total=action==='accept'?OV.total_offer:amt;
+  try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-agent-pass':sellerPass()},body:JSON.stringify({op:'offer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
+  catch(e){renderOfferPage(e.message);return;}
+  const digits=String(OV.buyer_contact||'').replace(/\D/g,'');
+  const sms=digits.length>=10?`sms:${digits}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(SMSG[action](total,n)+offerURL())}`:'';
+  OSEND={text:SMSG[action](total,n)+offerURL(),who:(OV.buyer_name||'').split(' ')[0]||'the buyer',sms};
+  await loadOfferPage(); window.scrollTo(0,0);
+}
+async function sellerSignIn(){
+  const p=prompt('Seller passcode (the one you use in Card Vault):');if(!p)return;
+  try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-agent-pass':p},body:JSON.stringify({op:'whoami'})});const d=await r.json();if(!r.ok||!d.ok)throw new Error();}
+  catch(e){toast("That passcode didn't work.");return;}
+  try{localStorage.setItem('cv_seller_pass',p);}catch(e){}
+  await loadOfferPage(); toast('Signed in as the seller on this device');
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-bact]');if(b){e.preventDefault();buyerAct(b.dataset.bact);return;}
+  const sa=e.target.closest('[data-sact]');if(sa){e.preventDefault();sellerAct(sa.dataset.sact);return;}
+  if(e.target.closest('[data-sellerin]')){sellerSignIn();return;}
+  if(e.target.closest('[data-sellerout]')){try{localStorage.removeItem('cv_seller_pass');}catch(err){}OSEND=null;loadOfferPage();return;}
+  if(e.target.closest('[data-copylink]')){try{navigator.clipboard.writeText(offerURL());toast('Link copied');}catch(err){}return;}
+});
 document.addEventListener('visibilitychange',()=>{if(OTOK&&document.visibilityState==='visible')loadOfferPage();});
 
 /* ---------- boot ---------- */
