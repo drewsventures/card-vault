@@ -175,6 +175,8 @@ nav button .ic{font-size:17px;line-height:1}
 .srow[onclick]{cursor:pointer}
 .segbanner{display:inline-flex;align-items:center;background:var(--goldsoft);border:1px solid var(--line2);border-radius:20px;padding:5px 7px 5px 12px;margin-right:9px;font-size:12.5px;color:var(--ink);font-weight:600}
 .segbanner b{color:var(--gold);cursor:pointer;margin-left:8px;font-weight:700}
+.addallbtn{margin-left:8px;background:var(--gold);color:#fff;border:none;border-radius:9px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer}
+#segsel{max-width:46vw}
 .soldbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 4px;margin-top:10px}
 .soldbar input{width:100%;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:16px var(--ui);background:var(--card);color:var(--ink)}
 .soldbar input:focus{outline:none;border-color:var(--ink)}
@@ -688,7 +690,7 @@ body{font-variant-numeric:tabular-nums}
   <div id="dash"><div class="spin">Loading your collection...</div></div>
   <div id="search" class="hide">
     <div class="chips" id="chips" style="margin-top:12px"></div>
-    <div class="ctrlrow"><select id="sortsel" onchange="SORT=this.value;runSearch()"><option value="value">Highest value</option><option value="move">Biggest value change</option><option value="up">Top gainers</option><option value="down">Top decliners</option><option value="pop">Lowest graded pop</option><option value="new">Recently added</option><option value="low">Lowest value</option></select><input id="subjq" placeholder="Filter by player, character or team" oninput="renderSubjBar()" autocomplete="off"></div>
+    <div class="ctrlrow"><select id="segsel" onchange="SEGFILTER=this.value||null;SUBJ=null;const sq=document.getElementById('subjq');if(sq)sq.value='';runSearch()" aria-label="Category"><option value="">All categories</option></select><select id="sortsel" onchange="SORT=this.value;runSearch()"><option value="value">Highest value</option><option value="move">Biggest value change</option><option value="up">Top gainers</option><option value="down">Top decliners</option><option value="pop">Lowest graded pop</option><option value="new">Recently added</option><option value="low">Lowest value</option></select><input id="subjq" placeholder="Filter by player, character or team" oninput="renderSubjBar()" autocomplete="off"></div>
     <div class="subjbar" id="subjbar"></div>
     <div class="count" id="scount"></div>
     <div class="grid" id="results"></div>
@@ -842,7 +844,7 @@ async function load(){
   CARDS=await fetchJSON(SB+"/rest/v1/cards?select=*,photos(url,side,is_primary,display_url,thumb_url)&order=current_value.desc.nullslast&limit=5000");
   await mergeCost();
   DUPE={};CARDS.forEach(c=>{if(!c.dupe_key)c.dupe_key='u_'+c.id;(DUPE[c.dupe_key]=DUPE[c.dupe_key]||[]).push(c);});
-  renderDash(); buildChips(); loadLots(); loadExtras();
+  renderDash(); buildChips(); buildSegSel(); loadLots(); loadExtras();
   document.getElementById('asof').textContent='as of '+new Date().toLocaleDateString();
  }catch(e){
   document.getElementById('dash').innerHTML='<div class="spin">Could not load ('+e.message+'). Pull to refresh.</div>';
@@ -853,6 +855,24 @@ let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=300;
 function buildChips(){
  const c=['all','no cost','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
+}
+/* Category picker on Search (Oct 26 2026): pick a category, then narrow with the chips and the player/character box. */
+function buildSegSel(){
+ const el=document.getElementById('segsel');if(!el)return;
+ const n={};CARDS.forEach(c=>{if(c.status==='sold'||c.status==='duplicate'||c.item_type==='sealed'||c.item_type==='set')return;const k=seg(c);n[k]=(n[k]||0)+1;});
+ const groups={};Object.keys(n).forEach(k=>{const d=segDomain(k);(groups[d]=groups[d]||[]).push(k);});
+ let h='<option value="">All categories</option>';
+ ['Pinned collections','Sports','Culture','Other'].forEach(d=>{if(!groups[d])return;h+=`<optgroup label="${d}">`+groups[d].sort((a,b)=>n[b]-n[a]).map(k=>`<option value="${esc(k)}">${esc(k)} (${n[k].toLocaleString()})</option>`).join('')+'</optgroup>';});
+ el.innerHTML=h;el.value=SEGFILTER||'';
+}
+async function addShownToLot(){
+ if(!BUILDLOT)return;const set=LOTMEM[BUILDLOT]=LOTMEM[BUILDLOT]||new Set();
+ const ids=LASTLIST.filter(c=>!set.has(c.id)).map(c=>c.id);if(!ids.length)return;
+ const l=LOTS.find(x=>x.id===BUILDLOT);
+ if(!confirm(`Add ${ids.length} card${ids.length===1?'':'s'} to "${l?l.name:'this lot'}"?`))return;
+ const res=await lotOp({op:'add_items',lot_id:BUILDLOT,card_ids:ids});
+ if(!res||!res.ok){alert('Could not add cards'+(res&&res.error?': '+res.error:''));return;}
+ ids.forEach(id=>set.add(id));runSearch();updateBuildBar();
 }
 function setFilt(f,el){VALONLY=false;FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
 function runSearch(){
@@ -872,8 +892,8 @@ function runSearch(){
  if(q){const t=q.split(/\s+/);list=list.filter(c=>{const s=((c.player||'')+' '+(c.set_name||'')+' '+(c.variation||'')+' '+(c.year||'')+' '+(c.ref||'')).toLowerCase();return t.every(w=>s.includes(w));});}
  if(VALONLY)list=list.filter(c=>c.current_value!=null);
  const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY&&!SUBJ;
- sortList(list,neutral); const ss=document.getElementById('sortsel');if(ss)ss.value=SORT; renderSubjBar();
- document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards';
+ sortList(list,neutral); const ss=document.getElementById('sortsel');if(ss)ss.value=SORT; const sg=document.getElementById('segsel');if(sg&&sg.value!==(SEGFILTER||''))sg.value=SEGFILTER||''; renderSubjBar();
+ document.getElementById('scount').innerHTML=(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards'+(()=>{if(!BUILDLOT)return '';const set=LOTMEM[BUILDLOT]||new Set();const m=list.filter(c=>!set.has(c.id)).length;return m?` <button class="addallbtn" onclick="addShownToLot()">+ Add all ${m.toLocaleString()} shown to lot</button>`:(list.length?' <span style="color:var(--green);font-weight:700">&middot; all shown are in the lot</span>':'');})();
  LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
  el.innerHTML='';
@@ -1688,7 +1708,7 @@ function openLot(id){
  let h=`<div style="display:flex;align-items:center;gap:8px;margin:16px 0 4px"><button class="cpbtn" onclick="show('lots');renderLots()">&lsaquo; Lots</button><h2 style="margin:0;flex:1">${l.name||'Lot'}</h2></div>`;
  h+=`<div class="lottot"><div class="tc"><div class="n">${t.n}</div><div class="l">cards</div></div><div class="tc"><div class="n">${money(t.val)}</div><div class="l">value</div></div><div class="tc"><div class="n" style="color:${pnl==null?'var(--ink)':(pnl>=0?'var(--green)':'var(--accent)')}">${t.cost?money(t.cost):'--'}</div><div class="l">cost</div></div></div>`;
  h+=`<div class="lotact"><button class="primary" onclick="startBuild('${id}')">+ Add cards</button><button onclick="copyLotPost('${id}')">Copy lot post</button><button onclick="renameLot('${id}')">Rename</button><button onclick="deleteLot('${id}')">Delete</button></div>`;
- if(!cards.length) h+='<div class="stat-note">No cards yet. Tap “+ Add cards” and tap cards to add them.</div>';
+ if(!cards.length) h+='<div class="stat-note">No cards yet. Tap “+ Add cards”, pick a category (like Star Wars), narrow it with the filters, then tap cards or add everything shown.</div>';
  cards.forEach(c=>{const u=primary(c);
    h+=`<div class="litem"><img loading="lazy" src="${u||''}" onerror="this.style.visibility='hidden'"><div class="lt" onclick='openCard("${c.id}")'>${c.player||c.ref}<div class="s">${c.set_name||''} ${c.card_number?'#'+c.card_number:''} &middot; <span style="color:${srcColor(c)}">${money(c.current_value)}</span></div></div><button class="rm" title="remove" onclick="removeFromLot('${id}','${c.id}')">&times;</button></div>`;
  });
