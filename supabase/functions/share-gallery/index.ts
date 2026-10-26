@@ -184,7 +184,7 @@ async function publicView(slug: string) {
     title: link.title, intro: link.intro, terms: link.terms, contact: link.contact,
     price_mode: link.price_mode, show_comps: link.show_comps, count: cards.length, cards,
     recipient: link.recipient || null, discount_pct: disc || null, discount_ends_at: disc ? link.discount_ends_at : null,
-    allow_offers: link.allow_offers !== false,
+    allow_offers: link.allow_offers !== false, channels: await contactChannels(db),
   }, 200, { 'cache-control': 'public, max-age=60' });
 }
 
@@ -224,6 +224,15 @@ async function payDetails(db: any) {
   const out: Record<string, string> = {}; for (const k of PAY_KEYS) if (v[k]) out[k] = String(v[k]).slice(0, 300);
   return out;
 }
+// Drew's messaging channels (agent_settings.contact_channels), shown on every link so buyers can find him;
+// buyers pick one when they offer, so Drew knows where to look for the conversation.
+const CHANNEL_KEYS = ['instagram', 'whatnot', 'ebay', 'facebook', 'email', 'phone'];
+async function contactChannels(db: any) {
+  const { data } = await db.from('agent_settings').select('value').eq('key', 'contact_channels').maybeSingle();
+  const v = (data && data.value && typeof data.value === 'object') ? data.value : {};
+  const out: Record<string, string> = {}; for (const k of CHANNEL_KEYS) if (v[k]) out[k] = String(v[k]).slice(0, 200);
+  return out;
+}
 // Shipping address the buyer enters after a deal; Drew sees all of it, the buyer's page shows only city/state.
 function cleanShip(x: any) {
   const f = (k: string, n = 120) => String((x || {})[k] || '').trim().slice(0, n);
@@ -250,7 +259,8 @@ async function submitOffer(b: any) {
   const name = String(b.name || '').trim().slice(0, 80), contact = String(b.contact || '').trim().slice(0, 120);
   // name/username and a contact are required so Drew knows who's who; contact is free-form (phone, @handle,
   // email) because the conversation happens wherever they already talk
-  const via = /^@/.test(contact) ? 'ig' : /\S+@\S+\.\S+/.test(contact) ? 'email' : 'text';
+  const channel = CHANNEL_KEYS.includes(b.channel) ? b.channel : null;
+  const via = channel === 'instagram' || /^@/.test(contact) ? 'ig' : channel === 'email' || /\S+@\S+\.\S+/.test(contact) ? 'email' : 'text';
   if (!name) return j({ error: 'Add your name or username.' }, 400);
   if (contact.length < 3) return j({ error: 'Add a way to reach you (phone, @handle or email).' }, 400);
   const since = new Date(Date.now() - 10 * 60e3).toISOString();
@@ -282,7 +292,7 @@ async function submitOffer(b: any) {
 
   const tok = token();
   const { data: o, error } = await db.from('offers').insert({
-    link_id: link.id, token: tok, kind, buyer_name: name, buyer_via: via, buyer_contact: contact, message: String(b.message || '').slice(0, 1000) || null,
+    link_id: link.id, token: tok, kind, buyer_name: name, buyer_via: via, buyer_contact: contact, channel, message: String(b.message || '').slice(0, 1000) || null,
     total_list: r2(listed), total_shown: r2(shown), total_comp: r2(comp), total_offer: total, status: 'new', turn: 'seller',
   }).select('*').single();
   if (error) return j({ error: error.message }, 500);
@@ -310,7 +320,7 @@ async function offerView(tok: string, seller = false) {
     total_list: o.total_list, total_shown: o.total_shown, total_comp: o.total_comp, total_offer: o.total_offer, counter_total: o.counter_total,
     items: items || [], events: ev || [], link: link ? { slug: link.slug, title: link.title, terms: link.terms } : null,
     ...(['accepted', 'sold'].includes(o.status) ? { pay: await payDetails(db) } : {}),
-    paid_via: o.paid_via, buyer_paid_at: o.buyer_paid_at,
+    paid_via: o.paid_via, buyer_paid_at: o.buyer_paid_at, channel: o.channel, channels: await contactChannels(db),
     ship_summary: o.shipping ? [o.shipping.city, o.shipping.state].filter(Boolean).join(', ') : null,
     ...(seller ? { seller: true, buyer_contact: o.buyer_contact, buyer_via: o.buyer_via, shipping: o.shipping } : {}),
   });
@@ -469,7 +479,13 @@ Deno.serve(async (req) => {
     const fields = ['title', 'intro', 'scope_type', 'lot_id', 'segment', 'card_ids', 'price_mode', 'markup_pct', 'show_comps', 'terms', 'contact', 'active', 'recipient', 'discount_pct', 'discount_ends_at', 'allow_offers'];
     const pick = (o: any) => { const r: any = {}; for (const k of fields) if (o[k] !== undefined) r[k] = o[k]; return r; };
     if (op === 'whoami') return j({ ok: true, seller: true });
-    if (op === 'get_pay') return j({ ok: true, pay: await payDetails(db) });
+    if (op === 'get_pay') return j({ ok: true, pay: await payDetails(db), channels: await contactChannels(db) });
+    if (op === 'set_channels') {
+      const v: Record<string, string> = {}; for (const k of CHANNEL_KEYS) if (b.channels && b.channels[k]) v[k] = String(b.channels[k]).trim().slice(0, 200);
+      const { error } = await db.from('agent_settings').upsert({ key: 'contact_channels', value: v, updated_at: new Date().toISOString() });
+      if (error) return j({ error: error.message }, 500);
+      return j({ ok: true, channels: v });
+    }
     if (op === 'set_pay') {
       const v: Record<string, string> = {}; for (const k of PAY_KEYS) if (b.pay && b.pay[k]) v[k] = String(b.pay[k]).trim().slice(0, 300);
       const { error } = await db.from('agent_settings').upsert({ key: 'pay_details', value: v, updated_at: new Date().toISOString() });
