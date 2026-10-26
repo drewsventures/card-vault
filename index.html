@@ -2465,7 +2465,17 @@ function shareCount(l){
 async function copyText(t,btn,label){try{await navigator.clipboard.writeText(t);}catch(e){prompt('Copy this link',t);}if(btn){const o=btn.textContent;btn.textContent=label||'Copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent=o;btn.classList.remove('ok');},1600);}}
 async function nativeShare(id){const l=(SHARES||[]).find(x=>x.id===id);if(!l)return;const url=shareUrl(l);if(navigator.share){try{await navigator.share({title:l.title,url});}catch(e){}}else copyText(url);}
 /* ---- Offers inbox: buyers' claims and offers from share links ---- */
-let OFFERS=null, OFFTAB='open', OFFOPEN={};
+let OFFERS=null, OFFTAB='open', OFFOPEN={}, PAY=null, PAYOPEN=false;
+async function loadPay(){const r=await shareOp({op:'get_pay'});if(r&&r.ok)PAY=r.pay||{};return PAY;}
+const PAYF=[['venmo','Venmo','@yourname'],['paypal','PayPal','email or paypal.me link'],['zelle','Zelle','phone or email'],['cashapp','Cash App','$cashtag'],['note','Note to buyers','e.g. PayPal G&S add 3%. Ships within 2 days.']];
+function payHTML(){
+ const p=PAY||{}, set=PAYF.filter(([k])=>k!=='note'&&p[k]).map(([k,l])=>l);
+ if(!PAYOPEN)return `<div class="shrow" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="ln" style="font-size:14.5px">Payment details</div><div class="lm">${set.length?'Buyers see: '+esc(set.join(', '))+' (only after you agree on a price)':'<b style="color:var(--dn)">Not set.</b> Buyers need these to pay you after a deal.'}</div></div><div class="lotact" style="margin:0"><button onclick="PAYOPEN=true;renderShare()">${set.length?'Edit':'Add'}</button></div></div>`;
+ return `<div class="shform"><div class="skidh">Payment details</div><div class="skidn" style="margin-bottom:6px">Shown to a buyer only after you both agree on a price, on their offer page next to the shipping address form. Leave any you don't use blank.</div>
+  ${PAYF.map(([k,l,ph])=>`<label for="pay-${k}">${l}</label><input id="pay-${k}" value="${esc(p[k]||'')}" placeholder="${esc(ph)}">`).join('')}
+  <div class="skidb"><button class="go" onclick="savePay()">Save</button><button onclick="PAYOPEN=false;renderShare()">Cancel</button></div></div>`;
+}
+async function savePay(){const pay={};PAYF.forEach(([k])=>{pay[k]=(document.getElementById('pay-'+k)||{}).value||'';});const r=await shareOp({op:'set_pay',pay});if(!r||!r.ok){alert('Could not save: '+((r&&r.error)||'unknown'));return;}PAY=r.pay;PAYOPEN=false;renderShare();}
 async function loadOffers(){const r=await shareOp({op:'list_offers'});if(r&&r.offers){OFFERS=r.offers;offerBadge();}return OFFERS||[];}
 function offerBadge(){const n=(OFFERS||[]).filter(o=>o.turn==='seller'&&o.status==='new').length;const b=document.getElementById('offbadge');if(b){b.hidden=!n;b.textContent=n;}}
 const OFF_OPEN=o=>['new','countered','accepted'].includes(o.status);
@@ -2506,11 +2516,13 @@ function offersHTML(){
    <div class="ogrid"><div>Comp<b>${money(o.total_comp)}</b></div><div>Priced at<b>${money(o.total_shown)}</b></div><div>Offer vs comp<b style="color:${pct==null?'inherit':pct>=100?'var(--up)':pct>=80?'var(--ink)':'var(--dn)'}">${pct==null?'--':pct+'%'}</b></div><div>Profit vs cost<b style="color:${prof==null?'inherit':prof>=0?'var(--up)':'var(--dn)'}">${prof==null?'--':(prof>=0?'+':'-')+money(Math.abs(prof))}</b></div></div>
    ${lastBuyer&&lastBuyer.note?`<div class="onote">“${esc(lastBuyer.note)}”</div>`:''}
    ${exp?`<div class="oitems">${o.items.map(x=>`<div class="oitem${x.included?'':' out'}">${isNew&&o.items.length>1?`<input type="checkbox" class="oinc" data-o="${o.id}" value="${x.card_id}" ${x.included?'checked':''} aria-label="Include ${esc(x.title)}">`:'<span></span>'}${x.thumb?`<img src="${esc(x.thumb)}" alt="" loading="lazy">`:'<span class="ph0"></span>'}<div class="nm">${esc(x.title||x.ref)}<small>${esc(x.ref||'')} · comp ${money(x.comp)}${x.cards&&x.cards.cost_basis!=null?' · cost '+money(x.cards.cost_basis):''}</small></div><b>${money(x.offer_price)}</b></div>`).join('')}</div>
-   <div class="ohist">${o.events.map(e=>`${e.actor==='buyer'?esc((o.buyer_name||'Buyer').split(' ')[0]):'You'} ${({offer:o.kind==='claim'?'claimed':'offered',counter:'countered',accept:'accepted',decline:'declined',withdraw:'withdrew',sold:'marked sold',release:'released'})[e.action]||e.action}${e.amount!=null?' '+money(e.amount):''} · ${new Date(e.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`).join('<br>')}</div>`:`<button class="linkish" style="background:none;border:0;padding:6px 0;color:var(--ink);text-decoration:underline;cursor:pointer;font-weight:600" onclick="OFFOPEN['${o.id}']=1;renderShare()">Show ${inc.length} card${inc.length===1?'':'s'} &amp; history</button>`}`;
+   <div class="ohist">${o.events.map(e=>`${e.actor==='buyer'?esc((o.buyer_name||'Buyer').split(' ')[0]):'You'} ${({offer:o.kind==='claim'?'claimed':'offered',counter:'countered',accept:'accepted',decline:'declined',withdraw:'withdrew',sold:'marked sold',release:'released',ship:'sent shipping address'})[e.action]||e.action}${e.amount!=null&&e.action!=='ship'?' '+money(e.amount):''} · ${new Date(e.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`).join('<br>')}</div>`:`<button class="linkish" style="background:none;border:0;padding:6px 0;color:var(--ink);text-decoration:underline;cursor:pointer;font-weight:600" onclick="OFFOPEN['${o.id}']=1;renderShare()">Show ${inc.length} card${inc.length===1?'':'s'} &amp; history</button>`}`;
   if(o.status==='new')h+=`<div class="ocounter"><input type="number" inputmode="decimal" id="oc-${o.id}" placeholder="Counter amount ($)"><input id="on-${o.id}" placeholder="Note to buyer (optional)"></div>
    <div class="lotact" style="margin-top:8px"><button class="primary" onclick="offerAct('${o.id}','accept')">Accept ${money(o.total_offer)}</button><button onclick="offerAct('${o.id}','counter')">Counter</button><button onclick="offerAct('${o.id}','decline')">Decline</button>${offerContactBtn(o,'')}<a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
   else if(o.status==='countered')h+=`<div class="lotact" style="margin-top:8px">${offerContactBtn(o,'counter')}<button onclick="offerAct('${o.id}','accept')">Accept their ${money(o.total_offer)} instead</button><button onclick="offerAct('${o.id}','decline')">Withdraw counter</button><a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
-  else if(o.status==='accepted')h+=`<div class="lotact" style="margin-top:8px"><button class="primary" onclick="offerSold('${o.id}')">Paid · mark ${inc.length} sold</button>${offerContactBtn(o,'accept')}<button onclick="offerAct('${o.id}','release')">Fell through · release</button><a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
+  if(o.status==='accepted'||o.status==='sold'){const sh=o.shipping,a=sh?[sh.name,sh.line1,sh.line2,[sh.city,sh.state].filter(Boolean).join(', ')+(sh.zip?' '+sh.zip:'')].filter(Boolean).join('\n'):'';
+   h+=`<div class="onote" style="margin-top:10px">${o.paid_via?`<b>Buyer says paid via ${esc(o.paid_via)}</b>`:'Not marked paid yet'}${sh?`<div style="white-space:pre-line;margin-top:6px">${esc(a)}</div><button class="linkish" style="background:none;border:0;padding:4px 0;text-decoration:underline;cursor:pointer;font-weight:600;color:var(--ink)" onclick="copyText(${esc(JSON.stringify(a))},this,'Address copied')">Copy address</button>`:'<div style="margin-top:4px;color:var(--mut)">No shipping address yet. Their offer page asks for it.</div>'}</div>`;}
+  if(o.status==='accepted')h+=`<div class="lotact" style="margin-top:8px"><button class="primary" onclick="offerSold('${o.id}')">Paid · mark ${inc.length} sold</button>${offerContactBtn(o,'accept')}<button onclick="offerAct('${o.id}','release')">Fell through · release</button><a class="btnlink" href="${esc(o.status_url)}" target="_blank" rel="noopener">Buyer's page</a></div>`;
   h+=`</div>`;
  });
  return h;
@@ -2530,16 +2542,13 @@ async function offerAct(id,action){
  if(['counter','accept','decline'].includes(action)&&!r.emailed){const no=(OFFERS||[]).find(x=>x.id===id);const el=document.getElementById('off-'+id);
   if(no&&el)el.insertAdjacentHTML('beforeend',`<div class="onote" style="margin-top:10px"><b>Now send ${esc(no.buyer_name.split(' ')[0])} the link</b> (paste it wherever you two are talking):<div class="lotact" style="margin:8px 0 0">${offerContactBtn(no,action)}</div></div>`);}
 }
-// Paid: record each card's sale (price split by the offer's per-card amounts), then close the offer.
+// Paid: the server records each card's sale (split by the offer's per-card amounts) and closes the offer.
 async function offerSold(id){
  const o=(OFFERS||[]).find(x=>x.id===id);if(!o)return;
- const inc=o.items.filter(x=>x.included);const base=inc.reduce((t,x)=>t+(+x.offer_price||0),0)||1;
- const venue=prompt(`Mark ${inc.length} card${inc.length===1?'':'s'} sold to ${o.buyer_name} for ${money(o.total_offer)}.\n\nWhere was it paid? (e.g. Venmo, PayPal, In person)`,'Direct');if(venue===null)return;
- const today=new Date().toISOString().slice(0,10);let done=0;
- for(const x of inc){const price=Math.round((+x.offer_price||0)/base*o.total_offer*100)/100;
-  const r=await lotOp({op:'sell_card',card_id:x.card_id,sale_price:price,sold_venue:venue||'Direct',sold_date:today,sold_to:o.buyer_name});if(r&&r.ok)done++;}
- if(done<inc.length&&!confirm(`${done} of ${inc.length} cards were recorded as sold. Close the offer anyway?`))return;
- await shareOp({op:'offer_respond',id,action:'sold'});
+ const inc=o.items.filter(x=>x.included);
+ const venue=prompt(`Mark ${inc.length} card${inc.length===1?'':'s'} sold to ${o.buyer_name} for ${money(o.total_offer)}.\n\nPaid how?`,o.paid_via||'Venmo');if(venue===null)return;
+ const r=await shareOp({op:'offer_respond',id,action:'sold',venue:venue||'Direct'});
+ if(!r||!r.ok){alert('Could not mark sold: '+((r&&r.error)||'unknown'));return;}
  if(typeof refreshData==='function')await refreshData();
  await loadOffers();OFFTAB='open';await renderShare();
 }
@@ -2547,9 +2556,10 @@ async function renderShare(){
  const el=document.getElementById('share');
  el.innerHTML='<h2 style="margin:16px 0 8px">Share</h2><div class="spin">Loading…</div>';
  if(typeof loadLots==='function')await loadLots();
- await Promise.all([loadShares(true),loadOffers().catch(()=>null)]);
+ await Promise.all([loadShares(true),loadOffers().catch(()=>null),PAY?null:loadPay().catch(()=>null)]);
  let h=`<div class="shhead"><h2 style="margin:16px 0 2px">Share</h2><div class="shsub">Send a buyer or friend a clean, swipeable gallery. They see photos, grades and your asking price. Never your cost, P&amp;L or notes.</div></div>`;
  h+=offersHTML();
+ h+=payHTML();
  h+=`<h3 style="margin:18px 0 8px;font-size:16px">Links</h3>`;
  h+=`<button class="newlot" onclick="shareForm()">+ New share link</button>`;
  if(SHAREFORM)h+=shareFormHTML(SHAREFORM);

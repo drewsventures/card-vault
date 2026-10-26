@@ -239,6 +239,24 @@ footer b{color:var(--ink2)}
 .pricebox .cmp{font-size:13.5px;color:var(--ink2);margin-top:4px}
 .errbox{font-size:13.5px;color:var(--deal);background:var(--dealbg);border-radius:10px;padding:9px 12px;margin-top:10px}
 .linkrow{display:flex;gap:8px;margin-top:12px}
+.howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 2px;max-width:760px}
+.howto div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--ink2);line-height:1.35}
+.howto b{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+.howto i{font-style:normal;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+@media(max-width:560px){.howto{grid-template-columns:1fr;gap:6px}.howto div{display:flex;gap:8px;align-items:baseline;padding:8px 12px}.howto b{margin:0;white-space:nowrap}}
+.steps{display:flex;gap:6px;margin:12px 0 6px}
+.steps div{flex:1;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:700;color:var(--mut);background:var(--surface);border:1px solid var(--line);line-height:1.25}
+.steps div.done{color:var(--good);border-color:#bfe3cf;background:#f1faf4}
+.steps div.now{color:#fff;background:var(--ink);border-color:var(--ink)}
+.steps small{display:block;font-weight:600;opacity:.8;font-size:11px}
+.paylist{margin-top:8px}
+.paylist .pr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14.5px}
+.paylist .pr:first-child{border-top:0}
+.paylist .pr b{font-weight:800}
+.shipf{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.shipf input,.shipf select{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:16px;background:var(--surface);color:var(--ink)}
+.shipf .full{grid-column:1/-1}
+.addr{white-space:pre-line;font-size:15px;line-height:1.45;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:8px}
 .sendbox{background:var(--surface);border:2px solid var(--ink);border-radius:16px;padding:14px;margin-top:14px;text-align:left}
 .sendbox h3{margin:0 0 8px;font-size:15px;font-weight:800;letter-spacing:0;text-transform:none;color:var(--ink)}
 .sendbox textarea{width:100%;min-height:84px;border:1px solid var(--line);border-radius:10px;padding:10px;font:14px var(--font);background:var(--bg);color:var(--ink);resize:none}
@@ -276,6 +294,7 @@ footer b{color:var(--ink2)}
       <p class="intro" id="intro" hidden></p>
       <div id="dealline"></div>
       <div class="stats" id="stats"></div>
+      <div class="howto" id="howto" hidden></div>
       <div id="mine" style="margin-top:8px"></div>
     </div>
     <div class="bar" id="bar">
@@ -892,17 +911,18 @@ function renderOfferPage(msg){
   const o=OV, S=!!o.seller, inc=o.items.filter(x=>x.included!==false), out=o.items.filter(x=>x.included===false);
   const first=(o.buyer_name||'').split(' ')[0]||'the buyer';
   const buyerHead={new:`Waiting on the seller. If you haven't yet, send them this link.`,countered:`The seller countered at ${money(o.counter_total)}. Accept it, send a different number, or pass.`,
-    accepted:`Deal at ${money(o.total_offer)}. The seller will follow up with payment details.`,declined:"This one didn't work out. Thanks for the offer.",withdrawn:'This offer was withdrawn.',sold:`Sold for ${money(o.total_offer)}. Thank you!`}[o.status]||'';
+    accepted:o.ship_summary?`Deal at ${money(o.total_offer)}. Thanks, your address${o.paid_via?' and payment':''} went to the seller. Send them the link if you haven't.`:`Deal at ${money(o.total_offer)}! Pay with one of the options below, then add your shipping address.`,declined:"This one didn't work out. Thanks for the offer.",withdrawn:'This offer was withdrawn.',sold:`Sold for ${money(o.total_offer)}. Thank you!`}[o.status]||'';
   const sellerHead={new:`${o.buyer_name} ${o.events.length>1?'countered at':o.kind==='claim'?'claimed at':'offered'} ${money(o.total_offer)}. Accept, counter or decline, then send them the link.`,countered:`You countered at ${money(o.counter_total)}. Waiting on ${first}.`,
-    accepted:`Deal at ${money(o.total_offer)}. Send payment details, then tap Paid in your Card Vault hub (Share → Offers).`,declined:'Closed.',withdrawn:`${first} withdrew this offer.`,sold:`Sold for ${money(o.total_offer)}.`}[o.status]||'';
+    accepted:o.shipping?`Deal at ${money(o.total_offer)}. ${first} sent their address${o.paid_via?' and says they paid via '+o.paid_via:''}. Once the money lands, tap Paid below.`:`Deal at ${money(o.total_offer)}. Waiting on ${first} to pay and send their address (their page asks for both).`,declined:'Closed.',withdrawn:`${first} withdrew this offer.`,sold:`Sold for ${money(o.total_offer)}.`}[o.status]||'';
   const who=a=>S?(a==='buyer'?esc(first):'You'):(a==='buyer'?'You':'Seller');
-  const verb={offer:o.kind==='claim'?'claimed at':'offered',counter:'countered at',accept:'accepted',decline:'declined',withdraw:'withdrew',note:'noted',sold:'marked sold',release:'released the cards'};
+  const verb={offer:o.kind==='claim'?'claimed at':'offered',counter:'countered at',accept:'accepted',decline:'declined',withdraw:'withdrew',note:'noted',sold:'marked sold',release:'released the cards',ship:'sent shipping address'};
   let h=`<div class="os">
     <div class="eyebrow">${esc(o.link?o.link.title:'Offer')}${S?' · seller view':''}</div>
     <h1>${S?`Offer from ${esc(o.buyer_name)}`:o.kind==='claim'?'Your claim':'Your offer'}: ${money(o.total_offer)}</h1>
     <div class="note" style="margin:-2px 0 8px">${S?'':`From <b>${esc(o.buyer_name)}</b> to <b>Drew</b>`}</div>
     <span class="pillst st-${esc(o.status)}">${esc((S?ST_LBL_S:ST_LBL)[o.status]||o.status)}</span>
     <p class="lead" style="margin-top:10px">${esc(S?sellerHead:buyerHead)}</p>
+    ${stepsHTML(o)}
     ${S?`<div class="note" style="font-size:14px">Buyer: <b>${esc(o.buyer_name)}</b>${o.buyer_contact?` · <b>${esc(o.buyer_contact)}</b>`:''}</div>`:''}
     ${msg?`<div class="errbox">${esc(msg)}</div>`:''}
     ${OSEND?sendBox(OSEND.text,OSEND.who,OSEND.sms):''}`;
@@ -922,11 +942,12 @@ function renderOfferPage(msg){
       <input id="bcnote" placeholder="Note to ${esc(first)} (optional)" style="height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px">
       <button class="linkbtn" data-sact="decline" style="align-self:flex-start">Decline</button></div></div>`;
   }
+  if(o.status==='accepted'||o.status==='sold')h+=S?sellerFinishHTML(o):buyerFinishHTML(o);
   const mine=S?'Offer':o.status==='accepted'||o.status==='sold'?'Deal':'Your offer';
   h+=`<div class="card"><h3>${inc.length} card${inc.length===1?'':'s'}</h3>${inc.map(x=>`<div class="orow"><div class="th">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:''}</div><div style="min-width:0"><div class="nm">${esc(x.title||x.ref)}</div><div class="sb">${x.comp?'Comp '+money(x.comp):''}${x.shown!=null?(x.comp?' · ':'')+'Priced '+money(x.shown):''}</div></div><div class="rp"><b>${money(x.offer_price)}</b></div></div>`).join('')}
     ${out.length?`<div class="note" style="margin-top:8px">Not included in the deal: ${out.map(x=>esc(x.title||x.ref)).join(', ')}</div>`:''}
     <div class="totals">${o.total_comp?`<div class="r"><span>Comp total</span><span>${money(o.total_comp)}</span></div>`:''}${o.total_shown?`<div class="r"><span>Priced at</span><span>${money(o.total_shown)}</span></div>`:''}<div class="r tot"><span>${mine}</span><span>${money(o.total_offer)}</span></div></div></div>`;
-  h+=`<div class="card"><h3>History</h3>${o.events.map(e=>`<div class="ev"><span class="who">${who(e.actor)}</span><span>${esc(verb[e.action]||e.action)}${e.amount!=null?' '+money(e.amount):''}${e.note?`<br><span style="color:var(--ink2)">“${esc(e.note)}”</span>`:''}</span><span class="when">${fmtWhen(e.created_at)}</span></div>`).join('')}</div>`;
+  h+=`<div class="card"><h3>History</h3>${o.events.map(e=>`<div class="ev"><span class="who">${who(e.actor)}</span><span>${esc(verb[e.action]||e.action)}${e.amount!=null&&e.action!=='ship'?' '+money(e.amount):''}${e.note?`<br><span style="color:var(--ink2)">“${esc(e.note)}”</span>`:''}</span><span class="when">${fmtWhen(e.created_at)}</span></div>`).join('')}</div>`;
   if(!OSEND)h+=`<div class="card"><h3>Share this offer</h3><div class="linkrow" style="margin-top:0"><input readonly value="${esc(offerURL())}" onclick="this.select()" aria-label="Offer link"><button class="btn sec" style="flex:none;padding:0 16px" data-copylink>Copy link</button></div></div>`;
   if(!S&&['new','countered'].includes(o.status))h+=`<button class="linkbtn" data-bact="withdraw" style="margin-top:14px">Withdraw this offer</button>`;
   h+=`<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">${o.link?`<a class="btn sec" style="display:inline-flex;align-items:center;text-decoration:none;height:46px;flex:none;padding:0 16px" href="/s/${esc(o.link.slug)}">&lsaquo; Back to the cards</a>`:''}
@@ -934,16 +955,62 @@ function renderOfferPage(msg){
   h+=`</div>`;
   document.getElementById('app').innerHTML=h; document.title=(S?'Offer from '+o.buyer_name:o.kind==='claim'?'Your claim':'Your offer')+' · '+(o.link?o.link.title:'');
 }
-const BMSG={accept:a=>`Deal, I accepted your ${money(a)} counter: `,counter:a=>`I can do ${money(a)}. Here's my counter: `,decline:()=>`I'm going to pass on the counter, thanks! `,withdraw:()=>`I withdrew my offer: `};
-const SMSG={accept:(a,n)=>`Deal! I accepted ${money(a)} for the ${n} card${n===1?'':'s'}. Here are the details: `,counter:(a,n)=>`Thanks for the offer! I can do ${money(a)} for the ${n} card${n===1?'':'s'}. Accept or counter here: `,decline:()=>`Thanks for the offer, I'm going to pass this time. `};
+function stepsHTML(o){
+  const st=o.status, closed=['declined','withdrawn'].includes(st), shipped=!!o.ship_summary;
+  if(closed)return '';
+  const s1='done', s2=['accepted','sold'].includes(st)?'done':'now', s3=st==='sold'?'done':['accepted'].includes(st)?'now':'';
+  const sub2=st==='countered'?(OV.seller?'waiting on buyer':'your turn'):st==='new'?(OV.seller?'your turn':'waiting on seller'):'agreed';
+  const sub3=st==='sold'?'complete':st==='accepted'?(shipped?(OV.seller?'mark it sold':'sent, thanks!'):(OV.seller?'waiting on buyer':'your turn')):'';
+  return `<div class="steps"><div class="${s1}">1. Offer<small>sent</small></div><div class="${s2}">2. Agree on price<small>${sub2}</small></div><div class="${s3}">3. Pay &amp; ship<small>${sub3||'after a deal'}</small></div></div>`;
+}
+const PAYLBL={venmo:'Venmo',paypal:'PayPal',zelle:'Zelle',cashapp:'Cash App'};
+function buyerFinishHTML(o){
+  if(o.status==='sold')return `<div class="card"><h3>All set</h3><p style="margin:0">Paid${o.paid_via?' via '+esc(o.paid_via):''}. Shipping to ${esc(o.ship_summary||'your address')}. Thank you!</p></div>`;
+  const pay=o.pay||{}, opts=Object.keys(PAYLBL).filter(k=>pay[k]);
+  const B=store.get('cv_ship')||{};
+  let h=`<div class="card"><h3>Step 3: Pay &amp; send your address</h3>
+    <div style="font-size:30px;font-weight:800;letter-spacing:-.03em">${money(o.total_offer)}</div>
+    ${opts.length?`<div class="paylist">${opts.map(k=>`<div class="pr"><span>${PAYLBL[k]}</span><span><b>${esc(pay[k])}</b> <button class="linkbtn" data-copyval="${esc(pay[k])}">Copy</button></span></div>`).join('')}</div>`:`<p class="note">The seller will send payment details.</p>`}
+    ${pay.note?`<div class="note" style="margin-top:6px">${esc(pay.note)}</div>`:''}
+    ${o.link&&o.link.terms?`<div class="note" style="margin-top:6px"><b>Terms:</b> ${esc(o.link.terms)}</div>`:''}`;
+  if(o.ship_summary&&!SHIPEDIT)h+=`<div class="onote" style="margin-top:12px">Address sent (${esc(o.ship_summary)})${o.paid_via?` · paid via <b>${esc(o.paid_via)}</b>`:' · payment not marked yet'}. <button class="linkbtn" data-shipedit>Update</button></div>`;
+  else h+=`<div class="shipf">
+      <input class="full" id="sh_name" placeholder="Full name" autocomplete="name" value="${esc(B.name||o.buyer_name||'')}">
+      <input class="full" id="sh_line1" placeholder="Street address" autocomplete="address-line1" value="${esc(B.line1||'')}">
+      <input class="full" id="sh_line2" placeholder="Apt, suite (optional)" autocomplete="address-line2" value="${esc(B.line2||'')}">
+      <input id="sh_city" placeholder="City" autocomplete="address-level2" value="${esc(B.city||'')}">
+      <input id="sh_state" placeholder="State" autocomplete="address-level1" value="${esc(B.state||'')}">
+      <input id="sh_zip" placeholder="ZIP" autocomplete="postal-code" inputmode="numeric" value="${esc(B.zip||'')}">
+      <select id="sh_paid" aria-label="How did you pay?"><option value="">Haven't paid yet</option>${opts.map(k=>`<option${o.paid_via===PAYLBL[k]?' selected':''}>${PAYLBL[k]}</option>`).join('')}<option${o.paid_via==='Other'?' selected':''}>Other</option></select>
+    </div>
+    <button class="btn" style="width:100%;margin-top:10px;height:50px" data-bact="ship">Send address${opts.length?' &amp; payment':''}</button>`;
+  return h+`</div>`;
+}
+function sellerFinishHTML(o){
+  const sh=o.shipping, a=sh?[sh.name,sh.line1,sh.line2,[sh.city,sh.state].filter(Boolean).join(', ')+(sh.zip?' '+sh.zip:''),sh.country&&sh.country!=='US'?sh.country:''].filter(Boolean).join('\n'):'';
+  let h=`<div class="card"><h3>${o.status==='sold'?'Sold':'Step 3: Payment &amp; shipping'}</h3>`;
+  h+=o.paid_via?`<p style="margin:0 0 6px"><b>${esc(o.buyer_name)} says they paid via ${esc(o.paid_via)}.</b> Check it landed.</p>`:`<p style="margin:0 0 6px" class="note">Not marked paid yet.</p>`;
+  h+=sh?`<div class="addr" id="shipaddr">${esc(a)}</div><button class="linkbtn" data-copyval="${esc(a)}">Copy address</button>`:`<p class="note" style="margin:0">No shipping address yet. Their page asks for it.</p>`;
+  if(!o.pay||!Object.keys(o.pay).length)h+=`<div class="warn">Buyers don't see payment options yet. Add your Venmo/PayPal/Zelle in Card Vault → Share → Payment details.</div>`;
+  if(o.status==='accepted')h+=`<button class="btn" style="width:100%;margin-top:12px;height:50px" data-sact="sold">Paid · mark ${o.items.filter(x=>x.included!==false).length} sold</button><button class="linkbtn" data-sact="release" style="margin-top:8px">Deal fell through · release cards</button>`;
+  return h+`</div>`;
+}
+let SHIPEDIT=false;
+const BMSG={ship:()=>``,accept:a=>`Deal, I accepted your ${money(a)} counter. I'll pay and add my address on this page: `,counter:a=>`I can do ${money(a)}. Here's my counter: `,decline:()=>`I'm going to pass on the counter, thanks! `,withdraw:()=>`I withdrew my offer: `};
+const SMSG={accept:(a,n)=>`Deal! I accepted ${money(a)} for the ${n} card${n===1?'':'s'}. Payment options are on this page, just add your shipping address there: `,counter:(a,n)=>`Thanks for the offer! I can do ${money(a)} for the ${n} card${n===1?'':'s'}. Accept or counter here: `,decline:()=>`Thanks for the offer, I'm going to pass this time. `};
 async function buyerAct(action){
   const amt=$('#bcamt')?+$('#bcamt').value:null, note=$('#bcnote')?$('#bcnote').value.trim():'';
   if(action==='counter'&&!(amt>0)){renderOfferPage('Enter your number first.');return;}
+  let body={op:'buyer_respond',token:OTOK,action,amount:amt,note};
+  if(action==='ship'){const g=id=>($('#'+id)||{}).value||'';const sh={name:g('sh_name'),line1:g('sh_line1'),line2:g('sh_line2'),city:g('sh_city'),state:g('sh_state'),zip:g('sh_zip')};
+    if(!sh.name||!sh.line1||!sh.city||!sh.state||!sh.zip){renderOfferPage('Fill in your name, street, city, state and ZIP.');return;}
+    store.set('cv_ship',sh);body={op:'buyer_respond',token:OTOK,action,shipping:sh,paid_via:g('sh_paid')};}
   if(action==='withdraw'&&!confirm('Withdraw this offer?'))return;
   if(action==='decline'&&!confirm('Pass on the counter?'))return;
-  try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({op:'buyer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
+  try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
   catch(e){renderOfferPage(e.message);return;}
-  OSEND={text:BMSG[action](action==='accept'?OV.counter_total:amt)+offerURL(),who:'the seller'};
+  SHIPEDIT=false;
+  OSEND={text:(action==='ship'?(body.paid_via?`I paid ${money(OV.total_offer)} via ${body.paid_via} and sent my shipping address: `:`I sent my shipping address: `):BMSG[action](action==='accept'?OV.counter_total:amt))+offerURL(),who:'the seller'};
   await loadOfferPage(); window.scrollTo(0,0);
 }
 async function sellerAct(action){
@@ -951,9 +1018,12 @@ async function sellerAct(action){
   if(action==='counter'&&!(amt>0)){renderOfferPage('Enter your counter amount first.');return;}
   if(action==='accept'&&!confirm(`Accept ${money(OV.total_offer)} from ${OV.buyer_name}? The cards go on hold.`))return;
   if(action==='decline'&&!confirm(`Decline ${OV.buyer_name}'s offer?`))return;
+  if(action==='sold'&&!confirm(`Mark ${money(OV.total_offer)} received and record these cards as sold to ${OV.buyer_name}?`))return;
+  if(action==='release'&&!confirm('Release the hold and put these cards back up for sale?'))return;
   const n=OV.items.filter(x=>x.included!==false).length, total=action==='accept'?OV.total_offer:amt;
   try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-agent-pass':sellerPass()},body:JSON.stringify({op:'offer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
   catch(e){renderOfferPage(e.message);return;}
+  if(action==='sold'||action==='release'){OSEND=action==='sold'?{text:`Got your payment, thank you! Shipping out soon. ${offerURL()}`,who:(OV.buyer_name||'').split(' ')[0]||'the buyer'}:null;await loadOfferPage();window.scrollTo(0,0);return;}
   const digits=String(OV.buyer_contact||'').replace(/\D/g,'');
   const sms=digits.length>=10?`sms:${digits}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(SMSG[action](total,n)+offerURL())}`:'';
   OSEND={text:SMSG[action](total,n)+offerURL(),who:(OV.buyer_name||'').split(' ')[0]||'the buyer',sms};
@@ -971,6 +1041,8 @@ document.addEventListener('click',e=>{
   const sa=e.target.closest('[data-sact]');if(sa){e.preventDefault();sellerAct(sa.dataset.sact);return;}
   if(e.target.closest('[data-sellerin]')){sellerSignIn();return;}
   if(e.target.closest('[data-sellerout]')){try{localStorage.removeItem('cv_seller_pass');}catch(err){}OSEND=null;loadOfferPage();return;}
+  const cv=e.target.closest('[data-copyval]');if(cv){try{navigator.clipboard.writeText(cv.dataset.copyval);toast('Copied');}catch(err){}return;}
+  if(e.target.closest('[data-shipedit]')){SHIPEDIT=true;renderOfferPage();return;}
   if(e.target.closest('[data-copylink]')){try{navigator.clipboard.writeText(offerURL());toast('Link copied');}catch(err){}return;}
 });
 document.addEventListener('visibilitychange',()=>{if(OTOK&&document.visibilityState==='visible')loadOfferPage();});
@@ -994,6 +1066,7 @@ document.addEventListener('visibilitychange',()=>{if(OTOK&&document.visibilitySt
     $('#dealline').innerHTML=`<div class="deal"><b>${Math.round(D.discount_pct)}% off</b>&nbsp;everything here${D.recipient?', for '+esc(D.recipient):''}${end?' · through '+esc(end):''}</div>`;
   }
   const avail=D.cards.filter(c=>!c.sold&&!c.nfs), comp=avail.reduce((t,c)=>t+(+c.comp||0),0);
+  if(D.allow_offers!==false)$('#howto').hidden=false,$('#howto').innerHTML=`<div><b><i>1</i>Pick cards</b>Tap the circle on any card you want, or use Select all.</div><div><b><i>2</i>Tap Make offer</b>Pay the price shown, or name your own for the group.</div><div><b><i>3</i>Send me the link</b>You'll get a message to copy. Send it to me and I'll reply the same way.</div>`;
   $('#stats').innerHTML=`<span><b>${avail.length.toLocaleString()}</b> available</span>${comp?`<span>Total comp <b>${money(Math.round(comp))}</b></span>`:''}${D.allow_offers!==false?'<span>Offers welcome</span>':''}`;
   ALL=D.cards.map(c=>{const g=parseGrade(c.grade);c._gr=g.grader;c._gn=g.gnum;c._g=grabble(c);BYID[c.id]=c;return c;});
   (store.get('cv_sel_'+SLUG)||[]).forEach(id=>{if(BYID[id]&&selectable(BYID[id]))SEL.add(id);});
