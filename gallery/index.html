@@ -233,6 +233,31 @@ footer b{color:var(--ink2)}
 .zoom img{width:100%;min-height:100%;object-fit:contain}
 .zoom button{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px}
 .err{padding:80px 16px;text-align:center}
+.stats{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;color:var(--mut);font-size:13.5px}
+.stats b{color:var(--ink);font-size:15px;font-weight:800;letter-spacing:-.01em}
+.badge.hold{background:#fff4dc;border-color:#f0d9a6;color:#7a5200}
+.pricebox .cmp{font-size:13.5px;color:var(--ink2);margin-top:4px}
+.errbox{font-size:13.5px;color:var(--deal);background:var(--dealbg);border-radius:10px;padding:9px 12px;margin-top:10px}
+.linkrow{display:flex;gap:8px;margin-top:12px}
+.linkrow input{flex:1;min-width:0;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:13.5px;background:var(--bg)}
+/* offer status page */
+.os{max-width:640px;margin:0 auto;padding:22px 16px calc(40px + var(--safe-b))}
+.os .pillst{display:inline-block;border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.st-new{background:#eef2ff;color:#3346a8}.st-countered{background:#fff4dc;color:#7a5200}.st-accepted,.st-sold{background:#e6f5ec;color:var(--good)}.st-declined,.st-withdrawn{background:#f0f0ee;color:var(--mut)}
+.os h1{font-size:26px;margin:10px 0 4px}
+.os .lead{color:var(--ink2);margin:0 0 14px}
+.os .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:12px}
+.os .card h3{margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.ev{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.ev:first-of-type{border-top:0}
+.ev .who{font-weight:800;min-width:46px}
+.ev .when{color:var(--mut);font-size:12.5px;margin-left:auto;white-space:nowrap}
+.act{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.act .row{display:flex;gap:8px}
+.act .money{width:auto;flex:1}
+.act>.btn,.act .row .btn{flex:none;height:50px}
+.act .row .btn.sec{padding:0 18px}
+.act .row .money input{height:50px}
 .err h1{font-size:22px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
@@ -245,6 +270,8 @@ footer b{color:var(--ink2)}
       <h1 id="title">Loading…</h1>
       <p class="intro" id="intro" hidden></p>
       <div id="dealline"></div>
+      <div class="stats" id="stats"></div>
+      <div id="mine" style="margin-top:8px"></div>
     </div>
     <div class="bar" id="bar">
       <div class="srow">
@@ -326,7 +353,7 @@ footer b{color:var(--ink2)}
 const FN='https://kcmrmswazprkizbzewpm.supabase.co/functions/v1/share-gallery';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=v=>v==null?'':'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:v<100?2:0});
+const money=v=>{if(v==null)return '';const n=Number(v),c=n<100&&Math.round(n)!==n;return '$'+n.toLocaleString(undefined,{minimumFractionDigits:c?2:0,maximumFractionDigits:c?2:0});};
 const store={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 let D=null, ALL=[], VIEW=[], BYID={}, q='', shown=0, sort='feat', SLUG='';
 const PAGE=40;
@@ -361,6 +388,7 @@ function priceHTML(c){
 }
 function tileBadge(c){
   if(c.sold) return '<span class="badge sold">Sold</span>';
+  if(c.hold) return '<span class="badge hold">On hold</span>';
   if(c.grade) return `<span class="badge">${esc(c.grade)}</span>`;
   if(c.serial) return `<span class="badge">${esc(c.serial)}</span>`;
   return '';
@@ -509,9 +537,9 @@ function renderSelAll(){
 }
 function selCards(){return [...SEL].map(id=>BYID[id]).filter(c=>c&&selectable(c));}
 function sums(cs){
-  let list=0,your=0,unpriced=0;
-  cs.forEach(c=>{if(c.price==null){unpriced++;return;}your+=c.price;list+=(c.list!=null?c.list:c.price);});
-  return {list,your,unpriced,n:cs.length};
+  let list=0,your=0,unpriced=0,comp=0;
+  cs.forEach(c=>{comp+=+c.comp||0;if(c.price==null){unpriced++;return;}your+=c.price;list+=(c.list!=null?c.list:c.price);});
+  return {list,your,unpriced,comp,n:cs.length};
 }
 function renderTray(){
   const cs=selCards(), s=sums(cs), on=cs.length>0&&!OPEN&&!$('#viewer').classList.contains('open');
@@ -519,7 +547,8 @@ function renderTray(){
   if(!cs.length)return;
   $('#tl1').textContent=`${s.n} card${s.n===1?'':'s'} selected`;
   const parts=[];
-  if(D.price_mode!=='hide'&&s.your){parts.push(s.list>s.your?`<s>${money(s.list)}</s> ${money(s.your)} your price`:`${money(s.your)} asking`);}
+  if(s.comp)parts.push(`Comp ${money(s.comp)}`);
+  if(D.price_mode!=='hide'&&s.your&&!(D.price_mode==='value'&&!hasDeal())){parts.push(s.list>s.your?`<s>${money(s.list)}</s> ${money(s.your)} your price`:`${money(s.your)} asking`);}
   if(s.unpriced)parts.push(`${s.unpriced} make-an-offer`);
   $('#tl2').innerHTML=parts.join(' · ');
   $('#tgo').textContent=D.allow_offers===false?'Review':'Make offer';
@@ -540,10 +569,12 @@ function slideHTML(c,i){
   if(D.price_mode!=='hide'||c.sold){
     const deal=!c.sold&&!c.nfs&&c.list!=null&&c.price!=null&&c.list>c.price;
     const amt=c.sold?'Sold':c.nfs?'Not for sale':c.price==null?'Make an offer':money(c.price);
-    const lbl=c.sold||c.nfs?'Status':deal?'Your price':(D.price_mode==='value'?'Market value':'Asking');
+    const lbl=c.sold||c.nfs?'Status':deal?'Your price':(D.price_mode==='value'?'Comp value':'Asking');
+    const cmpLine=!c.sold&&!c.nfs&&c.comp&&(D.price_mode!=='value'||deal)?`<div class="cmp">Comp ${money(c.comp)}</div>`:'';
+    const holdLine=c.hold?`<div class="cmp" style="color:#7a5200;font-weight:700">On hold for another buyer. You can still send a backup offer.</div>`:'';
     let comps='';
     if(c.comps&&c.comps.length){comps=`<div class="comps"><div class="lbl">Recent sales</div>${c.comps.map(x=>`<div class="crow"><span>${new Date(x.d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</span><b>${money(x.p)}</b></div>`).join('')}</div>`;}
-    pb=`<div class="pricebox"><div class="lbl">${lbl}</div><div class="amt">${amt}</div>${deal?`<div class="was">Listed <s>${money(c.list)}</s><span class="off">${Math.round(D.discount_pct)}% off</span></div>`:''}${D.terms&&!c.sold&&!c.nfs?`<div class="terms">${esc(D.terms)}</div>`:''}${comps}</div>`;
+    pb=`<div class="pricebox"><div class="lbl">${lbl}</div><div class="amt">${amt}</div>${cmpLine}${holdLine}${deal?`<div class="was">Listed <s>${money(c.list)}</s><span class="off">${Math.round(D.discount_pct)}% off</span></div>`:''}${D.terms&&!c.sold&&!c.nfs?`<div class="terms">${esc(D.terms)}</div>`:''}${comps}</div>`;
   } else if(D.terms){pb=`<div class="pricebox"><div class="lbl">Price</div><div class="amt" style="font-size:20px">Message for price</div><div class="terms">${esc(D.terms)}</div></div>`;}
   return `<article class="slide" data-i="${i}"><div class="stage">
     <div class="big${raw?' raw':''}" data-i="${i}">${p.front?`<img alt="${esc(titleOf(c))} front" src="${esc(p.front.thumb)}" data-full="${esc(p.front.img)}" ${Math.abs(i-VI)>1?'loading="lazy"':''} onload="if(this.dataset.full&&this.src!==this.dataset.full){const f=this.dataset.full;this.dataset.full='';const t=new Image();t.onload=()=>{this.src=f};t.src=f;}">`:''}
@@ -624,7 +655,7 @@ function openFilters(){$('#fbody').innerHTML=filtersHTML();openSheet('#fsheet');
 
 /* ---------- offer ---------- */
 // O.mode: 'lot' (one number for everything) or 'each' (a price per card). O.unit: '$' or '%' (percent off the shown price).
-const O={mode:'lot',unit:'$',lot:'',each:{},msg:'',done:null};
+const O={mode:'lot',unit:'$',lot:'',each:{},msg:'',done:null,err:''};
 let BUYER=store.get('cv_buyer')||{name:'',via:'text',contact:''};
 function offerState(){
   const cs=selCards(), s=sums(cs);
@@ -670,7 +701,9 @@ function offerBody(){
     <div class="field"><div class="seg3" role="group" aria-label="Contact method"><button data-via="text" aria-pressed="${BUYER.via==='text'}">Text</button><button data-via="email" aria-pressed="${BUYER.via==='email'}">Email</button><button data-via="ig" aria-pressed="${BUYER.via==='ig'}">Instagram</button></div></div>
     <div class="field"><label for="bc">${BUYER.via==='email'?'Email':BUYER.via==='ig'?'Instagram handle':'Mobile number'}</label><input id="bc" value="${esc(BUYER.contact)}" ${BUYER.via==='email'?'type="email" autocomplete="email" inputmode="email" placeholder="you@example.com"':BUYER.via==='ig'?'autocapitalize="off" placeholder="@handle"':'type="tel" autocomplete="tel" inputmode="tel" placeholder="(555) 555-1234"'}></div>
     <div class="field"><label for="bm">Note (optional)</label><textarea id="bm" placeholder="Shipping zip, payment preference, questions…">${esc(O.msg)}</textarea></div>
-    ${D.terms?`<div class="note"><b>Terms:</b> ${esc(D.terms)}</div>`:''}</div>`;
+    <input type="text" name="website" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+    ${D.terms?`<div class="note"><b>Terms:</b> ${esc(D.terms)}</div>`:''}
+    ${O.err?`<div class="errbox">${esc(O.err)}</div>`:''}</div>`;
   return h;
 }
 function offerHint(st){
@@ -685,9 +718,10 @@ function offerHint(st){
 }
 function totalsHTML(st){
   const {s,total}=st; let h='';
-  if(D.price_mode!=='hide'&&s.your){
+  if(s.comp) h+=`<div class="r"><span>Comp total</span><span>${money(s.comp)}</span></div>`;
+  if(D.price_mode!=='hide'&&s.your&&!(D.price_mode==='value'&&!hasDeal()&&Math.abs(s.your-s.comp)<1)){
     if(s.list>s.your) h+=`<div class="r"><span>Listed</span><s>${money(s.list)}</s></div>`;
-    h+=`<div class="r"><span>${hasDeal()?`Your price (${Math.round(D.discount_pct)}% off)`:'Asking'}</span><span>${money(s.your)}</span></div>`;
+    h+=`<div class="r"><span>${hasDeal()?`Your price (${Math.round(D.discount_pct)}% off)`:D.price_mode==='value'?'Priced at':'Asking'}</span><span>${money(s.your)}</span></div>`;
   }
   if(s.unpriced) h+=`<div class="r"><span>Make-an-offer cards</span><span>${s.unpriced}</span></div>`;
   h+=`<div class="r tot"><span>${st.claim?'Total':'Your offer'}</span><span>${total!=null&&total>0?money(total):'—'}</span></div>`;
@@ -707,7 +741,7 @@ function refreshOfferLive(){
   renderOfferFoot();
 }
 function renderOffer(){
-  if(O.done){$('#obody').innerHTML=doneHTML();$('#ofoot').innerHTML=`<button class="btn sec" id="ocopy">Copy offer</button><button class="btn" id="ofinish">Done</button>`;$('#osh-t').textContent='Offer ready';return;}
+  if(O.done){$('#obody').innerHTML=doneHTML();$('#ofoot').innerHTML=O.done.url?`<button class="btn" id="ofinish">Back to the cards</button>`:`<button class="btn sec" id="ocopy">Copy offer</button><button class="btn" id="ofinish">Done</button>`;$('#osh-t').textContent=O.done.url?'Sent':'Offer ready';return;}
   $('#osh-t').textContent=D.allow_offers===false?'Claim cards':'Your offer';
   $('#obody').innerHTML=offerBody(); renderOfferFoot();
 }
@@ -730,15 +764,35 @@ function offerText(st){
   return lines.join('\n');
 }
 function doneHTML(){
+  if(O.done.url){const d=O.done;
+    return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
+    <h3>${d.claim?'Claim sent':'Offer sent'}: ${money(d.total)}</h3>
+    <p>It's in my inbox now. I'll reply on your private offer page, and reach you by ${BUYER.via==='email'?'email':BUYER.via==='ig'?'Instagram':'text'} when there's news. Save this link to check back, accept a counter, or withdraw.</p>
+    <div class="linkrow"><input readonly value="${esc(d.url)}" aria-label="Your offer page" onclick="this.select()"><button class="btn sec" id="ocopylink">Copy</button></div>
+    <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px" href="${esc(d.url)}">Open my offer page</a></div>`;}
   const how=O.done.how, where={sms:'Messages',mail:'your email app',ig:'Instagram'}[how];
   return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
     <h3>${where?'Almost there: hit send':'Offer copied'}</h3>
     <p>${where?`Your ${O.done.claim?'claim':'offer'} opened in ${where}. Send it and I'll get back to you by ${BUYER.via==='email'?'email':BUYER.via==='ig'?'Instagram':'text'}.`:`Paste it to the person who sent you this link.`} Didn't open? Copy it below.</p>
     <div class="msgbox">${esc(O.done.text)}</div></div>`;
 }
-function submitOffer(){
+// Offers go straight to the seller's inbox. If the server can't be reached, fall back to the old
+// prefilled text/email so the buyer is never stuck.
+async function submitOffer(){
   const st=offerState(); if(!st.valid)return;
-  BUYER.name=$('#bn').value; BUYER.contact=$('#bc').value; store.set('cv_buyer',BUYER);
+  BUYER.name=$('#bn').value; BUYER.contact=$('#bc').value; store.set('cv_buyer',BUYER); O.msg=($('#bm')||{}).value||O.msg;
+  const btn=$('#osend'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
+  const body={op:'submit_offer',slug:SLUG,kind:O.mode==='each'&&D.allow_offers!==false?'per_card':'lot',total_offer:st.total,
+    items:st.cs.map(c=>({id:c.id,offer:st.perCard?st.perCard[c.id]:undefined})),name:BUYER.name.trim(),via:BUYER.via,contact:BUYER.contact.trim(),message:O.msg.trim(),website:($('#hp')||{}).value||''};
+  try{
+    const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
+    if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||'Could not send'),{soft:r.status<500});
+    const mine=store.get('cv_offers')||[];mine.unshift({t:d.token,slug:SLUG,total:d.total,at:Date.now()});store.set('cv_offers',mine.slice(0,20));
+    O.err='';O.done={url:d.status_url,claim:d.kind==='claim',total:d.total};renderOffer();renderMine();return;
+  }catch(err){
+    if(err.soft){O.err=err.message;renderOffer();return;}
+    if(!D.contact){O.err="Couldn't reach the server. Try again in a minute.";renderOffer();return;}
+  }
   const text=offerText(st);
   const how=sendMessage(text,(st.claim?'Claim: ':'Offer: ')+st.cs.length+' card'+(st.cs.length===1?'':'s')+' · '+money(st.total));
   O.done={text,how,claim:st.claim}; renderOffer();
@@ -762,6 +816,7 @@ document.addEventListener('click',e=>{
   const oe=e.target.closest('[data-oeach]'); if(oe){const p=+oe.dataset.oeach;selCards().forEach(c=>{if(c.price!=null)O.each[c.id]=p?String(Math.round(c.price*(1-p/100))):String(c.price);});renderOffer();return;}
   const vv=e.target.closest('[data-via]'); if(vv){BUYER.name=$('#bn').value;if(BUYER.via!==vv.dataset.via){BUYER.via=vv.dataset.via;BUYER.contact='';}O.msg=$('#bm').value;renderOffer();const c=$('#bc');if(c)c.focus();return;}
   if(e.target.id==='osend'){submitOffer();return;}
+  if(e.target.id==='ocopylink'){try{navigator.clipboard.writeText(O.done.url);toast('Link copied');}catch(err){}return;}
   if(e.target.id==='ocopy'){try{navigator.clipboard.writeText(O.done.text);toast('Offer copied');}catch(err){}return;}
   if(e.target.id==='ofinish'){SEL.clear();saveSel();O.lot='';O.each={};O.msg='';O.done=null;document.querySelectorAll('.tile.sel').forEach(t=>{t.classList.remove('sel');const b=t.querySelector('.selbtn');if(b)b.setAttribute('aria-pressed','false');});closeSheet();renderSelAll();return;}
   const f=e.target.closest('[data-flip]'); if(f){e.stopPropagation();const i=+f.dataset.flip,c=VIEW[i];flipped[i]=!flipped[i];const im=f.parentElement.querySelector('img');const s=flipped[i]?c.photos.back:c.photos.front;im.src=s.img;f.parentElement.classList.toggle('raw',!s.clean);f.querySelector('span').textContent=flipped[i]?'Front':'Back';return;}
@@ -795,11 +850,67 @@ document.addEventListener('keydown',e=>{
   if(!$('#viewer').classList.contains('open'))return;
   if(e.key==='Escape')closeViewer(); if(e.key==='ArrowRight')go(1); if(e.key==='ArrowLeft')go(-1);
 });
-function barH(){document.documentElement.style.setProperty('--barh',$('#bar').offsetHeight+'px');}
+function barH(){if(!$('#bar'))return;document.documentElement.style.setProperty('--barh',$('#bar').offsetHeight+'px');}
 window.addEventListener('resize',()=>{barH();if($('#viewer').classList.contains('open')){const t=$('#track');t.scrollLeft=VI*t.clientWidth;}});
+
+/* ---------- buyer's offer page (/o/<token>) ---------- */
+function renderMine(){
+  const el=$('#mine'); if(!el)return;
+  const mine=(store.get('cv_offers')||[]).filter(x=>x.slug===SLUG);
+  el.innerHTML=mine.length?`<a class="linkbtn" href="/o/${esc(mine[0].t)}">Your offer${mine.length>1?'s':''}: ${money(mine[0].total)}${mine.length>1?' and '+(mine.length-1)+' more':''} &rsaquo;</a>`:'';
+}
+const ST_LBL={new:'Waiting on seller',countered:'Counter offer',accepted:'Accepted',declined:'Declined',withdrawn:'Withdrawn',sold:'Sold'};
+const fmtWhen=d=>new Date(d).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+let OV=null, OTOK='';
+async function loadOfferPage(){
+  try{const r=await fetch(FN+'?o='+encodeURIComponent(OTOK));OV=await r.json();if(!r.ok)throw new Error(OV.error||'Not found');}
+  catch(e){document.getElementById('app').innerHTML=`<div class="err"><h1>Offer not found</h1><p style="color:var(--mut)">${esc(e.message)}</p></div>`;return;}
+  renderOfferPage();
+}
+function renderOfferPage(msg){
+  const o=OV, inc=o.items.filter(x=>x.included!==false), out=o.items.filter(x=>x.included===false);
+  const head={new:`I have your ${o.kind==='claim'?'claim':'offer'} and will reply soon.`,countered:`I countered at ${money(o.counter_total)}. Accept it, send a different number, or pass.`,
+    accepted:`Deal at ${money(o.total_offer)}. I'll reach out with payment details${o.link&&o.link.terms?'':''}.`,declined:'This one didn\'t work out. Thanks for the offer.',withdrawn:'You withdrew this offer.',sold:`Sold for ${money(o.total_offer)}. Thank you!`}[o.status]||'';
+  const verb={offer:o.kind==='claim'?'claimed at':'offered',counter:'countered at',accept:'accepted',decline:'declined',withdraw:'withdrew',note:'noted',sold:'marked sold',release:'released the cards'};
+  let h=`<div class="os">
+    <div class="eyebrow">${esc(o.link?o.link.title:'Your offer')}</div>
+    <h1>${o.kind==='claim'?'Your claim':'Your offer'}: ${money(o.status==='countered'?o.total_offer:o.total_offer)}</h1>
+    <span class="pillst st-${esc(o.status)}">${esc(ST_LBL[o.status]||o.status)}</span>
+    <p class="lead" style="margin-top:10px">${esc(head)}</p>
+    ${msg?`<div class="errbox">${esc(msg)}</div>`:''}`;
+  if(o.status==='countered'&&o.turn==='buyer'){
+    h+=`<div class="card"><h3>Seller's counter</h3><div style="font-size:30px;font-weight:800;letter-spacing:-.03em">${money(o.counter_total)}</div>
+      <div class="note" style="margin:2px 0 12px">Your offer was ${money(o.total_offer)}${o.total_comp?` · comp ${money(o.total_comp)}`:''}</div>
+      <div class="act"><button class="btn" data-bact="accept">Accept ${money(o.counter_total)}</button>
+      <div class="row"><label class="money"><span>$</span><input id="bcamt" type="number" inputmode="decimal" min="1" placeholder="Your number" aria-label="Counter amount"></label><button class="btn sec" data-bact="counter">Counter</button></div>
+      <input id="bcnote" placeholder="Note (optional)" style="height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:16px">
+      <button class="linkbtn" data-bact="decline" style="align-self:flex-start">No thanks, pass</button></div></div>`;
+  }
+  h+=`<div class="card"><h3>${inc.length} card${inc.length===1?'':'s'}</h3>${inc.map(x=>`<div class="orow"><div class="th">${x.thumb?`<img src="${esc(x.thumb)}" alt="">`:''}</div><div style="min-width:0"><div class="nm">${esc(x.title||x.ref)}</div><div class="sb">${x.comp?'Comp '+money(x.comp):''}${x.shown!=null?(x.comp?' · ':'')+'Priced '+money(x.shown):''}</div></div><div class="rp"><b>${money(x.offer_price)}</b></div></div>`).join('')}
+    ${out.length?`<div class="note" style="margin-top:8px">Not included in the deal: ${out.map(x=>esc(x.title||x.ref)).join(', ')}</div>`:''}
+    <div class="totals">${o.total_comp?`<div class="r"><span>Comp total</span><span>${money(o.total_comp)}</span></div>`:''}${o.total_shown?`<div class="r"><span>Priced at</span><span>${money(o.total_shown)}</span></div>`:''}<div class="r tot"><span>${o.status==='accepted'||o.status==='sold'?'Deal':'Your offer'}</span><span>${money(o.total_offer)}</span></div></div></div>`;
+  h+=`<div class="card"><h3>History</h3>${o.events.map(e=>`<div class="ev"><span class="who">${e.actor==='buyer'?'You':'Seller'}</span><span>${esc(verb[e.action]||e.action)}${e.amount!=null?' '+money(e.amount):''}${e.note?`<br><span style="color:var(--ink2)">“${esc(e.note)}”</span>`:''}</span><span class="when">${fmtWhen(e.created_at)}</span></div>`).join('')}</div>`;
+  if(['new','countered'].includes(o.status))h+=`<button class="linkbtn" data-bact="withdraw" style="margin-top:14px">Withdraw this offer</button>`;
+  if(o.link)h+=`<div style="margin-top:18px"><a class="btn sec" style="display:inline-flex;align-items:center;text-decoration:none;height:46px" href="/s/${esc(o.link.slug)}">&lsaquo; Back to the cards</a></div>`;
+  h+=`</div>`;
+  document.getElementById('app').innerHTML=h; document.title=(o.kind==='claim'?'Your claim':'Your offer')+' · '+(o.link?o.link.title:'');
+}
+async function buyerAct(action){
+  const amt=$('#bcamt')?+$('#bcamt').value:null, note=$('#bcnote')?$('#bcnote').value.trim():'';
+  if(action==='counter'&&!(amt>0)){renderOfferPage('Enter your number first.');return;}
+  if(action==='withdraw'&&!confirm('Withdraw this offer?'))return;
+  if(action==='decline'&&!confirm('Pass on the counter?'))return;
+  try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({op:'buyer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
+  catch(e){renderOfferPage(e.message);return;}
+  await loadOfferPage(); toast({accept:'Accepted. I\'ll be in touch.',counter:'Counter sent',decline:'Passed',withdraw:'Offer withdrawn'}[action]);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-bact]');if(b){e.preventDefault();buyerAct(b.dataset.bact);}});
+document.addEventListener('visibilitychange',()=>{if(OTOK&&document.visibilityState==='visible')loadOfferPage();});
 
 /* ---------- boot ---------- */
 (async function(){
+  const om=location.pathname.match(/\/o\/([a-z0-9]+)/i)||[null,new URLSearchParams(location.search).get('o')];
+  if(om[1]){OTOK=om[1];document.querySelectorAll('.tray,.cta').forEach(x=>x.remove());await loadOfferPage();return;}
   $('#grid').innerHTML=skeleton(10);
   SLUG=slug();
   if(!SLUG){document.getElementById('app').innerHTML='<div class="err"><h1>Link missing</h1><p>Ask for a fresh link.</p></div>';return;}
@@ -814,10 +925,12 @@ window.addEventListener('resize',()=>{barH();if($('#viewer').classList.contains(
     const end=D.discount_ends_at?new Date(D.discount_ends_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
     $('#dealline').innerHTML=`<div class="deal"><b>${Math.round(D.discount_pct)}% off</b>&nbsp;everything here${D.recipient?', for '+esc(D.recipient):''}${end?' · through '+esc(end):''}</div>`;
   }
+  const avail=D.cards.filter(c=>!c.sold&&!c.nfs), comp=avail.reduce((t,c)=>t+(+c.comp||0),0);
+  $('#stats').innerHTML=`<span><b>${avail.length.toLocaleString()}</b> available</span>${comp?`<span>Total comp <b>${money(Math.round(comp))}</b></span>`:''}${D.allow_offers!==false?'<span>Offers welcome</span>':''}`;
   ALL=D.cards.map(c=>{const g=parseGrade(c.grade);c._gr=g.grader;c._gn=g.gnum;c._g=grabble(c);BYID[c.id]=c;return c;});
   (store.get('cv_sel_'+SLUG)||[]).forEach(id=>{if(BYID[id]&&selectable(BYID[id]))SEL.add(id);});
   $('#foot').innerHTML=`${D.terms?`<div><b>Terms:</b> ${esc(D.terms)}</div>`:''}<div style="margin-top:6px">Tap a card for full photos, front and back. Tap the circle to add it to an offer, or use Select all. Prices can change; message to confirm.</div>`;
-  readURL(); renderSort(); applyFilters(); renderTray(); barH();
+  readURL(); renderSort(); applyFilters(); renderTray(); renderMine(); barH();
   const h=decodeURIComponent((location.hash.match(/c=([^&]+)/)||[])[1]||'');
   if(h){const i=VIEW.findIndex(c=>c.id===h); if(i>=0) openViewer(i);}
 })();
