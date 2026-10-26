@@ -216,6 +216,20 @@ async function notifyBuyer(o: any, subject: string, text: string) {
   return sendEmail(o.buyer_contact, subject, text);
 }
 
+// Drew's payment options (agent_settings.pay_details), shown to a buyer only once a price is agreed.
+const PAY_KEYS = ['venmo', 'paypal', 'zelle', 'cashapp', 'note'];
+async function payDetails(db: any) {
+  const { data } = await db.from('agent_settings').select('value').eq('key', 'pay_details').maybeSingle();
+  const v = (data && data.value && typeof data.value === 'object') ? data.value : {};
+  const out: Record<string, string> = {}; for (const k of PAY_KEYS) if (v[k]) out[k] = String(v[k]).slice(0, 300);
+  return out;
+}
+// Shipping address the buyer enters after a deal; Drew sees all of it, the buyer's page shows only city/state.
+function cleanShip(x: any) {
+  const f = (k: string, n = 120) => String((x || {})[k] || '').trim().slice(0, n);
+  return { name: f('name'), line1: f('line1'), line2: f('line2'), city: f('city', 60), state: f('state', 30), zip: f('zip', 15), country: f('country', 40) || 'US', note: f('note', 300) };
+}
+
 async function setHolds(db: any, offerId: string, on: boolean) {
   if (on) {
     const { data } = await db.from('offer_items').select('card_id').eq('offer_id', offerId).eq('included', true);
@@ -295,7 +309,10 @@ async function offerView(tok: string, seller = false) {
     status: o.status, turn: o.turn, kind: o.kind, buyer_name: o.buyer_name, created_at: o.created_at,
     total_list: o.total_list, total_shown: o.total_shown, total_comp: o.total_comp, total_offer: o.total_offer, counter_total: o.counter_total,
     items: items || [], events: ev || [], link: link ? { slug: link.slug, title: link.title, terms: link.terms } : null,
-    ...(seller ? { seller: true, buyer_contact: o.buyer_contact, buyer_via: o.buyer_via } : {}),
+    ...(['accepted', 'sold'].includes(o.status) ? { pay: await payDetails(db) } : {}),
+    paid_via: o.paid_via, buyer_paid_at: o.buyer_paid_at,
+    ship_summary: o.shipping ? [o.shipping.city, o.shipping.state].filter(Boolean).join(', ') : null,
+    ...(seller ? { seller: true, buyer_contact: o.buyer_contact, buyer_via: o.buyer_via, shipping: o.shipping } : {}),
   });
 }
 
@@ -310,6 +327,16 @@ async function buyerRespond(b: any) {
     await db.from('offers').update({ status: 'withdrawn', turn: 'none', updated_at: now }).eq('id', o.id);
     await addEvent(db, o.id, 'buyer', 'withdraw', null, note);
     await notifyDrew(`${o.buyer_name} withdrew their offer`, `${o.buyer_name} withdrew their ${money(o.total_offer)} offer.`);
+    return j({ ok: true });
+  }
+  if (act === 'ship') {
+    if (o.status !== 'accepted') return j({ error: 'Shipping details are for accepted deals.' }, 409);
+    const sh = cleanShip(b.shipping);
+    if (!sh.name || !sh.line1 || !sh.city || !sh.state || !sh.zip) return j({ error: 'Fill in name, street, city, state and ZIP.' }, 400);
+    const via = String(b.paid_via || '').slice(0, 40) || null;
+    await db.from('offers').update({ shipping: sh, paid_via: via, buyer_paid_at: via ? now : o.buyer_paid_at, updated_at: now }).eq('id', o.id);
+    await addEvent(db, o.id, 'buyer', 'ship', via ? +o.total_offer : null, (via ? `Paid via ${via}. ` : '') + `Ship to ${sh.city}, ${sh.state}` + (note ? ` · ${note}` : ''));
+    await notifyDrew(`${o.buyer_name} sent shipping${via ? ' and paid via ' + via : ''}`, `${o.buyer_name}: ${sh.name}, ${sh.line1}${sh.line2 ? ', ' + sh.line2 : ''}, ${sh.city}, ${sh.state} ${sh.zip}.${via ? ' Paid via ' + via + '.' : ''}`);
     return j({ ok: true });
   }
   if (o.status !== 'countered' || o.turn !== 'buyer') return j({ error: "It's not your turn on this offer." }, 409);
@@ -392,7 +419,14 @@ async function sellerRespond(db: any, b: any) {
     return j({ ok: true, status_url: url, emailed });
   }
   if (act === 'sold') {
-    // the app records each card's sale (lot-ops sell_card) first, then closes the offer here
+    if (!['accepted', 'sold'].includes(o.status)) return j({ error: 'Accept the offer first.' }, 409);
+    // record each card's sale, splitting the deal by the offer's per-card amounts (same fields as lot-ops sell_card)
+    const { data: it } = await db.from('offer_items').select('card_id,offer_price').eq('offer_id', o.id).eq('included', true);
+    const base = (it || []).reduce((t: number, x: any) => t + (+x.offer_price || 0), 0) || 1;
+    const venue = String(b.venue || o.paid_via || 'Direct').slice(0, 40), day = now.slice(0, 10);
+    for (const x of it || []) {
+      await db.from('cards').update({ status: 'sold', disposition: 'sold', is_listed: false, sale_price: r2((+x.offer_price || 0) / base * (+o.total_offer)), sold_fees: null, sold_venue: venue, sold_to: o.buyer_name, sold_date: day }).eq('id', x.card_id);
+    }
     await db.from('offers').update({ status: 'sold', turn: 'none', updated_at: now }).eq('id', o.id);
     await setHolds(db, o.id, false);
     await addEvent(db, o.id, 'seller', 'sold', +o.total_offer, note);
@@ -435,6 +469,13 @@ Deno.serve(async (req) => {
     const fields = ['title', 'intro', 'scope_type', 'lot_id', 'segment', 'card_ids', 'price_mode', 'markup_pct', 'show_comps', 'terms', 'contact', 'active', 'recipient', 'discount_pct', 'discount_ends_at', 'allow_offers'];
     const pick = (o: any) => { const r: any = {}; for (const k of fields) if (o[k] !== undefined) r[k] = o[k]; return r; };
     if (op === 'whoami') return j({ ok: true, seller: true });
+    if (op === 'get_pay') return j({ ok: true, pay: await payDetails(db) });
+    if (op === 'set_pay') {
+      const v: Record<string, string> = {}; for (const k of PAY_KEYS) if (b.pay && b.pay[k]) v[k] = String(b.pay[k]).trim().slice(0, 300);
+      const { error } = await db.from('agent_settings').upsert({ key: 'pay_details', value: v, updated_at: new Date().toISOString() });
+      if (error) return j({ error: error.message }, 500);
+      return j({ ok: true, pay: v });
+    }
     if (op === 'list_offers') return await listOffers(db);
     if (op === 'offer_respond') return await sellerRespond(db, b);
     if (op === 'list_links') {
