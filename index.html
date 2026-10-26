@@ -2466,7 +2466,19 @@ async function copyText(t,btn,label){try{await navigator.clipboard.writeText(t);
 async function nativeShare(id){const l=(SHARES||[]).find(x=>x.id===id);if(!l)return;const url=shareUrl(l);if(navigator.share){try{await navigator.share({title:l.title,url});}catch(e){}}else copyText(url);}
 /* ---- Offers inbox: buyers' claims and offers from share links ---- */
 let OFFERS=null, OFFTAB='open', OFFOPEN={}, PAY=null, PAYOPEN=false;
-async function loadPay(){const r=await shareOp({op:'get_pay'});if(r&&r.ok)PAY=r.pay||{};return PAY;}
+let CHANS=null, CHANOPEN=false;
+async function loadPay(){const r=await shareOp({op:'get_pay'});if(r&&r.ok){PAY=r.pay||{};CHANS=r.channels||{};}return PAY;}
+// Where buyers can reach Drew: shown on every link; buyers pick one when they offer.
+const CHANF=[['instagram','Instagram','@yourhandle'],['whatnot','Whatnot','your Whatnot username'],['ebay','eBay','your eBay username'],['facebook','Facebook','facebook.com/yourprofile'],['email','Email','you@example.com'],['phone','Phone for texts (optional)','(555) 555-1234']];
+const CHANLBL={instagram:'Instagram',whatnot:'Whatnot',ebay:'eBay',facebook:'Facebook',email:'Email',phone:'Text'};
+function chanHTML(){
+ const c=CHANS||{}, set=CHANF.filter(([k])=>c[k]).map(([k])=>CHANLBL[k]);
+ if(!CHANOPEN)return `<div class="shrow" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="ln" style="font-size:14.5px">How buyers reach you</div><div class="lm">${set.length?'Shown on every link: '+esc(set.join(', '))+'. Buyers pick one when they offer.':'<b style="color:var(--dn)">Not set.</b> Add your Instagram, Whatnot, eBay, Facebook or email so buyers know where to message you.'}</div></div><div class="lotact" style="margin:0"><button onclick="CHANOPEN=true;renderShare()">${set.length?'Edit':'Add'}</button></div></div>`;
+ return `<div class="shform"><div class="skidh">How buyers reach you</div><div class="skidn" style="margin-bottom:6px">These show as "Message me on…" buttons at the top of every link. When a buyer makes an offer they pick one of these, so you know where their messages and offer links will show up. Leave any you don't use blank.</div>
+  ${CHANF.map(([k,l,ph])=>`<label for="chan-${k}">${l}</label><input id="chan-${k}" value="${esc(c[k]||'')}" placeholder="${esc(ph)}">`).join('')}
+  <div class="skidb"><button class="go" onclick="saveChans()">Save</button><button onclick="CHANOPEN=false;renderShare()">Cancel</button></div></div>`;
+}
+async function saveChans(){const channels={};CHANF.forEach(([k])=>{channels[k]=(document.getElementById('chan-'+k)||{}).value||'';});const r=await shareOp({op:'set_channels',channels});if(!r||!r.ok){alert('Could not save: '+((r&&r.error)||'unknown'));return;}CHANS=r.channels;CHANOPEN=false;renderShare();}
 const PAYF=[['venmo','Venmo','@yourname'],['paypal','PayPal','email or paypal.me link'],['zelle','Zelle','phone or email'],['cashapp','Cash App','$cashtag'],['note','Note to buyers','e.g. PayPal G&S add 3%. Ships within 2 days.']];
 function payHTML(){
  const p=PAY||{}, set=PAYF.filter(([k])=>k!=='note'&&p[k]).map(([k,l])=>l);
@@ -2491,6 +2503,9 @@ function offerBuyerMsg(o,kind){
 function offerContactBtn(o,kind){
  const msg=offerBuyerMsg(o,kind), c=(o.buyer_contact||'').trim(), first=esc((o.buyer_name||'').split(' ')[0]||'buyer'), d=c.replace(/[^\d+]/g,'');
  let h=`<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied')">Copy message</button>`;
+ const hd=c.replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+\.(com|net|tv|me)\/((user|usr|u)\/)?/i,'').replace(/^@/,'').replace(/[/?#].*$/,'');
+ const open={instagram:'https://ig.me/m/'+encodeURIComponent(hd),whatnot:'https://www.whatnot.com/user/'+encodeURIComponent(hd),ebay:'https://www.ebay.com/usr/'+encodeURIComponent(hd),facebook:'https://facebook.com/'+encodeURIComponent(hd)}[o.channel];
+ if(open)return h+`<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied');window.open(${esc(JSON.stringify(open))},'_blank')">Copy &amp; open ${esc(CHANLBL[o.channel])}</button>`;
  if(navigator.share)h+=`<button onclick="navigator.share({text:${esc(JSON.stringify(msg))}}).catch(()=>{})">Share…</button>`;
  if(d.replace(/\D/g,'').length>=10)h+=`<a class="btnlink" href="sms:${esc(d)}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}">Text ${first}</a>`;
  else if(/^@/.test(c))h+=`<button onclick="copyText(${esc(JSON.stringify(msg))},this,'Copied');window.open('https://ig.me/m/${encodeURIComponent(c.replace(/^@/,''))}','_blank')">DM ${first} on Instagram</button>`;
@@ -2511,7 +2526,7 @@ function offersHTML(){
   const lastBuyer=[...o.events].reverse().find(e=>e.actor==='buyer');
   h+=`<div class="offer${isNew?' newo':''}" id="off-${o.id}">
    <div class="ot"><div style="min-width:0"><div class="on1">${esc(o.buyer_name)}<span class="ostp ${esc(o.status)}">${o.status==='new'?(o.events.length>1?'countered you':o.kind==='claim'?'claim':'new'):o.status==='countered'?'waiting on buyer':esc(o.status)}</span></div>
-    <div class="om"><b style="color:var(--ink)">${esc(o.buyer_contact||'no contact')}</b> · ${esc(o.link?o.link.title:'Share link')} · ${inc.length} card${inc.length===1?'':'s'} · ${when}</div></div>
+    <div class="om">${o.channel?`<span class="ostp new" style="margin:0 4px 0 0">${esc(CHANLBL[o.channel]||o.channel)}</span>`:''}<b style="color:var(--ink)">${esc(o.buyer_contact||'no contact')}</b> · ${esc(o.link?o.link.title:'Share link')} · ${inc.length} card${inc.length===1?'':'s'} · ${when}</div></div>
     <div class="oamt">${money(o.total_offer)}<small>${o.status==='countered'?'you countered '+money(o.counter_total):o.kind==='claim'?'claim at price':o.kind==='per_card'?'per-card offer':'lot offer'}</small></div></div>
    <div class="ogrid"><div>Comp<b>${money(o.total_comp)}</b></div><div>Priced at<b>${money(o.total_shown)}</b></div><div>Offer vs comp<b style="color:${pct==null?'inherit':pct>=100?'var(--up)':pct>=80?'var(--ink)':'var(--dn)'}">${pct==null?'--':pct+'%'}</b></div><div>Profit vs cost<b style="color:${prof==null?'inherit':prof>=0?'var(--up)':'var(--dn)'}">${prof==null?'--':(prof>=0?'+':'-')+money(Math.abs(prof))}</b></div></div>
    ${lastBuyer&&lastBuyer.note?`<div class="onote">“${esc(lastBuyer.note)}”</div>`:''}
@@ -2559,6 +2574,7 @@ async function renderShare(){
  await Promise.all([loadShares(true),loadOffers().catch(()=>null),PAY?null:loadPay().catch(()=>null)]);
  let h=`<div class="shhead"><h2 style="margin:16px 0 2px">Share</h2><div class="shsub">Send a buyer or friend a clean, swipeable gallery. They see photos, grades and your asking price. Never your cost, P&amp;L or notes.</div></div>`;
  h+=offersHTML();
+ h+=chanHTML();
  h+=payHTML();
  h+=`<h3 style="margin:18px 0 8px;font-size:16px">Links</h3>`;
  h+=`<button class="newlot" onclick="shareForm()">+ New share link</button>`;

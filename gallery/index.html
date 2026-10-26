@@ -239,6 +239,12 @@ footer b{color:var(--ink2)}
 .pricebox .cmp{font-size:13.5px;color:var(--ink2);margin-top:4px}
 .errbox{font-size:13.5px;color:var(--deal);background:var(--dealbg);border-radius:10px;padding:9px 12px;margin-top:10px}
 .linkrow{display:flex;gap:8px;margin-top:12px}
+.reach{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:13px;color:var(--mut)}
+.reach a{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:700;font-size:13px;text-decoration:none}
+.reach a b{font-weight:600;color:var(--mut)}
+.chanpick{display:flex;flex-wrap:wrap;gap:6px}
+.chanpick button{height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:13.5px;cursor:pointer;color:var(--ink2)}
+.chanpick button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .howto{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 2px;max-width:760px}
 .howto div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--ink2);line-height:1.35}
 .howto b{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:13.5px;margin-bottom:2px}
@@ -294,6 +300,7 @@ footer b{color:var(--ink2)}
       <p class="intro" id="intro" hidden></p>
       <div id="dealline"></div>
       <div class="stats" id="stats"></div>
+      <div class="reach" id="reach" hidden></div>
       <div class="howto" id="howto" hidden></div>
       <div id="mine" style="margin-top:8px"></div>
     </div>
@@ -722,9 +729,12 @@ function offerBody(){
   }
   h+=`<div>${rows}</div>`;
   h+=`<div class="totals" id="ototals">${totalsHTML(st)}</div>`;
-  h+=`<div class="blk"><h3>Your info</h3>
-    <div class="field"><label for="bn">Name or username</label><input id="bn" autocomplete="name" value="${esc(BUYER.name)}" placeholder="First and last"></div>
-    <div class="field"><label for="bc">How to reach you</label><input id="bc" value="${esc(BUYER.contact)}" autocomplete="tel" placeholder="Phone, @instagram, email…"><div class="note" style="margin-top:6px">Any app is fine. The seller uses this to know who you are and reply.</div></div>
+  const chs=CH_ORDER.filter(k=>D.channels&&D.channels[k]);if(chs.length&&!chs.includes(BUYER.channel))BUYER.channel='';
+  const cur=BUYER.channel&&CH[BUYER.channel];
+  h+=`<div class="blk"><h3>${chs.length?'Where should we talk?':'Your info'}</h3>
+    ${chs.length?`<div class="chanpick" role="group" aria-label="Where should we talk">${chs.map(k=>`<button data-chan="${k}" aria-pressed="${BUYER.channel===k}">${CH[k].l}</button>`).join('')}</div><div class="note" style="margin-top:6px">${cur?`You'll send me your offer link on ${cur.l} (I'm ${esc(chanShow(BUYER.channel,D.channels[BUYER.channel]))}), and I'll reply there.`:'Pick the app you want to message me on.'}</div>`:''}
+    <div class="field"><label for="bn">Name</label><input id="bn" autocomplete="name" value="${esc(BUYER.name)}" placeholder="First and last"></div>
+    <div class="field"><label for="bc">${cur?'Your '+cur.you:'How to reach you'}</label><input id="bc" value="${esc(BUYER.contact)}" autocomplete="${BUYER.channel==='email'?'email':BUYER.channel==='phone'?'tel':'off'}" placeholder="${cur?(BUYER.channel==='email'?'you@example.com':BUYER.channel==='phone'?'(555) 555-1234':BUYER.channel==='facebook'?'facebook.com/yourname':'@yourname'):'Phone, @instagram, email…'}">${chs.length?'':'<div class="note" style="margin-top:6px">Any app is fine. The seller uses this to know who you are and reply.</div>'}</div>
     <div class="field"><label for="bm">Note (optional)</label><textarea id="bm" placeholder="Shipping zip, payment preference, questions…">${esc(O.msg)}</textarea></div>
     <input type="text" name="website" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     ${D.terms?`<div class="note"><b>Terms:</b> ${esc(D.terms)}</div>`:''}
@@ -755,7 +765,8 @@ function totalsHTML(st){
   return h;
 }
 function renderOfferFoot(){
-  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&BUYER.contact.trim().length>=3;
+  const needChan=CH_ORDER.some(k=>D.channels&&D.channels[k]);
+  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&BUYER.contact.trim().length>=3&&(!needChan||BUYER.channel);
   const label=!st.cs.length?'Send offer':st.claim?`Claim ${st.cs.length} card${st.cs.length===1?'':'s'} · ${money(st.total)}`:`Send offer${st.total?' · '+money(st.total):''}`;
   $('#ofoot').innerHTML=`<button class="btn" id="osend" ${ok?'':'disabled'}>${label}</button>`;
 }
@@ -792,8 +803,8 @@ function doneHTML(){
   if(O.done.url){const d=O.done;
     return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
     <h3>${d.claim?'Claim saved':'Offer saved'}: ${money(d.total)}</h3>
-    <p>Last step: send this message to the seller wherever you two are talking (text, Instagram, anywhere). They'll open the link, respond there, and send it back to you.</p>
-    ${sendBox(d.claim?`Hi! I'd like to claim ${d.n} card${d.n===1?'':'s'} for ${money(d.total)}: ${d.url}`:`Hi! I made an offer of ${money(d.total)} on ${d.n} card${d.n===1?'':'s'}: ${d.url}`,'')}
+    ${(()=>{const k=BUYER.channel,dv=k&&D.channels&&D.channels[k],msg=d.claim?`Hi! I'd like to claim ${d.n} card${d.n===1?'':'s'} for ${money(d.total)}: ${d.url}`:`Hi! I made an offer of ${money(d.total)} on ${d.n} card${d.n===1?'':'s'}: ${d.url}`;
+      return `<p>Last step: send this message to me${dv?` on <b>${CH[k].l}</b> (${esc(chanShow(k,dv))})`:" wherever we're talking"}. I'll open the link, respond there, and send it back to you.</p>`+sendBox(msg,dv?'Drew on '+CH[k].l:'',null,dv?chanURL(k,dv,msg):'',dv?'Open '+CH[k].l:'');})()}
     <a class="btn sec" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px" href="${esc(d.url)}">Open my offer page</a></div>`;}
   const how=O.done.how, where={sms:'Messages',mail:'your email app',ig:'Instagram'}[how];
   return `<div class="done"><div class="ok">${CHECK.replace('width="14" height="14"','width="26" height="26"')}</div>
@@ -808,7 +819,7 @@ async function submitOffer(){
   BUYER.name=$('#bn').value; BUYER.contact=$('#bc').value; store.set('cv_buyer',BUYER); O.msg=($('#bm')||{}).value||O.msg;
   const btn=$('#osend'); if(btn){btn.disabled=true;btn.textContent='Sending…';}
   const body={op:'submit_offer',slug:SLUG,kind:O.mode==='each'&&D.allow_offers!==false?'per_card':'lot',total_offer:st.total,
-    items:st.cs.map(c=>({id:c.id,offer:st.perCard?st.perCard[c.id]:undefined})),name:BUYER.name.trim(),via:BUYER.via,contact:BUYER.contact.trim(),message:O.msg.trim(),website:($('#hp')||{}).value||''};
+    items:st.cs.map(c=>({id:c.id,offer:st.perCard?st.perCard[c.id]:undefined})),name:BUYER.name.trim(),via:BUYER.via,channel:BUYER.channel||null,contact:BUYER.contact.trim(),message:O.msg.trim(),website:($('#hp')||{}).value||''};
   try{
     const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
     if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||'Could not send'),{soft:r.status<500});
@@ -839,6 +850,7 @@ document.addEventListener('click',e=>{
   const ou=e.target.closest('[data-ounit]'); if(ou){const st=offerState();if(ou.dataset.ounit!==O.unit){if(O.lot!==''&&st.total!=null&&st.s.your){O.lot=ou.dataset.ounit==='%'?String(Math.max(0,Math.round((1-st.total/st.s.your)*100))):String(st.total);}O.unit=ou.dataset.ounit;}renderOffer();return;}
   const oq=e.target.closest('[data-oq]'); if(oq){const s=sums(selCards());O.unit='$';O.lot=String(Math.round(s.your*(1-(+oq.dataset.oq)/100)));renderOffer();return;}
   const oe=e.target.closest('[data-oeach]'); if(oe){const p=+oe.dataset.oeach;selCards().forEach(c=>{if(c.price!=null)O.each[c.id]=p?String(Math.round(c.price*(1-p/100))):String(c.price);});renderOffer();return;}
+  const cp=e.target.closest('[data-chan]'); if(cp){BUYER.name=$('#bn').value;if(BUYER.channel!==cp.dataset.chan){BUYER.channel=cp.dataset.chan;BUYER.contact='';}O.msg=($('#bm')||{}).value||O.msg;renderOffer();const c=$('#bc');if(c)c.focus();return;}
   const vv=e.target.closest('[data-via]'); if(vv){BUYER.name=$('#bn').value;if(BUYER.via!==vv.dataset.via){BUYER.via=vv.dataset.via;BUYER.contact='';}O.msg=$('#bm').value;renderOffer();const c=$('#bc');if(c)c.focus();return;}
   if(e.target.id==='osend'){submitOffer();return;}
   if(e.target.id==='ocopylink'){try{navigator.clipboard.writeText(O.done.url);toast('Link copied');}catch(err){}return;}
@@ -886,13 +898,37 @@ function renderMine(){
 }
 // One link per offer. Buyer and seller each open it, see whose turn it is, respond, and send it back.
 // Drew signs in once per device with his passcode; the server only shows seller controls when it checks out.
-function sendBox(text,who,sms){
+/* ---------- Drew's messaging channels ---------- */
+// Drew lists where buyers can reach him; a buyer picks one when they offer, so both sides know where the
+// conversation (and the offer links) live.
+const CH={instagram:{l:'Instagram',you:'Instagram username'},whatnot:{l:'Whatnot',you:'Whatnot username'},ebay:{l:'eBay',you:'eBay username'},facebook:{l:'Facebook',you:'Facebook name or profile link'},email:{l:'Email',you:'email address'},phone:{l:'Text',you:'mobile number'}};
+const CH_ORDER=['instagram','whatnot','ebay','facebook','email','phone'];
+const handle=v=>String(v||'').trim().replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+\.(com|net|tv|me)\/((user|usr|u)\/)?/i,'').replace(/^@/,'').replace(/[/?#].*$/,'');
+function fbURL(v){v=String(v||'').trim();return /^https?:\/\//i.test(v)?v:'https://facebook.com/'+handle(v);}
+// where a person's channel opens: a DM when the platform allows linking straight to one, otherwise their profile
+function chanURL(k,v,body){
+  if(!v)return '';
+  if(k==='instagram')return 'https://ig.me/m/'+encodeURIComponent(handle(v));
+  if(k==='whatnot')return 'https://www.whatnot.com/user/'+encodeURIComponent(handle(v));
+  if(k==='ebay')return 'https://www.ebay.com/usr/'+encodeURIComponent(handle(v));
+  if(k==='facebook'){const u=fbURL(v),m=u.match(/facebook\.com\/([A-Za-z0-9.]+)\/?$/);return m&&!/^profile\.php/.test(m[1])?'https://m.me/'+m[1]:u;}
+  if(k==='email')return 'mailto:'+String(v).trim()+(body?'?subject='+encodeURIComponent('Card offer')+'&body='+encodeURIComponent(body):'');
+  if(k==='phone'){const d=String(v).replace(/[^\d+]/g,'');return 'sms:'+d+(body?(/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?')+'body='+encodeURIComponent(body):'');}
+  return '';
+}
+const chanShow=(k,v)=>k==='email'||k==='phone'?String(v):k==='facebook'?(handle(v)||'profile'):'@'+handle(v);
+function reachHTML(ch){
+  const ks=CH_ORDER.filter(k=>ch&&ch[k]);if(!ks.length)return '';
+  return `<span>Message me on</span>${ks.map(k=>`<a href="${esc(k==='instagram'?'https://instagram.com/'+handle(ch[k]):k==='facebook'?fbURL(ch[k]):chanURL(k,ch[k]))}" target="_blank" rel="noopener">${CH[k].l} <b>${esc(chanShow(k,ch[k]))}</b></a>`).join('')}`;
+}
+function sendBox(text,who,sms,openUrl,openLabel){
   const canShare=!!navigator.share;
   return `<div class="sendbox"><h3>${who?'Now send this to '+esc(who):'Send this message'}</h3><textarea readonly id="sendtxt" onclick="this.select()">${esc(text)}</textarea>
-    <div class="row"><button class="btn" data-copysend>Copy message</button>${canShare?'<button class="btn sec" data-sharesend>Share…</button>':''}${sms?`<a class="btn sec" href="${esc(sms)}">Text ${esc(who)}</a>`:''}</div></div>`;
+    <div class="row"><button class="btn" data-copysend>Copy message</button>${openUrl?`<a class="btn sec" data-copyopen href="${esc(openUrl)}" target="_blank" rel="noopener">${esc(openLabel||'Open')}</a>`:''}${canShare?'<button class="btn sec" data-sharesend>Share…</button>':''}${sms?`<a class="btn sec" href="${esc(sms)}">Text ${esc(who)}</a>`:''}</div></div>`;
 }
 document.addEventListener('click',async e=>{
   if(e.target.closest('[data-copysend]')){const t=$('#sendtxt');try{await navigator.clipboard.writeText(t.value);toast('Copied. Paste it into your chat.');}catch(err){t.select();document.execCommand&&document.execCommand('copy');toast('Copied');}return;}
+  if(e.target.closest('[data-copyopen]')){const t=$('#sendtxt');try{await navigator.clipboard.writeText(t.value);toast('Message copied. Paste it in the chat.');}catch(err){}return;}
   if(e.target.closest('[data-sharesend]')){try{await navigator.share({text:$('#sendtxt').value});}catch(err){}return;}
 });
 const ST_LBL={new:'Waiting on seller',countered:'Counter offer',accepted:'Accepted',declined:'Declined',withdrawn:'Withdrawn',sold:'Sold'};
@@ -919,13 +955,13 @@ function renderOfferPage(msg){
   let h=`<div class="os">
     <div class="eyebrow">${esc(o.link?o.link.title:'Offer')}${S?' · seller view':''}</div>
     <h1>${S?`Offer from ${esc(o.buyer_name)}`:o.kind==='claim'?'Your claim':'Your offer'}: ${money(o.total_offer)}</h1>
-    <div class="note" style="margin:-2px 0 8px">${S?'':`From <b>${esc(o.buyer_name)}</b> to <b>Drew</b>`}</div>
+    <div class="note" style="margin:-2px 0 8px">${S?'':`From <b>${esc(o.buyer_name)}</b> to <b>Drew</b>${o.channel&&o.channels&&o.channels[o.channel]?` · talking on <b>${CH[o.channel].l}</b> (Drew is ${esc(chanShow(o.channel,o.channels[o.channel]))})`:''}`}</div>
     <span class="pillst st-${esc(o.status)}">${esc((S?ST_LBL_S:ST_LBL)[o.status]||o.status)}</span>
     <p class="lead" style="margin-top:10px">${esc(S?sellerHead:buyerHead)}</p>
     ${stepsHTML(o)}
-    ${S?`<div class="note" style="font-size:14px">Buyer: <b>${esc(o.buyer_name)}</b>${o.buyer_contact?` · <b>${esc(o.buyer_contact)}</b>`:''}</div>`:''}
+    ${S?`<div class="note" style="font-size:14px">Buyer: <b>${esc(o.buyer_name)}</b>${o.buyer_contact?` · ${o.channel?CH[o.channel].l+' ':''}<b>${esc(o.buyer_contact)}</b>`:''}${o.channel?` · <b>look for their messages on ${CH[o.channel].l}</b>`:''}</div>`:''}
     ${msg?`<div class="errbox">${esc(msg)}</div>`:''}
-    ${OSEND?sendBox(OSEND.text,OSEND.who,OSEND.sms):''}`;
+    ${OSEND?sendBox(OSEND.text,OSEND.who,OSEND.sms,OSEND.openUrl,OSEND.openLabel):''}`;
   if(!S&&o.status==='countered'&&o.turn==='buyer'&&!OSEND){
     h+=`<div class="card"><h3>Seller's counter</h3><div style="font-size:30px;font-weight:800;letter-spacing:-.03em">${money(o.counter_total)}</div>
       <div class="note" style="margin:2px 0 12px">Your offer was ${money(o.total_offer)}${o.total_comp?` · comp ${money(o.total_comp)}`:''}</div>
@@ -1010,7 +1046,9 @@ async function buyerAct(action){
   try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
   catch(e){renderOfferPage(e.message);return;}
   SHIPEDIT=false;
-  OSEND={text:(action==='ship'?(body.paid_via?`I paid ${money(OV.total_offer)} via ${body.paid_via} and sent my shipping address: `:`I sent my shipping address: `):BMSG[action](action==='accept'?OV.counter_total:amt))+offerURL(),who:'the seller'};
+  const txt=(action==='ship'?(body.paid_via?`I paid ${money(OV.total_offer)} via ${body.paid_via} and sent my shipping address: `:`I sent my shipping address: `):BMSG[action](action==='accept'?OV.counter_total:amt))+offerURL();
+  const k=OV.channel,dv=k&&OV.channels&&OV.channels[k];
+  OSEND={text:txt,who:dv?'Drew on '+CH[k].l:'the seller',openUrl:dv?chanURL(k,dv,txt):'',openLabel:dv?'Open '+CH[k].l:''};
   await loadOfferPage(); window.scrollTo(0,0);
 }
 async function sellerAct(action){
@@ -1023,10 +1061,11 @@ async function sellerAct(action){
   const n=OV.items.filter(x=>x.included!==false).length, total=action==='accept'?OV.total_offer:amt;
   try{const r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json','x-agent-pass':sellerPass()},body:JSON.stringify({op:'offer_respond',token:OTOK,action,amount:amt,note})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Something went wrong');}
   catch(e){renderOfferPage(e.message);return;}
-  if(action==='sold'||action==='release'){OSEND=action==='sold'?{text:`Got your payment, thank you! Shipping out soon. ${offerURL()}`,who:(OV.buyer_name||'').split(' ')[0]||'the buyer'}:null;await loadOfferPage();window.scrollTo(0,0);return;}
+  if(action==='sold'||action==='release'){const t2=`Got your payment, thank you! Shipping out soon. ${offerURL()}`;OSEND=action==='sold'?{text:t2,who:(OV.buyer_name||'').split(' ')[0]||'the buyer',openUrl:OV.channel?chanURL(OV.channel,OV.buyer_contact,t2):'',openLabel:OV.channel?'Open '+CH[OV.channel].l:''}:null;await loadOfferPage();window.scrollTo(0,0);return;}
+  const txt=SMSG[action](total,n)+offerURL(), k=OV.channel, first=(OV.buyer_name||'').split(' ')[0]||'the buyer';
   const digits=String(OV.buyer_contact||'').replace(/\D/g,'');
-  const sms=digits.length>=10?`sms:${digits}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(SMSG[action](total,n)+offerURL())}`:'';
-  OSEND={text:SMSG[action](total,n)+offerURL(),who:(OV.buyer_name||'').split(' ')[0]||'the buyer',sms};
+  const sms=!k&&digits.length>=10?`sms:${digits}${/iPhone|iPad|Macintosh/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(txt)}`:'';
+  OSEND={text:txt,who:first+(k?' on '+CH[k].l:''),sms,openUrl:k?chanURL(k,OV.buyer_contact,txt):'',openLabel:k?'Open '+CH[k].l:''};
   await loadOfferPage(); window.scrollTo(0,0);
 }
 async function sellerSignIn(){
@@ -1067,6 +1106,7 @@ document.addEventListener('visibilitychange',()=>{if(OTOK&&document.visibilitySt
   }
   const avail=D.cards.filter(c=>!c.sold&&!c.nfs), comp=avail.reduce((t,c)=>t+(+c.comp||0),0);
   if(D.allow_offers!==false)$('#howto').hidden=false,$('#howto').innerHTML=`<div><b><i>1</i>Pick cards</b>Tap the circle on any card you want, or use Select all.</div><div><b><i>2</i>Tap Make offer</b>Pay the price shown, or name your own for the group.</div><div><b><i>3</i>Send me the link</b>You'll get a message to copy. Send it to me and I'll reply the same way.</div>`;
+  if(reachHTML(D.channels)){$('#reach').hidden=false;$('#reach').innerHTML=reachHTML(D.channels);}
   $('#stats').innerHTML=`<span><b>${avail.length.toLocaleString()}</b> available</span>${comp?`<span>Total comp <b>${money(Math.round(comp))}</b></span>`:''}${D.allow_offers!==false?'<span>Offers welcome</span>':''}`;
   ALL=D.cards.map(c=>{const g=parseGrade(c.grade);c._gr=g.grader;c._gn=g.gnum;c._g=grabble(c);BYID[c.id]=c;return c;});
   (store.get('cv_sel_'+SLUG)||[]).forEach(id=>{if(BYID[id]&&selectable(BYID[id]))SEL.add(id);});
