@@ -656,7 +656,10 @@ function openFilters(){$('#fbody').innerHTML=filtersHTML();openSheet('#fsheet');
 /* ---------- offer ---------- */
 // O.mode: 'lot' (one number for everything) or 'each' (a price per card). O.unit: '$' or '%' (percent off the shown price).
 const O={mode:'lot',unit:'$',lot:'',each:{},msg:'',done:null,err:''};
+// Everything runs over text (Drew, Oct 26 2026): buyers must leave a mobile number.
 let BUYER=store.get('cv_buyer')||{name:'',via:'text',contact:''};
+if(BUYER.via!=='text'){BUYER.via='text';BUYER.contact='';}
+const phoneOK=v=>String(v||'').replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'').length===10;
 function offerState(){
   const cs=selCards(), s=sums(cs);
   let total=null, perCard=null, valid=true;
@@ -696,10 +699,9 @@ function offerBody(){
   }
   h+=`<div>${rows}</div>`;
   h+=`<div class="totals" id="ototals">${totalsHTML(st)}</div>`;
-  h+=`<div class="blk"><h3>How should I get back to you?</h3>
+  h+=`<div class="blk"><h3>Where should I text you?</h3>
     <div class="field"><label for="bn">Your name</label><input id="bn" autocomplete="name" value="${esc(BUYER.name)}" placeholder="First and last"></div>
-    <div class="field"><div class="seg3" role="group" aria-label="Contact method"><button data-via="text" aria-pressed="${BUYER.via==='text'}">Text</button><button data-via="email" aria-pressed="${BUYER.via==='email'}">Email</button><button data-via="ig" aria-pressed="${BUYER.via==='ig'}">Instagram</button></div></div>
-    <div class="field"><label for="bc">${BUYER.via==='email'?'Email':BUYER.via==='ig'?'Instagram handle':'Mobile number'}</label><input id="bc" value="${esc(BUYER.contact)}" ${BUYER.via==='email'?'type="email" autocomplete="email" inputmode="email" placeholder="you@example.com"':BUYER.via==='ig'?'autocapitalize="off" placeholder="@handle"':'type="tel" autocomplete="tel" inputmode="tel" placeholder="(555) 555-1234"'}></div>
+    <div class="field"><label for="bc">Mobile number</label><input id="bc" value="${esc(BUYER.contact)}" type="tel" autocomplete="tel" inputmode="tel" placeholder="(555) 555-1234"><div class="note" style="margin-top:6px">I'll text you about your offer. Your number is only used for this.</div></div>
     <div class="field"><label for="bm">Note (optional)</label><textarea id="bm" placeholder="Shipping zip, payment preference, questions…">${esc(O.msg)}</textarea></div>
     <input type="text" name="website" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
     ${D.terms?`<div class="note"><b>Terms:</b> ${esc(D.terms)}</div>`:''}
@@ -730,7 +732,7 @@ function totalsHTML(st){
   return h;
 }
 function renderOfferFoot(){
-  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&BUYER.contact.trim();
+  const st=offerState(), ok=st.valid&&BUYER.name.trim()&&phoneOK(BUYER.contact);
   const label=!st.cs.length?'Send offer':st.claim?`Claim ${st.cs.length} card${st.cs.length===1?'':'s'} · ${money(st.total)}`:`Send offer${st.total?' · '+money(st.total):''}`;
   $('#ofoot').innerHTML=`<button class="btn" id="osend" ${ok?'':'disabled'}>${label}</button>`;
 }

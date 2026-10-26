@@ -208,7 +208,22 @@ async function sendEmail(to: string, subject: string, text: string) {
     return r.ok;
   } catch (_) { return false; }
 }
-const notifyDrew = (subject: string, text: string) => sendEmail(Deno.env.get('NOTIFY_EMAIL') || '', subject, text);
+// Drew's alerts (Oct 26 2026): a free ntfy push to his phone. The private topic lives in agent_settings
+// (key ntfy_topic) so it isn't in the code; email still goes out too if Resend is ever configured.
+const HUB = 'https://card-vault-orpin.vercel.app';
+async function pushDrew(title: string, body: string, click?: string) {
+  try {
+    const { data } = await supa().from('agent_settings').select('value').eq('key', 'ntfy_topic').maybeSingle();
+    const topic = data && data.value ? String(data.value).replace(/^"|"$/g, '') : '';
+    if (!topic) return false;
+    const r = await fetch('https://ntfy.sh/' + encodeURIComponent(topic), { method: 'POST', body: body.slice(0, 3500),
+      headers: { Title: title.replace(/[^\x20-\x7E]/g, ''), Click: click || HUB, Tags: 'moneybag', Priority: '4' } });
+    return r.ok;
+  } catch (_) { return false; }
+}
+const notifyDrew = async (subject: string, text: string) => {
+  await Promise.all([pushDrew(subject, text), sendEmail(Deno.env.get('NOTIFY_EMAIL') || '', subject, text)]);
+};
 async function notifyBuyer(o: any, subject: string, text: string) {
   if (o.buyer_via !== 'email' || !Deno.env.get('RESEND_FROM')) return false;
   return sendEmail(o.buyer_contact, subject, text);
@@ -232,8 +247,11 @@ async function submitOffer(b: any) {
   const { data: link } = await db.from('share_links').select('*').eq('slug', slug).maybeSingle();
   if (!link || !link.active) return j({ error: 'This link is no longer active.' }, 404);
   const name = String(b.name || '').trim().slice(0, 80), contact = String(b.contact || '').trim().slice(0, 120);
-  const via = ['text', 'email', 'ig'].includes(b.via) ? b.via : 'text';
-  if (!name || !contact) return j({ error: 'Add your name and how to reach you.' }, 400);
+  // everything runs over text: a 10-digit US mobile number is required
+  const via = 'text';
+  const digits = contact.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  if (!name) return j({ error: 'Add your name.' }, 400);
+  if (digits.length !== 10) return j({ error: 'Add a 10-digit mobile number so I can text you.' }, 400);
   const since = new Date(Date.now() - 10 * 60e3).toISOString();
   const { count } = await db.from('offers').select('id', { count: 'exact', head: true }).eq('link_id', link.id).gte('created_at', since);
   if ((count || 0) >= 15) return j({ error: 'Too many offers on this link just now. Try again in a few minutes.' }, 429);
