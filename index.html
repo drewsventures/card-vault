@@ -1397,7 +1397,7 @@ function soldList(){
  if(SOLDWHEN!=='all'){const now=new Date(),cut=SOLDWHEN==='year'?`${now.getFullYear()}-01-01`:new Date(now.getTime()-(+SOLDWHEN)*864e5).toISOString().slice(0,10);list=list.filter(c=>c.sold_date&&String(c.sold_date)>=cut);}
  list=list.filter(c=>soldMatches(c,SOLDQ));
  const d=c=>''+(c.sold_date||''),p=c=>+c.sale_price||0,r=c=>{const x=realizedPL(c);return x==null?null:x;};
- const by={new:(a,b)=>d(b).localeCompare(d(a)),old:(a,b)=>(d(a)||'9').localeCompare(d(b)||'9'),hi:(a,b)=>p(b)-p(a),lo:(a,b)=>p(a)-p(b),
+ const by={new:(a,b)=>(d(b)||'9999').localeCompare(d(a)||'9999'),old:(a,b)=>(d(a)||'9').localeCompare(d(b)||'9'),hi:(a,b)=>p(b)-p(a),lo:(a,b)=>p(a)-p(b),
   best:(a,b)=>(r(b)??-1e12)-(r(a)??-1e12),worst:(a,b)=>(r(a)??1e12)-(r(b)??1e12)};
  return list.sort(by[SOLDSORT]||by.new);
 }
@@ -1446,7 +1446,7 @@ function renderSoldList(){
   h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
    <div class="sthumb">${primary(c)?`<img class="lz" data-src="${primary(c)}">`:''}</div>
    <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div>
-    <div class="st">${esc(sub)}${c.sold_date?' &middot; '+c.sold_date:' &middot; no date'}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}${c.sold_to?' &middot; to '+esc(c.sold_to):''}</div>
+    <div class="st">${esc(sub)}${c.sold_date?' &middot; '+c.sold_date:' &middot; <b style="color:var(--accent)">no sale date</b>'}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}${c.sold_to?' &middot; to '+esc(c.sold_to):''}</div>
     <div class="sdec">${rl!=null?`<span style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))} realized</span>`:`<span style="color:var(--mut)">no cost basis</span>`}${hind!=null?` &middot; <span style="color:${hind>=0?'var(--green)':'var(--gold)'}">${hind>=0?'sold above market':'market up '+money(-hind)}</span>`:''}</div>
    </div>
    <div class="sprice">${money(c.sale_price)}<div class="sub">sold</div></div>
