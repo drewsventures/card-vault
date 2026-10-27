@@ -156,8 +156,14 @@ h2{font-family:var(--disp);font-weight:600;font-size:16px;margin:24px 0 9px;lett
 .litem .lp{font-weight:600;white-space:nowrap;font-size:13px;font-family:var(--mono);color:var(--gold)}
 .litem .rm{border:none;background:none;color:var(--accent);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
 .buildbar{position:fixed;left:0;right:0;bottom:60px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:12;font-size:13px;font-weight:700}
+.buildbar{box-shadow:0 -4px 18px rgba(0,0,0,.12)}
+body.building .wrap{padding-bottom:150px}
+body.building #askfab{display:none}
+img.lz:not(.lzok){visibility:hidden}
+@media(min-width:1000px){.buildbar{bottom:0;left:208px;padding:10px 28px}body.building .wrap{padding-bottom:90px}}
 .buildbar button{background:#fff;color:var(--gold);border:none;border-radius:9px;padding:7px 15px;font-weight:700;font-size:13px;cursor:pointer}
-.tile.inlot{outline:2.5px solid var(--gold);outline-offset:-2.5px}
+.tile.inlot .ph{box-shadow:0 0 0 3px var(--gold) inset}
+.tile .ph .no{white-space:normal}
 .tile .lotchk{position:absolute;top:6px;right:6px;z-index:2;background:var(--gold);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
 .addlotbtn{width:100%;border:1px solid var(--line2);background:var(--elev);color:var(--ink);border-radius:11px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;margin-top:9px}
 .krow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;gap:12px}
@@ -737,10 +743,25 @@ const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6
 /* Oct 26 2026: Supabase storage answers some photo requests with 429 (rate limited) when a page asks for many at once.
    Retry failed storage photos a few times with backoff instead of leaving them blank. */
 (function(){
- document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG')return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
+ document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG'||i.classList.contains('lz'))return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
   const n=+(i.dataset.rt||0);if(n>=5)return;i.dataset.rt=n+1;const base=s.replace(/[?&]rt=\d+$/,'');
   setTimeout(function(){i.src=base+(base.indexOf('?')<0?'?':'&')+'rt='+(n+1);},700*Math.pow(2,n)+Math.random()*700);},true);
  document.addEventListener('load',function(e){const i=e.target;if(i&&i.tagName==='IMG'&&i.dataset.rt)i.style.visibility='';},true);
+})();
+/* Oct 27 2026: photo loader. Supabase storage rate-limits (429) when a page asks for dozens of photos at once,
+   so grid photos use class "lz" + data-src and load a few at a time, nearest the screen first, retrying failures. */
+(function(){
+ const Q=[];let active=0;const MAX=6;
+ function pump(){while(active<MAX&&Q.length){const i=Q.shift();if(!i.isConnected||!i.dataset.src)continue;active++;let done=false;
+   const fin=ok=>{if(done)return;done=true;active--;if(ok){i.style.visibility='';i.classList.add('lzok');}else{const n=+(i.dataset.rt||0)+1;i.dataset.rt=n;
+     if(n<=8)setTimeout(()=>{if(i.isConnected){Q.push(i);pump();}},600*Math.min(n,6)+Math.random()*900);}
+     pump();};
+   i.addEventListener('load',()=>fin(true),{once:true});i.addEventListener('error',()=>fin(false),{once:true});
+   const n=+(i.dataset.rt||0);i.src=i.dataset.src+(n?(i.dataset.src.indexOf('?')<0?'?':'&')+'rt='+n:'');}}
+ const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);Q.push(e.target);}});pump();},{rootMargin:'700px 0px'}):null;
+ function scan(root){(root.querySelectorAll?root.querySelectorAll('img.lz[data-src]:not([data-lzq])'):[]).forEach(i=>{i.dataset.lzq=1;if(io)io.observe(i);else{Q.push(i);}});pump();}
+ new MutationObserver(ms=>{ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.matches&&n.matches('img.lz[data-src]:not([data-lzq])'))scan(n.parentNode||document);else scan(n);}}));}).observe(document.documentElement,{childList:true,subtree:true});
+ window.lzScan=()=>scan(document);
 })();
 let CARDS=[], DUPE={}, SEGFILTER=null;
 /* Oct 15 2026: every call to the Vault's edge functions carries Drew's passcode (set in the Ask panel, kept per device).
@@ -859,7 +880,7 @@ async function load(){
  }
 }
 let FILT='all';
-let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=80;
+let LASTLIST=[],SHOWN=0,VALONLY=false;const PAGE=60;
 function buildChips(){
  const c=['all','no cost','rookies','autos','relics','sketch','graded','duplicates','listed','has photo'];
  document.getElementById('chips').innerHTML=c.map(x=>`<div class="chip ${x==='all'?'on':''}" data-f="${x}" onclick="setFilt('${x}',this)">${x}</div>`).join('');
@@ -873,6 +894,8 @@ function buildSegSel(){
  ['Pinned collections','Sports','Culture','Other'].forEach(d=>{if(!groups[d])return;h+=`<optgroup label="${d}">`+groups[d].sort((a,b)=>n[b]-n[a]).map(k=>`<option value="${esc(k)}">${esc(k)} (${n[k].toLocaleString()})</option>`).join('')+'</optgroup>';});
  el.innerHTML=h;el.value=SEGFILTER||'';
 }
+function updateAddAll(){const el=document.getElementById('addall');if(!el)return;if(!BUILDLOT){el.innerHTML='';return;}const set=LOTMEM[BUILDLOT]||new Set();const m=LASTLIST.filter(c=>!set.has(c.id)).length;
+ el.innerHTML=m?` <button class="addallbtn" onclick="addShownToLot()">+ Add all ${m.toLocaleString()} shown to lot</button>`:(LASTLIST.length?' <span style="color:var(--green);font-weight:700">&middot; all shown are in the lot</span>':'');}
 async function addShownToLot(){
  if(!BUILDLOT)return;const set=LOTMEM[BUILDLOT]=LOTMEM[BUILDLOT]||new Set();
  const ids=LASTLIST.filter(c=>!set.has(c.id)).map(c=>c.id);if(!ids.length)return;
@@ -880,7 +903,7 @@ async function addShownToLot(){
  if(!confirm(`Add ${ids.length} card${ids.length===1?'':'s'} to "${l?l.name:'this lot'}"?`))return;
  const res=await lotOp({op:'add_items',lot_id:BUILDLOT,card_ids:ids});
  if(!res||!res.ok){alert('Could not add cards'+(res&&res.error?': '+res.error:''));return;}
- ids.forEach(id=>set.add(id));runSearch();updateBuildBar();
+ ids.forEach(id=>set.add(id));document.querySelectorAll('#results .tile[data-id]').forEach(t=>{if(set.has(t.dataset.id)){t.classList.add('inlot');const k=t.querySelector('.lotchk');if(k)k.style.display='';}});updateAddAll();updateBuildBar();
 }
 function setFilt(f,el){VALONLY=false;FILT=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');runSearch();}
 function runSearch(){
@@ -901,7 +924,8 @@ function runSearch(){
  if(VALONLY)list=list.filter(c=>c.current_value!=null);
  const neutral=!q&&FILT==='all'&&!SEGFILTER&&!VALONLY&&!SUBJ;
  sortList(list,neutral); const ss=document.getElementById('sortsel');if(ss)ss.value=SORT; const sg=document.getElementById('segsel');if(sg&&sg.value!==(SEGFILTER||''))sg.value=SEGFILTER||''; renderSubjBar();
- document.getElementById('scount').innerHTML=(q?`<span class="segbanner">&ldquo;${esc(q)}&rdquo;<b onclick="clearQ();runSearch()">clear &times;</b></span>`:'')+(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards'+(()=>{if(!BUILDLOT)return '';const set=LOTMEM[BUILDLOT]||new Set();const m=list.filter(c=>!set.has(c.id)).length;return m?` <button class="addallbtn" onclick="addShownToLot()">+ Add all ${m.toLocaleString()} shown to lot</button>`:(list.length?' <span style="color:var(--green);font-weight:700">&middot; all shown are in the lot</span>':'');})();
+ document.getElementById('scount').innerHTML=(q?`<span class="segbanner">&ldquo;${esc(q)}&rdquo;<b onclick="clearQ();runSearch()">clear &times;</b></span>`:'')+(SEGFILTER?`<span class="segbanner">${SEGFILTER}<b onclick="clearSeg()">clear &times;</b></span>`:'')+list.length.toLocaleString()+' cards'+'<span id="addall"></span>';
+ LASTLIST=list; updateAddAll();
  LASTLIST=list; SHOWN=0;
  const el=document.getElementById('results');
  el.innerHTML='';
@@ -916,9 +940,9 @@ function searchTile(c,inSet){
    const n=DUPE[c.dupe_key].filter(x=>x.status!=='sold'&&x.status!=='duplicate').length;
    const inlot=inSet&&inSet.has(c.id);
    const click=BUILDLOT?`toggleLotCard("${c.id}")`:`openCard("${c.id}")`;
-   return `<div class="tile${inlot?' inlot':''}" onclick='${click}'>
+   return `<div class="tile${inlot?' inlot':''}" data-id="${c.id}" onclick='${click}'>
      ${BUILDLOT?`<div class="lotchk" style="${inlot?'':'display:none'}">&#10003;</div>`:''}
-     <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
+     <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img class="lz" data-src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
      <div class="m"><div class="pl">${esc(c.player||c.ref)}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
      <div class="st">${esc(c.set_name||'')}</div>
      <div class="pr">${money(c.current_value)}${(SORT==='move'&&TREND[c.id]&&TREND[c.id].trend_kind==='revalued')?rvPill(c):trendPill(c,true)}${vtagFor(c)}</div>${costLine(c)}${popPill(c)?`<div>${popPill(c)}</div>`:''}</div></div>`;
@@ -930,7 +954,8 @@ function renderMore(){
    const next=LASTLIST.slice(SHOWN,SHOWN+PAGE);
    el.insertAdjacentHTML('beforeend', next.map(c=>searchTile(c,inSet)).join(''));
    SHOWN+=next.length;
-   if(SHOWN<LASTLIST.length) el.insertAdjacentHTML('beforeend', `<button id="loadmore" onclick="renderMore()" style="grid-column:1/-1;margin:12px auto;padding:11px 22px;background:var(--chip);border:1px solid var(--line);color:var(--gold);border-radius:10px;font-weight:700;cursor:pointer">Load more (${(LASTLIST.length-SHOWN).toLocaleString()} more)</button>`);
+   if(SHOWN<LASTLIST.length){el.insertAdjacentHTML('beforeend', `<button id="loadmore" onclick="renderMore()" style="grid-column:1/-1;margin:12px auto;padding:11px 22px;background:none;border:0;color:var(--mut);font-weight:600;cursor:pointer">Loading more… (${(LASTLIST.length-SHOWN).toLocaleString()} left)</button>`);
+     if('IntersectionObserver' in window){const b=document.getElementById('loadmore');const o=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){o.disconnect();renderMore();}},{rootMargin:'900px 0px'});o.observe(b);}}
 }
 function compQuery(c,withGrade){
  const p=[];
@@ -1172,7 +1197,7 @@ function bucketOf(t,c){const ci=cardGI(c),ii=itemGrade(t);let b;if(ci.g){if(!ii.
 function bmed(arr){const s=arr.map(x=>+x.price).filter(x=>x).sort((a,b)=>a-b);return s.length?(s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2):null;}
 function mitem(r){
  const dt=r.item_date?new Date(r.item_date).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
- return `<div class="mitem">${r.image?`<img loading="lazy" src="${r.image}">`:'<div class="ni"></div>'}<div class="mt"><a href="${r.url||'#'}" target="_blank" rel="noopener">${r.title||''}</a><div class="md">${dt}</div></div><div class="mp">${money(r.price)}</div></div>`;
+ return `<div class="mitem">${r.image?`<img class="lz" data-src="${r.image}">`:'<div class="ni"></div>'}<div class="mt"><a href="${r.url||'#'}" target="_blank" rel="noopener">${r.title||''}</a><div class="md">${dt}</div></div><div class="mp">${money(r.price)}</div></div>`;
 }
 function renderMkt(c){
  const el=document.getElementById('cvmkt');if(!el)return;c=c||window.CUR||{};
@@ -1314,7 +1339,7 @@ function renderSealed(){
  if(!items.length){document.getElementById('sealed').innerHTML=h+'<div class="spin">No sealed items yet.</div>';return;}
  items.sort((a,b)=>(b.current_value||0)-(a.current_value||0));
  h+=`<div class="grid">`+items.map(c=>{const u=primary(c);return `<div class="tile" onclick='openCard("${c.id}")'>
-     <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
+     <div class="ph">${u?`<img class="lz" data-src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
      <div class="m"><div class="pl">${esc(c.player||c.ref)}${c.needs_review?`<span class="badge">review</span>`:''}</div>
      <div class="st">${esc(c.variation||c.set_name||'')}</div>
      <div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;}).join('')+`</div>`;
@@ -1329,7 +1354,7 @@ function renderSets(){
  if(!items.length){document.getElementById('sets').innerHTML=h+'<div class="spin">No sets yet.</div>';return;}
  items.sort((a,b)=>(b.current_value||0)-(a.current_value||0));
  h+=`<div class="grid">`+items.map(c=>{const u=primary(c);const cnt=c.card_count?`${c.card_count} cards`:'set';return `<div class="tile" onclick='openCard("${c.id}")'>
-     <div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
+     <div class="ph">${u?`<img class="lz" data-src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
      <div class="m"><div class="pl">${esc(c.player||c.ref)}${c.needs_review?`<span class="badge">review</span>`:''}</div>
      <div class="st">${esc(c.set_name||'')} &middot; ${cnt}</div>
      <div class="pr">${money(c.current_value)} <small style="color:${srcColor(c)}">${srcLabel(c)}</small></div></div></div>`;}).join('')+`</div>`;
@@ -1419,7 +1444,7 @@ function renderSoldList(){
   const hind=(c.sale_price!=null&&mk!=null)?(+c.sale_price-+mk):null;
   const sub=[c.year&&!String(c.set_name||'').startsWith(String(c.year))?c.year:'',c.set_name,c.card_number?'#'+String(c.card_number).replace(/^#/,''):'',c.grade&&!/^raw/i.test(c.grade)?c.grade:''].filter(Boolean).join(' ');
   h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
-   <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
+   <div class="sthumb">${primary(c)?`<img class="lz" data-src="${primary(c)}">`:''}</div>
    <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div>
     <div class="st">${esc(sub)}${c.sold_date?' &middot; '+c.sold_date:' &middot; no date'}${c.sold_venue?' &middot; '+esc(c.sold_venue):''}${c.sold_to?' &middot; to '+esc(c.sold_to):''}</div>
     <div class="sdec">${rl!=null?`<span style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))} realized</span>`:`<span style="color:var(--mut)">no cost basis</span>`}${hind!=null?` &middot; <span style="color:${hind>=0?'var(--green)':'var(--gold)'}">${hind>=0?'sold above market':'market up '+money(-hind)}</span>`:''}</div>
@@ -1640,7 +1665,7 @@ function openShow(name){
  if(!d.sells.length)h+=`<div class="spin">No sells tagged to this show.</div>`;
  d.sells.slice().sort((a,b)=>(+b.sale_price||0)-(+a.sale_price||0)).forEach(c=>{const rl=realizedPL(c);
   h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
-   <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
+   <div class="sthumb">${primary(c)?`<img class="lz" data-src="${primary(c)}">`:''}</div>
    <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div>
     <div class="sdec">${rl!=null?`<span style="color:${rl>=0?'var(--green)':'var(--accent)'}">${rl>=0?'+':'-'}${money(Math.abs(rl))} realized</span>`:'<span style="color:var(--mut)">no cost basis</span>'}</div></div>
    <div class="sprice">${money(c.sale_price)}<div class="sub">sold</div></div></div>`;});
@@ -1649,7 +1674,7 @@ function openShow(name){
  if(!d.buys.length)h+=`<div class="spin">No buys tagged to this show.</div>`;
  d.buys.slice().sort((a,b)=>(+b.cost_basis||0)-(+a.cost_basis||0)).forEach(c=>{const mk=c.current_value;
   h+=`<div class="soldrow" onclick='openCard("${c.id}")'>
-   <div class="sthumb">${primary(c)?`<img loading="lazy" src="${primary(c)}">`:''}</div>
+   <div class="sthumb">${primary(c)?`<img class="lz" data-src="${primary(c)}">`:''}</div>
    <div class="sinfo"><div class="pl">${esc(c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}${c.serial?' &middot; '+esc(c.serial):''}</div>
     <div class="sdec">${mk!=null?`<span style="color:var(--mut)">comp ${money(mk)}</span>`:'<span style="color:var(--mut)">not comped yet</span>'}</div></div>
    <div class="sprice">${money(c.cost_basis)}<div class="sub">paid</div></div></div>`;});
@@ -1718,7 +1743,7 @@ function openLot(id){
  h+=`<div class="lotact"><button class="primary" onclick="startBuild('${id}')">+ Add cards</button><button onclick="copyLotPost('${id}')">Copy lot post</button><button onclick="renameLot('${id}')">Rename</button><button onclick="deleteLot('${id}')">Delete</button></div>`;
  if(!cards.length) h+='<div class="stat-note">No cards yet. Tap “+ Add cards”, pick a category (like Star Wars), narrow it with the filters, then tap cards or add everything shown.</div>';
  cards.forEach(c=>{const u=primary(c);
-   h+=`<div class="litem"><img loading="lazy" src="${u||''}" onerror="this.style.visibility='hidden'"><div class="lt" onclick='openCard("${c.id}")'>${c.player||c.ref}<div class="s">${c.set_name||''} ${c.card_number?'#'+c.card_number:''} &middot; <span style="color:${srcColor(c)}">${money(c.current_value)}</span></div></div><button class="rm" title="remove" onclick="removeFromLot('${id}','${c.id}')">&times;</button></div>`;
+   h+=`<div class="litem"><img class="lz" data-src="${u||''}" onerror="this.style.visibility='hidden'"><div class="lt" onclick='openCard("${c.id}")'>${c.player||c.ref}<div class="s">${c.set_name||''} ${c.card_number?'#'+c.card_number:''} &middot; <span style="color:${srcColor(c)}">${money(c.current_value)}</span></div></div><button class="rm" title="remove" onclick="removeFromLot('${id}','${c.id}')">&times;</button></div>`;
  });
  el.innerHTML=h; window.scrollTo(0,0);
 }
@@ -1731,18 +1756,20 @@ function startBuild(id){BUILDLOT=id;show('search');navSearchKeep();updateBuildBa
 function navSearchKeep(){clearQ();VALONLY=false;SEGFILTER=null;FILT='all';setChip('all');show('search');runSearch();}
 function updateBuildBar(){
  const bar=document.getElementById('buildbar');
+ document.body.classList.toggle('building',!!BUILDLOT);
  if(!BUILDLOT){bar.classList.add('hide');return;}
  const l=LOTS.find(x=>x.id===BUILDLOT);const t=lotTotals(BUILDLOT);
  bar.className='buildbar';
  bar.innerHTML=`<span>Adding to “${l?l.name:'lot'}” &middot; ${t.n} card${t.n===1?'':'s'} &middot; ${money(t.val)}</span><button onclick="finishBuild()">Done</button>`;
 }
-function finishBuild(){const id=BUILDLOT;BUILDLOT=null;document.getElementById('buildbar').classList.add('hide');show('lots');if(id)openLot(id);else renderLots();}
+function finishBuild(){const id=BUILDLOT;BUILDLOT=null;document.body.classList.remove('building');document.getElementById('buildbar').classList.add('hide');show('lots');if(id)openLot(id);else renderLots();}
 async function toggleLotCard(cardId){
  if(!BUILDLOT)return;
  const set=LOTMEM[BUILDLOT]=LOTMEM[BUILDLOT]||new Set();
  if(set.has(cardId)){set.delete(cardId);await lotOp({op:'remove_item',lot_id:BUILDLOT,card_id:cardId});}
  else{set.add(cardId);await lotOp({op:'add_item',lot_id:BUILDLOT,card_id:cardId});}
- runSearch();updateBuildBar();
+ const on=set.has(cardId);document.querySelectorAll('#results .tile[data-id="'+cardId+'"]').forEach(t=>{t.classList.toggle('inlot',on);const k=t.querySelector('.lotchk');if(k)k.style.display=on?'':'none';});
+ updateAddAll();updateBuildBar();
 }
 async function addToLotMenu(cardId){
  if(!LOTS.length) await loadLots();
@@ -1816,7 +1843,7 @@ function trendPill(c,compact){
 }
 function popPill(c){const a=POPS[c.id];if(!a||!a.pop_total)return '';return `<span class="poppill" title="${esc(a.asset_name||'')} (${a.match} match via Alt)">Graded pop ${Number(a.pop_total).toLocaleString()}${a.match==='probable'?'*':''}</span>`;}
 function rvPill(c){const t=TREND[c.id];if(!t||t.pct==null)return '';const p=+t.pct;return `<span class="trend rv" title="Re-valued since ${t.then_date} (${esc(t.source_then||'')} to ${esc(c.value_source||'')}), not a market move">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}% re-comp</span>`;}
-function miniTile(c,rv){const u=primary(c);return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img loading="lazy" src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(subjectOf(c)||c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)}${rv?rvPill(c):trendPill(c,true)}</div></div></div>`;}
+function miniTile(c,rv){const u=primary(c);return `<div class="tile" onclick='openCard("${c.id}")'><div class="ph">${u?`<img class="lz" data-src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div><div class="m"><div class="pl">${esc(subjectOf(c)||c.player||c.ref)}</div><div class="st">${esc(c.set_name||'')}</div><div class="pr">${money(c.current_value)}${rv?rvPill(c):trendPill(c,true)}</div></div></div>`;}
 /* ---- home: headline value + sales cards ---- */
 let DASHRANGE='30d';
 const ymd=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');};
@@ -1906,7 +1933,7 @@ function renderDash(){
  const segArr=Object.entries(segs).sort((a,b)=>b[1].v-a[1].v);
  h+=`<div class="sechd"><h2>Collections</h2><a onclick="openAll('all')">Browse all &rsaquo;</a></div><div class="cattiles">`;
  segArr.forEach(([n,g])=>{const p=g.base?g.chg/g.base*100:null;
-  h+=`<div class="ctile" data-seg="${esc(n)}" onclick="openSeg(this.dataset.seg)">${g.hero?`<img loading="lazy" src="${primary(g.hero)}" alt="">`:'<div class="noimg">&#9635;</div>'}<div class="ov"></div><div class="tx"><div class="nm">${esc(n)}</div><div class="sub">${g.n.toLocaleString()} cards &middot; ${g.v?money(g.v):'--'}</div>${p!=null&&Math.abs(p)>=0.5?`<span class="trend">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p).toFixed(1)}%</span>`:''}</div></div>`;});
+  h+=`<div class="ctile" data-seg="${esc(n)}" onclick="openSeg(this.dataset.seg)">${g.hero?`<img class="lz" data-src="${primary(g.hero)}" alt="">`:'<div class="noimg">&#9635;</div>'}<div class="ov"></div><div class="tx"><div class="nm">${esc(n)}</div><div class="sub">${g.n.toLocaleString()} cards &middot; ${g.v?money(g.v):'--'}</div>${p!=null&&Math.abs(p)>=0.5?`<span class="trend">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p).toFixed(1)}%</span>`:''}</div></div>`;});
  if(sealedOwn.length)h+=`<div class="ctile" onclick="show('sealed');renderSealed()"><div class="noimg">&#128230;</div><div class="ov"></div><div class="tx"><div class="nm">Sealed</div><div class="sub">${sealedOwn.length} items</div></div></div>`;
  if(setsOwn.length)h+=`<div class="ctile" onclick="show('sets');renderSets()"><div class="noimg">&#128218;</div><div class="ov"></div><div class="tx"><div class="nm">Complete sets</div><div class="sub">${setsOwn.length} sets</div></div></div>`;
  h+=`</div>`;
@@ -1990,7 +2017,7 @@ async function renderWatch(force){
  <div class="grid">`;
  h+=L.slice(0,240).map(w=>{const p=w.pct_since_first;const s=WLSRC[w.first_source]||['?',''];const hasH=hist(w);
   return `<a class="tile wtile" href="https://www.ebay.com/itm/${w.item_id}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
-   <div class="ph">${w.image_url?`<img loading="lazy" src="${esc(w.image_url)}">`:`<div class="no">${esc(w.title)}</div>`}</div>
+   <div class="ph">${w.image_url?`<img class="lz" data-src="${esc(w.image_url)}">`:`<div class="no">${esc(w.title)}</div>`}</div>
    <div class="m"><div class="pl">${esc(w.title)}</div>
    <div class="pr">${money(w.latest_price)}${hasH&&Math.abs(p)>=0.5?`<span class="trend ${p>0?'up':'dn'}">${p>0?'&#9650;':'&#9660;'} ${Math.abs(p)>=10?Math.round(Math.abs(p)):Math.abs(p).toFixed(1)}%</span>`:''}${w.status==='ended'?'<span class="vtag rev">ENDED</span>':''}</div>
    <div class="was">${hasH?`was ${money(w.first_price)} on ${fmtDay(w.first_seen)}`:`first seen ${fmtDay(w.first_seen)}`}<span class="srcdot" title="${esc(s[1])}">${s[0]}</span></div>
@@ -2159,7 +2186,7 @@ async function loadInsights(force){
  INS={meta:(meta||[])[0]||{},stats:stats||[],recur:recur||[],cuts:(cuts||[]).filter(t=>!/auction/i.test(t.last_type||'')&&+t.last_price<+t.first_price*0.9).sort((a,b)=>(b.first_price-b.last_price)-(a.first_price-a.last_price)).slice(0,16),monthly:monthly||[],disc:disc||[],digest:(dig||[])[0]||null};
  return INS;
 }
-function insTile(t,extra){const img=t.image_url;return `<a class="tile wtile" href="${itemLink(t.item_id,t.title)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="ph">${img?`<img loading="lazy" src="${esc(img)}">`:`<div class="no">${esc(t.title)}</div>`}</div><div class="m"><div class="pl">${esc(t.title)}</div>${extra||''}</div></a>`;}
+function insTile(t,extra){const img=t.image_url;return `<a class="tile wtile" href="${itemLink(t.item_id,t.title)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><div class="ph">${img?`<img class="lz" data-src="${esc(img)}">`:`<div class="no">${esc(t.title)}</div>`}</div><div class="m"><div class="pl">${esc(t.title)}</div>${extra||''}</div></a>`;}
 function entCard(s){
  const ratio=s.prior_rate>0?(s.recent_rate/s.prior_rate):null;
  const own=s.owned_n>0?`you own ${s.owned_n}`:'you own none';
@@ -2339,7 +2366,7 @@ async function skLoadComps(c){
   const t=tiers[x.id]||[]; const tl=SKTIER[t[0]]||['','var(--mut)']; const adj=t[1];
   const p=+x.sold_price; const showAdj=adj!=null&&Math.abs(adj-p)/Math.max(p,1)>0.1;
   const own=x.source==='own_sale';
-  return `<div class="skc">${x.image_url?`<img loading="lazy" src="${x.image_url}">`:'<div style="width:52px;height:68px;border-radius:7px;background:var(--track);flex:none"></div>'}
+  return `<div class="skc">${x.image_url?`<img class="lz" data-src="${x.image_url}">`:'<div style="width:52px;height:68px;border-radius:7px;background:var(--track);flex:none"></div>'}
    <div class="ct">${x.url?`<a href="${x.url}" target="_blank" rel="noopener">${esc(x.title||'')}</a>`:esc(x.title||'')}<div class="tl" style="color:${tl[1]}">${own?'Your own sale &middot; ':''}${tl[0]}</div></div>
    <div class="cp"><b>${money(p)}</b><div>${skFmtDate(String(x.sold_date||'').slice(0,10))}</div>${showAdj?`<div title="Adjusted for differences in set, parallel, artist or character">≈ ${money(adj)} for yours</div>`:''}</div></div>`;
  }).join('');
@@ -2786,7 +2813,7 @@ function gqRow(g){
  const btn=(s,t)=>`<button class="gqb ${st===s?'on':''}" onclick="event.stopPropagation();gqSet('${g.id}','${st===s?'candidate':s}')">${t}</button>`;
  const pill=g.priority==='gem-only'&&g.gem_odds_needed!=null?`Only pays at PSA 10 · needs a 10 at least ${Math.max(1,Math.round(g.gem_odds_needed*100))}% of the time`:(g.headline||'');
  return `<div class="gqrow" onclick='openCard("${g.card_id}")'>
-  <div class="gqph">${u?`<img loading="lazy" src="${u}">`:''}</div>
+  <div class="gqph">${u?`<img class="lz" data-src="${u}">`:''}</div>
   <div class="gqm"><div class="gqt"><span class="idchip">${esc(g.ref)}</span> ${esc(c.player||'')}</div>
    <div class="gqs">${esc([c.set_name&&c.year&&String(c.set_name).startsWith(String(c.year))?null:c.year,c.set_name,c.card_number?'#'+c.card_number:'',c.variation&&!/^base$/i.test(c.variation)?c.variation:''].filter(Boolean).join(' · '))}</div>
    <div class="gqpill">${esc(pill)}</div>
@@ -2977,7 +3004,7 @@ async function rvLoadQueue(){
  try{if(!QUEUE)QUEUE=await fetchJSON(SB+"/rest/v1/ebay_purchases?status=eq.queued&select=title,price,order_date,image,note,item_id&order=price.desc.nullslast&limit=400",2);
   const n=document.getElementById('rvqn');if(n)n.textContent=(QUEUE||[]).length;
   const el=document.getElementById('revq');if(!el)return;
-  el.innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img loading="lazy" src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
+  el.innerHTML=(QUEUE||[]).map(q=>{const link=q.item_id?('https://www.ebay.com/itm/'+q.item_id):null;return `<div class="qcard">${q.image?`<img class="lz" data-src="${q.image}">`:'<div style="width:46px;height:46px"></div>'}<div class="qt">${q.title||''}<div class="qm">${q.note||''}${q.order_date?' &middot; '+q.order_date:''}</div>${link?`<a href="${link}" target="_blank" rel="noopener">view on eBay &raquo;</a>`:''}</div><div class="qp">${money(q.price)}</div></div>`;}).join('')||'<div class="stat-note">Queue is empty.</div>';
  }catch(e){const el=document.getElementById('revq');if(el)el.innerHTML='<div class="stat-note">Could not load queue.</div>';}
 }
 

@@ -289,6 +289,7 @@ footer b{color:var(--ink2)}
 .act .row .money input{height:50px}
 .err h1{font-size:22px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+img.lz:not(.lzok){visibility:hidden}
 </style>
 </head>
 <body>
@@ -390,10 +391,25 @@ let D=null, ALL=[], VIEW=[], BYID={}, q='', shown=0, sort='feat', SLUG='';
 /* Oct 26 2026: Supabase storage answers some photo requests with 429 (rate limited) when a page asks for many at once.
    Retry failed storage photos a few times with backoff instead of leaving them blank. */
 (function(){
- document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG')return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
+ document.addEventListener('error',function(e){const i=e.target;if(!i||i.tagName!=='IMG'||i.classList.contains('lz'))return;const s=i.currentSrc||i.src||'';if(!/\.supabase\.co\/storage\//.test(s))return;
   const n=+(i.dataset.rt||0);if(n>=5)return;i.dataset.rt=n+1;const base=s.replace(/[?&]rt=\d+$/,'');
   setTimeout(function(){i.src=base+(base.indexOf('?')<0?'?':'&')+'rt='+(n+1);},700*Math.pow(2,n)+Math.random()*700);},true);
  document.addEventListener('load',function(e){const i=e.target;if(i&&i.tagName==='IMG'&&i.dataset.rt)i.style.visibility='';},true);
+})();
+/* Oct 27 2026: photo loader. Supabase storage rate-limits (429) when a page asks for dozens of photos at once,
+   so grid photos use class "lz" + data-src and load a few at a time, nearest the screen first, retrying failures. */
+(function(){
+ const Q=[];let active=0;const MAX=6;
+ function pump(){while(active<MAX&&Q.length){const i=Q.shift();if(!i.isConnected||!i.dataset.src)continue;active++;let done=false;
+   const fin=ok=>{if(done)return;done=true;active--;if(ok){i.style.visibility='';i.classList.add('lzok');}else{const n=+(i.dataset.rt||0)+1;i.dataset.rt=n;
+     if(n<=8)setTimeout(()=>{if(i.isConnected){Q.push(i);pump();}},600*Math.min(n,6)+Math.random()*900);}
+     pump();};
+   i.addEventListener('load',()=>fin(true),{once:true});i.addEventListener('error',()=>fin(false),{once:true});
+   const n=+(i.dataset.rt||0);i.src=i.dataset.src+(n?(i.dataset.src.indexOf('?')<0?'?':'&')+'rt='+n:'');}}
+ const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);Q.push(e.target);}});pump();},{rootMargin:'700px 0px'}):null;
+ function scan(root){(root.querySelectorAll?root.querySelectorAll('img.lz[data-src]:not([data-lzq])'):[]).forEach(i=>{i.dataset.lzq=1;if(io)io.observe(i);else{Q.push(i);}});pump();}
+ new MutationObserver(ms=>{ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.matches&&n.matches('img.lz[data-src]:not([data-lzq])'))scan(n.parentNode||document);else scan(n);}}));}).observe(document.documentElement,{childList:true,subtree:true});
+ window.lzScan=()=>scan(document);
 })();
 const PAGE=40;
 const F={seg:new Set(),team:new Set(),grader:new Set(),tag:new Set(),cond:'any',grade:'any',sk:'any',min:'',max:''};
@@ -434,7 +450,7 @@ function tileBadge(c){
 }
 function img(c,big){
   const p=c.photos&&c.photos.front; if(!p) return '';
-  return `<img alt="${esc(titleOf(c))}" loading="lazy" decoding="async" src="${esc(big?p.img:p.thumb)}" onload="this.classList.add('in')">`;
+  return `<img class="lz" alt="${esc(titleOf(c))}" decoding="async" data-src="${esc(big?p.img:p.thumb)}" onload="this.classList.add('in')">`;
 }
 const CHECK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function tileHTML(c,i){
