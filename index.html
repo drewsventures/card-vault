@@ -943,7 +943,7 @@ function searchTile(c,inSet){
    return `<div class="tile${inlot?' inlot':''}" data-id="${c.id}" onclick='${click}'>
      ${BUILDLOT?`<div class="lotchk" style="${inlot?'':'display:none'}">&#10003;</div>`:''}
      <div class="ph"><span class="idchip" onclick='copyId(event,"${esc(c.ref)}")' title="copy ID">${esc(c.ref)}</span>${u?`<img class="lz" data-src="${u}">`:`<div class="no">${esc(c.player||c.ref)}</div>`}</div>
-     <div class="m"><div class="pl">${esc(c.player||c.ref)}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
+     <div class="m"><div class="pl">${esc(c.player||c.ref)}${c.is_rookie?`<span class="badge" title="Rookie card">RC</span>`:''}${dup?`<span class="badge">x${n}</span>`:''}${(c.is_listed||c.listing_url)?`<span class="listdot" title="listed">&#9679;</span>`:''}</div>
      <div class="st">${esc(c.set_name||'')}</div>
      <div class="pr">${money(c.current_value)}${(SORT==='move'&&TREND[c.id]&&TREND[c.id].trend_kind==='revalued')?rvPill(c):trendPill(c,true)}${vtagFor(c)}</div>${costLine(c)}${popPill(c)?`<div>${popPill(c)}</div>`:''}</div></div>`;
 }
@@ -1087,6 +1087,7 @@ function cardLine(c){
  if(c.card_number)p.push('#'+String(c.card_number).replace(/^#/,''));
  if(c.variation&&!/^base$/i.test(c.variation))p.push(c.variation);
  if(c.serial)p.push(c.serial);
+ if(c.is_rookie&&!/\b(RC|rookie)\b/i.test(p.join(' ')))p.push('RC');
  const gg=cleanGrade(c.grade);
  p.push(gg||'Raw');
  return p.join(' ').replace(/\s+/g,' ').trim();
