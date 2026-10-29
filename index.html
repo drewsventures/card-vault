@@ -351,6 +351,13 @@ nav button.on{color:var(--ink)}
 .kbars .hit:hover+.kbar,.kbars .hit:focus+.kbar{opacity:1;fill:var(--ink2)}
 .kfoot{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);margin-top:8px;flex-wrap:wrap}
 .kfoot b{color:var(--ink)}
+.hkpi.cfk{grid-column:1/-1}
+.cfchart{position:relative;margin-top:12px}.cfchart svg{width:100%;height:auto;display:block;overflow:visible}
+.cfin{fill:var(--up);opacity:.85}.cfout{fill:var(--dn);opacity:.78}.cfnet{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.cfdot{fill:var(--card);stroke:var(--ink);stroke-width:1.6}.cfchart .cfhit:hover~.cfin,.cfchart .cfhit:hover~.cfout{opacity:1}
+.cfleg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);font-weight:600;margin-top:6px}
+.cfleg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.cfcov{height:6px;border-radius:4px;background:var(--dnsoft);overflow:hidden;margin-top:10px}.cfcov div{height:100%;background:var(--up);border-radius:4px}
 .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 4px}
 .quick button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 6px;font:600 12px var(--ui);color:var(--ink);cursor:pointer}
 .quick button b{display:block;font-size:16px;font-weight:750;letter-spacing:-.01em}
@@ -1897,6 +1904,56 @@ function dashValueChart(){
   <div class="kchart">${R.length>1?pfLineChart('kpivc',R,'total_value',{w:W,h:130,label:'Collection value over time'}):'<div class="ksub">The trend line builds as daily snapshots add up.</div>'}</div>${foot}`;
  if(R.length>1)pfWire('kpivc',R,'total_value',(p,prev)=>`<b>${fmtDay(p.as_of)}</b><div>${money(p.total_value)}</div>${prev?`<small>${pfSign(p.total_value-prev.total_value)} that day${(+p.added_value)?` (${pfK(+p.added_value)} new)`:''}</small>`:''}`);
 }
+/* ---- home: cash flow, sales in vs spend out by month (Oct 29 2026) ---- */
+// Source: v_cash_flow_monthly. Cash in = sale price minus fees (sales table, by sold_date).
+// Cash out = Whatnot paid incl. tax + shipping, eBay item price, card show buys (v_spend_lines).
+let CF=null,CFRANGE=6;
+const cfMon=k=>{const [y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleString('en-US',{month:'short'});};
+const cfMonY=k=>{const [y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleString('en-US',{month:'short',year:'numeric'});};
+const cfSigned=v=>(v>=0?'+':'-')+money(Math.abs(v));
+async function dashCashFlow(){
+ const el=document.getElementById('kpicf');if(!el)return;
+ if(!CF){try{CF=await fetchJSON(SB+'/rest/v1/v_cash_flow_monthly?select=*&order=month.asc&limit=240',3);}
+  catch(e){el.innerHTML='<div class="kl"><span>Cash flow</span></div><div class="ksub">Could not load cash flow.</div>';return;}}
+ dashCashFlowDraw();
+}
+function dashCashFlowDraw(){
+ const el=document.getElementById('kpicf');if(!el||!CF)return;
+ const now=new Date(),cur=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+ const by={};CF.forEach(r=>by[r.month]=r);
+ const all=[];if(CF.length){let [y,m]=CF[0].month.split('-').map(Number);for(let g=0;g<600;g++){const k=y+'-'+String(m).padStart(2,'0');all.push(k);if(k>=cur)break;if(++m>12){m=1;y++;}}}else all.push(cur);
+ const row=k=>{const r=by[k]||{};return {month:k,cin:+r.cash_in||0,cout:+r.cash_out||0,n:+r.sales_n||0,fees:+r.sales_fees||0,wn:+r.out_whatnot||0,eb:+r.out_ebay||0,sh:+r.out_show||0};};
+ const firstSale=(CF.find(r=>+r.sales_n>0)||{}).month||null;
+ const keys=CFRANGE==='all'?all:all.slice(-CFRANGE);const R=keys.map(row);
+ const C=row(cur),net=C.cin-C.cout,cov=C.cout?C.cin/C.cout*100:null;
+ const S=firstSale?all.filter(k=>k>=firstSale).map(row):[];
+ const sin=S.reduce((a,r)=>a+r.cin,0),sout=S.reduce((a,r)=>a+r.cout,0),scov=sout?sin/sout*100:null;
+ // chart: sales up from the zero line, spend down, net as a line
+ const W=Math.round(Math.max(280,Math.min(1100,(el.clientWidth||340)-32))),H=176,T=8,B=18,Z=T+(H-B-T)/2,half=(H-B-T)/2;
+ const mx=Math.max(1,...R.map(r=>Math.max(r.cin,r.cout)));
+ const n=R.length,sw=W/n,bw=Math.max(6,Math.min(40,sw*0.56));
+ const yv=v=>Z-(v/mx)*half;
+ let bars='',pts=[],dots='',lbl='';
+ R.forEach((r,i)=>{const cx=sw*i+sw/2,x=cx-bw/2,hi=r.cin/mx*half,ho=r.cout/mx*half,nt=r.cin-r.cout;
+  const tip=`${cfMonY(r.month)}${r.month===cur?' (to date)':''}: sales in ${money(r.cin)}${r.n?` (${r.n} sale${r.n===1?'':'s'})`:''}, spend out ${money(r.cout)}, net ${cfSigned(nt)}${r.cout?`, sales covered ${Math.round(r.cin/r.cout*100)}%`:''}`;
+  bars+=`<g><rect class="cfhit" x="${(sw*i).toFixed(1)}" y="0" width="${sw.toFixed(1)}" height="${H-B}" fill="transparent" tabindex="0"><title>${esc(tip)}</title></rect>`
+   +(hi?`<rect class="cfin" x="${x.toFixed(1)}" y="${(Z-hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${hi.toFixed(1)}" rx="3"><title>${esc(tip)}</title></rect>`:'')
+   +(ho?`<rect class="cfout" x="${x.toFixed(1)}" y="${Z.toFixed(1)}" width="${bw.toFixed(1)}" height="${ho.toFixed(1)}" rx="3"><title>${esc(tip)}</title></rect>`:'')+`</g>`;
+  pts.push([cx,yv(nt)]);dots+=`<circle class="cfdot" cx="${cx.toFixed(1)}" cy="${yv(nt).toFixed(1)}" r="3.2"><title>${esc(tip)}</title></circle>`;
+  if(n<=12||i%Math.ceil(n/12)===0||i===n-1)lbl+=`<text x="${cx.toFixed(1)}" y="${H-3}" text-anchor="middle" class="pfax">${cfMon(r.month)}${r.month===cur?'*':''}</text>`;});
+ const line=pts.length>1?`<polyline class="cfnet" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"/>`:'';
+ const svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cash flow by month: sales in above the line, spend out below, net as a line"><line x1="0" x2="${W}" y1="${Z.toFixed(1)}" y2="${Z.toFixed(1)}" class="pfgrid"/>${bars}${line}${dots}${lbl}<text x="0" y="${T+9}" class="pfax">+${pfK(mx)}</text><text x="0" y="${H-B-3}" class="pfax">-${pfK(mx)}</text></svg>`;
+ el.innerHTML=`<div class="kl"><span>Cash flow &middot; ${cfMonY(cur)} to date</span><a onclick="SPM=null;show('spend');renderSpend()">Spend &rsaquo;</a></div>
+  <div class="kn" style="color:${net>=0?'var(--up)':'var(--dn)'}">${cfSigned(net)}</div>
+  <div class="kchg ${cov!=null&&cov>=100?'up':'dn'}">${cov==null?'No spend yet this month':`Sales covered ${Math.round(cov)}% of spend`}<span>${cov!=null&&cov<100?`&middot; ${money(C.cout-C.cin)} short of break-even`:cov!=null?`&middot; ${money(C.cin-C.cout)} ahead`:''}</span></div>
+  ${cov!=null?`<div class="cfcov" title="Sales as a share of spend this month"><div style="width:${Math.min(100,cov).toFixed(1)}%"></div></div>`:''}
+  <div class="ks"><span>In <b>${money(C.cin)}</b> from ${C.n} sale${C.n===1?'':'s'}${C.fees?` (after ${money(C.fees)} fees)`:''}</span><span>Out <b>${money(C.cout)}</b></span><span>Whatnot <b>${money(C.wn)}</b></span>${C.eb?`<span>eBay <b>${money(C.eb)}</b></span>`:''}${C.sh?`<span>Shows <b>${money(C.sh)}</b></span>`:''}</div>
+  <div class="krange" style="margin-top:12px">${[[6,'6M'],[12,'12M'],['all','All']].map(([k,t])=>`<button class="${CFRANGE===k?'on':''}" onclick="CFRANGE=${typeof k==='number'?k:"'all'"};dashCashFlowDraw()">${t}</button>`).join('')}</div>
+  <div class="cfchart">${svg}</div>
+  <div class="cfleg"><span><i style="background:var(--up)"></i>Sales in</span><span><i style="background:var(--dn)"></i>Spend out</span><span><i style="background:var(--ink);height:2px;vertical-align:3px"></i>Net</span><span>* month to date</span></div>
+  ${firstSale?`<div class="kfoot"><span>Since ${cfMonY(firstSale)}: in <b>${money(sin)}</b>, out <b>${money(sout)}</b>, net <b style="color:${sin-sout>=0?'var(--up)':'var(--dn)'}">${cfSigned(sin-sout)}</b></span><span>Sales covered <b>${scov!=null?Math.round(scov)+'%':'--'}</b> of spend</span></div>`:''}
+  <div class="ksub">Cash in is sale price minus fees. Cash out is Whatnot paid (tax and shipping included), eBay buys at item price, and card show buys. Sales are tracked from ${firstSale?cfMonY(firstSale):'the first recorded sale'}, so earlier months show spend only.</div>`;
+}
 function renderDash(){
  const live=c=>c.status!=='sold'&&c.status!=='duplicate';
  const own=CARDS.filter(c=>live(c)&&c.item_type!=='sealed'&&c.item_type!=='set');
@@ -1920,6 +1977,7 @@ function renderDash(){
    <div class="kchg ${sales.mNow>=sales.mPrev&&sales.mNow>0?'up':''}">${money(sales.mNow)} last 30 days <span>&middot; ${sales.nNow} card${sales.nNow===1?'':'s'}${sales.mPrev||sales.nPrev?` &middot; ${money(sales.mPrev)} the 30 before`:''}</span></div>
    <div class="ks"><span><b>${soldCards.length.toLocaleString()}</b> cards sold</span><span style="color:${realizedTotal>=0?'var(--up)':'var(--dn)'}"><b style="color:inherit">${realizedTotal>=0?'+':'-'}${money(Math.abs(realizedTotal))}</b> profit</span>${sales.avg?`<span>Avg <b>${money(sales.avg)}</b>/card</span>`:''}</div>
    ${dashSalesBars(sales)}</div>
+  <div class="hkpi cfk" id="kpicf"><div class="kl"><span>Cash flow</span><a onclick="SPM=null;show('spend');renderSpend()">Spend &rsaquo;</a></div><div class="ksub">Loading cash flow…</div></div>
  </div>
   <div class="quick"><button onclick="show('insights');renderInsights()"><b>&#10022;</b>Insights</button><button onclick="show('watch');renderWatch()"><b>&#9737;</b>Watchlist</button><button onclick="openAll('all')"><b>${valued.toLocaleString()}</b>Priced</button><button onclick="openDupes()"><b>${dupeGroups}</b>Dupes</button></div>`;
  if(mk.length>=20)h+=`<div class="dnote" title="Only cards valued from live comps both then and now count as a market move">Market since ${fmtDay(since)}: <b style="color:${mchg>=0?'var(--up)':'var(--dn)'}">${mchg>=0?'+':'-'}${money(Math.abs(mchg))}${mbase?` (${mchg>=0?'+':''}${(mchg/mbase*100).toFixed(1)}%)`:''}</b> on ${mk.length} comped cards</div>`;
@@ -1943,6 +2001,7 @@ function renderDash(){
  h+=`<button class="addpbtn" style="margin-top:22px" onclick="addPurchase()">+ Add a purchase</button>`;
  document.getElementById('dash').innerHTML=h;
  dashValueFill();
+ CF=null;dashCashFlow();
  const hs=document.getElementById('hsum');if(hs)hs.textContent=own.length.toLocaleString()+' cards · '+money(val);
 }
 /* ---- browse: subject bar + sort ---- */
