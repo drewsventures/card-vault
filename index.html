@@ -376,6 +376,16 @@ nav button.on{color:var(--ink)}
 .ctile .tx .sub{font-size:12px;opacity:.85;margin-top:1px}
 .ctile .tx .trend{margin-top:5px;background:rgba(255,255,255,.18);color:#fff}
 .ctile .noimg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:40px}
+.incsec{margin:18px 0 6px;display:flex;justify-content:space-between;align-items:baseline}.incsec h3{margin:0;font-size:15px}.incsec span{font-size:12px;color:var(--mut)}
+.inctbl{border:1px solid var(--line,#e5e5e5);border-radius:12px;overflow:hidden;background:var(--card,#fff)}
+.incrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid var(--line,#eee)}.incrow:first-child{border-top:0}
+.incrow .t{font-weight:650;font-size:13.5px;line-height:1.3}.incrow .m{font-size:12px;color:var(--mut);margin-top:2px}
+.incrow .a{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.incrow .a button{border:1px solid var(--line2,#ddd);background:var(--card,#fff);border-radius:999px;padding:4px 10px;font:600 12px var(--ui);color:var(--ink2);cursor:pointer}
+.incrow .a button.ok{background:var(--ink);color:#fff;border-color:var(--ink)}
+.incrow.grp{cursor:pointer}.incsub{background:var(--bg,#fafafa)}.incsub .incrow{padding-left:24px}
+.incflag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:6px;background:#fbe3e1;color:#b0322b}
+.incban{border:1px solid var(--line,#e5e5e5);border-radius:12px;padding:12px;margin:10px 0;background:var(--card,#fff);font-size:13.5px}.incban button{margin-top:8px;border:0;background:var(--ink);color:#fff;border-radius:999px;padding:6px 14px;font:600 13px var(--ui);cursor:pointer}
 .dnote{font-size:11.5px;color:var(--mut);margin:6px 2px 0;line-height:1.45}
 /* browse controls */
 .ctrlrow{display:flex;gap:8px;align-items:center;margin:8px 0 2px;flex-wrap:wrap}
@@ -716,6 +726,7 @@ body{font-variant-numeric:tabular-nums}
   <div id="sealed" class="hide"></div>
   <div id="grading" class="hide"></div>
   <div id="spend" class="hide"></div>
+  <div id="incoming" class="hide"></div>
   <div id="sets" class="hide"></div>
   <div id="watch" class="hide"></div>
   <div id="insights" class="hide"></div>
@@ -739,6 +750,7 @@ body{font-variant-numeric:tabular-nums}
   <button id="nav-shows" class="sec" onclick="SHOWSEL=null;show('shows');renderShows()"><span class="ic">&#9733;</span>Shows</button>
   <button id="nav-grading" class="sec" onclick="show('grading');renderGrading()"><span class="ic">&#9672;</span>Grading</button>
   <button id="nav-spend" class="sec" onclick="SPM=null;show('spend');renderSpend()"><span class="ic">&#36;</span>Spend</button>
+  <button id="nav-incoming" class="sec" onclick="show('incoming');renderIncoming()"><span class="ic">&#9993;</span>Incoming<span class="navbadge" id="incbadge" hidden></span></button>
   <button id="nav-sealed" class="sec" onclick="show('sealed');renderSealed()"><span class="ic">&#9635;</span>Sealed</button>
   <button id="nav-sets" class="sec" onclick="show('sets');renderSets()"><span class="ic">&#9776;</span>Sets</button>
   <button id="nav-more" onclick="toggleMore()" aria-haspopup="true" aria-expanded="false"><span class="ic">&#8943;</span>More</button>
@@ -1336,8 +1348,8 @@ async function loadChart(id){
  }catch(e){const el=document.getElementById('cvchart');if(el)el.innerHTML='';}
 }
 function closeCard(){document.getElementById('sheet').innerHTML='';document.body.style.overflow='';}
-function show(v){if(v!=='review')SKMODE=false;toggleMore(false);setTimeout(()=>{const a=document.querySelector('#mainnav button.sec.on');const m=document.getElementById('nav-more');if(m)m.classList.toggle('on',!!a);},0);['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading','spend'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
- ['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
+function show(v){if(v!=='review')SKMODE=false;toggleMore(false);setTimeout(()=>{const a=document.querySelector('#mainnav button.sec.on');const m=document.getElementById('nav-more');if(m)m.classList.toggle('on',!!a);},0);['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading','spend','incoming'].forEach(x=>{const e=document.getElementById(x);if(e)e.classList.toggle('hide',v!==x);});
+ ['dash','search','review','lots','share','sold','shows','sealed','sets','watch','insights','portfolio','grading','spend','incoming'].forEach(x=>{const e=document.getElementById('nav-'+x);if(e)e.classList.toggle('on',v===x);});window.scrollTo(0,0);}
 function renderSealed(){
  const items=CARDS.filter(c=>c.item_type==='sealed'&&c.status!=='sold'&&c.status!=='duplicate');
  const val=items.reduce((s,c)=>s+(+c.current_value||0),0);
@@ -2797,6 +2809,63 @@ setInterval(()=>{if(document.visibilityState==='visible')loadOffers().then(()=>{
 function toggleMore(force){const sh=document.getElementById('moresheet');if(!sh)return;const open=force===undefined?sh.classList.contains('hide'):force;
  if(open){const c=sh.querySelector('.mscard');c.innerHTML=[...document.querySelectorAll('#mainnav button.sec')].filter(b=>getComputedStyle(b).display!=='none'||window.innerWidth<1000).filter(b=>!['nav-sealed','nav-sets'].includes(b.id)).map(b=>`<button role="menuitem" onclick="document.getElementById('${b.id}').click()">${b.innerHTML}</button>`).join('');}
  sh.classList.toggle('hide',!open);const m=document.getElementById('nav-more');if(m)m.setAttribute('aria-expanded',open?'true':'false');}
+
+/* ---- Incoming (Oct 31 2026): paid for, not in the vault yet. Whatnot orders with shipping status,
+   eBay buys with no vault card, and break hits logged in Break Copilot. Checking off writes to
+   incoming_marks only; nothing is added to the vault until you photograph it as usual. ---- */
+let INC=null,INCOLD=false,INCOPEN={};
+const FN_INC=SB+"/functions/v1/incoming-ops";
+const INCSRC={whatnot_single:'Whatnot',whatnot_break:'Whatnot break',whatnot_other:'Whatnot',ebay:'eBay',break_hit:'Break hit'};
+async function incOp(items,mark){try{const r=await fetch(FN_INC,{method:'POST',headers:{'content-type':'application/json','x-ingest-secret':LOT_SECRET,apikey:KEY,Authorization:'Bearer '+KEY},body:JSON.stringify({op:'mark',mark,items:items.map(x=>({source:x.source,source_id:x.source_id}))})});return await r.json();}catch(e){return {error:String(e)};}}
+function incDate(d){if(!d)return '';const x=new Date(d+'T12:00:00');return x.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+function incPending(r){return !r.in_vault&&(!r.mark||r.mark==='pending');}
+async function loadIncoming(){const since=new Date(Date.now()-(INCOLD?365:60)*864e5).toISOString().slice(0,10);
+ INC=await fetchJSON(SB+'/rest/v1/v_incoming?select=*&order_date=gte.'+since+'&order=order_date.desc&limit=5000',3);incBadge();return INC;}
+function incBuckets(rows){const B={missing:[],check:[],way:[],arrived:[],hits:[],ebay:[],done:[]};
+ for(const r of rows){if(r.mark==='missing'){B.missing.push(r);continue;}
+  if(!incPending(r)){if(r.mark==='received'||r.mark==='not_card'||r.in_vault)B.done.push(r);continue;}
+  if(r.source==='break_hit')B.hits.push(r);
+  else if(r.source==='ebay')(r.days>=21?B.check:B.ebay).push(r);
+  else if(r.stage==='on_the_way')B.way.push(r);
+  else if(r.stage==='delivered')(r.days>=14?B.check:B.arrived).push(r);}
+ return B;}
+function incBadge(){const b=document.getElementById('incbadge');if(!b||!INC)return;const B=incBuckets(INC);const n=B.check.length+B.missing.length;b.textContent=n>99?'99+':n;b.hidden=!n;}
+function incRow(r,acts){const flag=r.ship_status==='Delayed in Transit'?'<span class="incflag">Delayed</span>':(r.mark==='missing'?'<span class="incflag">Missing</span>':'');
+ const meta=[INCSRC[r.source]||r.source,r.seller,incDate(r.order_date),r.price!=null?spMoney(r.price):null,r.source==='ebay'?(r.in_vault?'in vault':'not in vault'):r.ship_status].filter(Boolean).map(esc).join(' · ');
+ return `<div class="incrow"><div><div class="t">${esc((r.title||'').slice(0,110))}${flag}</div><div class="m">${meta}</div></div><div class="a">${acts.map(a=>`<button class="${a[2]||''}" onclick="incMark('${r.source}','${esc(r.source_id)}','${a[0]}')">${a[1]}</button>`).join('')}</div></div>`;}
+const INCACTS=[['received','Got it','ok'],['not_card','Not a card'],['missing','Missing']];
+function incGroup(key,rows,title){const open=INCOPEN[key];const delayed=rows.some(r=>r.ship_status==='Delayed in Transit');
+ return `<div class="incrow grp" onclick="INCOPEN['${esc(key)}']=!INCOPEN['${esc(key)}'];renderIncoming()"><div><div class="t">${esc(title)}${delayed?'<span class="incflag">Delayed</span>':''}</div><div class="m">${rows.length} spot${rows.length===1?'':'s'} · ${spMoney(rows.reduce((a,r)=>a+(+r.price||0),0))} · ${esc(rows[0].ship_status||'')} · tap to ${open?'hide':'see'} spots</div></div><div class="a"><button class="ok" onclick="event.stopPropagation();incMarkGroup('${esc(key)}','received')">Got it</button></div></div>`+(open?`<div class="incsub">${rows.map(r=>incRow(r,INCACTS)).join('')}</div>`:'');}
+let INCGROUPS={};
+function incList(rows){INCGROUPS={};const out=[];const breaks={};
+ for(const r of rows){if(r.source==='whatnot_break'){const k=(r.seller||'?')+'|'+r.order_date+'|'+(r.ship_status||'');(breaks[k]=breaks[k]||[]).push(r);}else out.push(incRow(r,r.mark==='missing'?[['received','Got it','ok'],['pending','Not missing']]:INCACTS));}
+ const g=Object.entries(breaks).map(([k,v])=>{INCGROUPS[k]=v;return incGroup(k,v,(v[0].seller||'Breaker')+' break, '+incDate(v[0].order_date));});
+ return g.concat(out).join('');}
+function incSection(title,sub,rows){if(!rows.length)return '';return `<div class="incsec"><h3>${title} <span>${rows.length}</span></h3><span>${sub}</span></div><div class="inctbl">${incList(rows)}</div>`;}
+async function incMark(source,id,mark){const r=(INC||[]).find(x=>x.source===source&&x.source_id===id);if(r){r.mark=mark;renderIncoming();}const res=await incOp([{source,source_id:id}],mark);if(res&&res.error)alert('Could not save: '+res.error);incBadge();}
+async function incMarkGroup(key,mark){const rows=INCGROUPS[key]||[];rows.forEach(r=>r.mark=mark);renderIncoming();const res=await incOp(rows,mark);if(res&&res.error)alert('Could not save: '+res.error);incBadge();}
+async function incStartFresh(cut){if(!confirm('Mark every Whatnot order delivered before '+incDate(cut)+' as received? You can still flag any of them as missing later.'))return;
+ const el=document.getElementById('incoming');el.insertAdjacentHTML('afterbegin','<div class="spin">Marking…</div>');
+ let all=[],off=0;while(true){const page=await fetchJSON(SB+'/rest/v1/v_incoming?select=source,source_id&source=like.whatnot_*&stage=eq.delivered&in_vault=eq.false&mark=is.null&order_date=lt.'+cut+'&limit=1000&offset='+off,3);all=all.concat(page);if(page.length<1000)break;off+=1000;}
+ for(let i=0;i<all.length;i+=1000){const res=await incOp(all.slice(i,i+1000),'received');if(res&&res.error){alert('Could not save: '+res.error);break;}}
+ INC=null;renderIncoming(true);}
+async function renderIncoming(force){const el=document.getElementById('incoming');
+ if(!INC||force){el.innerHTML='<div class="spin">Loading incoming…</div>';try{await loadIncoming();}catch(e){el.innerHTML='<div class="spin">Could not load incoming.</div>';return;}}
+ const B=incBuckets(INC);const cut=new Date(Date.now()-14*864e5).toISOString().slice(0,10);
+ const stale=B.check.filter(r=>r.source!=='ebay').length;
+ let h=`<div class="sechd" style="margin-top:8px"><h2>Incoming</h2><a onclick="renderIncoming(true)">Refresh &#8635;</a></div>
+ <div class="dnote" style="margin:-4px 2px 8px">Things you paid for that are not in the vault yet. Whatnot shipping status comes from your Whatnot order pull, eBay from your purchase history, break hits from Break Copilot. Check items off as they arrive. Cards still go into the vault the usual way, once photographed.</div>`;
+ if(stale>30)h+=`<div class="incban"><b>${stale} Whatnot orders delivered before ${incDate(cut)} have never been checked off.</b> Most of these have probably arrived. Start fresh by marking them received, so this list only shows what is new.<br><button onclick="incStartFresh('${cut}')">Mark them received</button></div>`;
+ h+=incSection('Check these','Delivered 2+ weeks ago (eBay 3+ weeks) and not checked off',B.check);
+ h+=incSection('Missing','You flagged these',B.missing);
+ h+=incSection('On the way','Shipping now',B.way);
+ h+=incSection('Arrived recently','Delivered in the last 2 weeks',B.arrived);
+ h+=incSection('Break hits to receive','Logged in Break Copilot',B.hits);
+ h+=incSection('eBay buys not in the vault','Ordered in the last 3 weeks',B.ebay);
+ if(!B.check.length&&!B.missing.length&&!B.way.length&&!B.arrived.length&&!B.hits.length&&!B.ebay.length)h+='<div class="spin">Nothing waiting. Everything you bought is checked off.</div>';
+ h+=`<div class="dnote" style="margin:14px 2px">${B.done.length} checked off in this window. Showing the last ${INCOLD?'12 months':'60 days'}. <a onclick="INCOLD=!INCOLD;renderIncoming(true)" style="cursor:pointer;text-decoration:underline">${INCOLD?'Show last 60 days':'Show last 12 months'}</a></div>`;
+ el.innerHTML=h;}
+setTimeout(()=>{loadIncoming().catch(()=>{});},4000);
 
 /* ---- Spend report (Oct 13 2026): monthly spend by channel, break spend by category, cost pools ---- */
 let SPD=null,SPP=null,SPM=null;
