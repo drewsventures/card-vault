@@ -481,6 +481,10 @@ nav button.on{color:var(--ink)}
 .pftab td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
 .pftab td small{display:block;font-size:10.5px;color:var(--mut)}
 .pftab .r{text-align:right;white-space:nowrap}
+.pfllf{display:flex;align-items:baseline;gap:9px;padding:9px 2px 2px;border-top:1px solid var(--line);margin-top:8px}
+.pfllf span{font-size:12px;color:var(--mut);font-weight:600}
+.pfllf b{font-size:19px;font-weight:700}
+.pfllf small{font-size:11px;color:var(--mut);margin-left:auto}
 .pfper tbody tr{cursor:pointer}
 .pfun{font-style:normal;color:var(--accent)}
 .pfper tbody tr.sel{background:var(--goldsoft)}
@@ -2217,6 +2221,34 @@ function pfWire(id,R,key,tipFn){
  hit.addEventListener('mousemove',move);hit.addEventListener('touchstart',move,{passive:true});hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('mouseleave',out);
 }
 function pfBar(label,v,max,n,note){const w=max?Math.abs(v)/max*50:0;return `<div class="pfdrow"><div class="pfdl">${label}<small>${note||''}</small></div><div class="pfdtrack"><div class="pfdmid"></div><div class="pfdbar ${v>=0?'pos':'neg'}" style="${v>=0?'left:50%':'right:50%'};width:${w.toFixed(2)}%"></div></div><div class="pfdv ${v>0?'up':v<0?'dn':''}">${pfSign(v)}</div></div>`;}
+/* ---- Same cards vs buying and selling -------------------------------------
+   The two reasons the total moves are different questions and need separating:
+     inventory  = cards arriving and leaving      (added - removed)
+     same cards = what you already held did       (market + reval)
+   For the percentage we chain each step's return on that step's held_base, so
+   the figure is a true like-for-like read: cards bought or sold mid-range can
+   swing the total but cannot move this number. */
+function pfSplit(R){
+ const steps=R.slice(1);
+ let invAdd=0,invRem=0,mkt=0,rev=0,fM=1,fH=1,nb=0;
+ steps.forEach(p=>{
+  invAdd+=+p.added_value||0;invRem+=+p.removed_value||0;
+  const m=+p.market_change||0,v=+p.reval_change||0,hb=+p.held_base||0;
+  mkt+=m;rev+=v;
+  if(hb>0){fM*=1+m/hb;fH*=1+(m+v)/hb;nb++;}
+ });
+ return {invAdd,invRem,inv:invAdd-invRem,mkt,rev,held:mkt+rev,
+         mktRet:fM-1,heldRet:fH-1,nb};
+}
+function pfSplitPanel(R,S){
+ const s=R[0],e=R[R.length-1],chg=e.total_value-s.total_value;
+ const mx=Math.max(Math.abs(S.inv),Math.abs(S.held),1);
+ return `<div class="panel pfpanel"><div class="pfh"><b>Is it the cards, or the buying?</b><span>${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}: total ${pfSign(chg)}</span></div>
+ ${pfBar('Buying and selling',S.inv,mx,0,`${pfSign(S.invAdd)} came in${S.invRem?`, ${pfSign(-S.invRem)} sold or removed`:''}`)}
+ ${pfBar('Cards you already held',S.held,mx,0,`market ${pfSign(S.mkt)} &middot; re-valued ${pfSign(S.rev)}`)}
+ <div class="pfllf"><span>Same-cards return</span><b class="${S.heldRet>0.0005?'up':S.heldRet<-0.0005?'dn':''}">${Math.abs(S.heldRet)<0.0005?'0.0%':pfPct(S.heldRet)}</b><small>market alone ${Math.abs(S.mktRet)<0.0005?'0.0%':pfPct(S.mktRet)}</small></div>
+ <div class="dnote">Same-cards return is the apples-to-apples number: it only counts cards you held at both ends, so adding or selling cards cannot move it. Buying and selling changes the total without any card being worth more or less. Re-valued means a comp correction or method change on a card you held, so your best estimate moved even though the market didn't.</div></div>`;
+}
 /* ---- Period ledger: day / week / month -------------------------------------
    Each period is expressed as a range whose first point is the baseline, so it
    reuses pfDecomp() and stays consistent with the rest of the page. Snapshots
@@ -2233,8 +2265,8 @@ function pfPeriods(gran){
  return groups.map(g=>{
   const R=P.slice(g.from>0?g.from-1:0,g.to+1);
   if(R.length<2)return null;
-  const D=pfDecomp(R);
-  return {gran,key:g.k,D,d0:D.s.as_of,d1:D.e.as_of,v0:D.s.total_value,v1:D.e.total_value,
+  const D=pfDecomp(R),S=pfSplit(R);
+  return {gran,key:g.k,D,S,d0:D.s.as_of,d1:D.e.as_of,v0:D.s.total_value,v1:D.e.total_value,
           chg:D.e.total_value-D.s.total_value,pct:D.s.total_value?D.e.total_value/D.s.total_value-1:0,
           resid:(D.e.total_value-D.s.total_value)-(D.added-D.removed+D.market+D.reval),
           snaps:g.to-g.from+1};
@@ -2246,11 +2278,9 @@ function pfPeriodLabel(p){
  return 'Week of '+fmtDay(p.key);
 }
 function pfPeriodSub(p){
- const D=p.D,bits=[];
- if(D.market)bits.push(`market ${pfSign(D.market)}`);
- if(D.added)bits.push(`new ${pfSign(D.added)}`);
- if(D.reval)bits.push(`re-comp ${pfSign(D.reval)}`);
- if(D.removed)bits.push(`sold ${pfSign(-D.removed)}`);
+ const S=p.S,bits=[];
+ if(S.inv)bits.push(`buying/selling ${pfSign(S.inv)}`);
+ if(S.held)bits.push(`same cards ${pfSign(S.held)}`);
  /* The buckets should sum to the change, and after the 2026-11-03 full rebuild
     they do (worst residual a cent). They drifted before, when points built on
     different days sat on different card sets, so keep showing any gap rather
@@ -2275,7 +2305,7 @@ function pfPickPeriod(i){
  if(!p){const R=pfRangePts();if(R.length>1)pfLoadMovers(R[0].as_of,R[R.length-1].as_of);return;}
  document.querySelectorAll('.pfper tbody tr').forEach((tr,n)=>tr.classList.toggle('sel',n===i));
  const hd=document.getElementById('pfmovhd');
- if(hd)hd.innerHTML=`Cards that moved in <b>${pfPeriodLabel(p)}</b> (${fmtDay(p.d0)} &rarr; ${fmtDay(p.d1)}). Tap a card to open it.`;
+ if(hd)hd.innerHTML=`<b>${pfPeriodLabel(p)}</b>: total ${pfSign(p.chg)} = buying and selling ${pfSign(p.S.inv)} ${p.S.held>=0?'+':'-'} cards you held ${pfSign(Math.abs(p.S.held))}${p.S.nb?` (same-cards ${Math.abs(p.S.heldRet)<0.0005?'0.0%':pfPct(p.S.heldRet)})`:''}. Tap a card to open it.`;
  const box=document.getElementById('pfmovers');if(box)box.innerHTML='<div class="spin">Loading…</div>';
  pfLoadMovers(p.d0,p.d1);
 }
@@ -2285,13 +2315,15 @@ async function renderPortfolio(force){
  if(!PF||force)el.innerHTML='<div class="spin">Loading portfolio history…</div>';
  await loadPortfolio(force);
  if(!PF.pts.length){el.innerHTML='<div class="dnote" style="margin-top:20px">No portfolio history yet. The first point is built tonight.</div>';return;}
- const R=pfRangePts(),D=pfDecomp(R),e=D.e,s=D.s,segs=pfSegRows(R);
+ const R=pfRangePts(),D=pfDecomp(R),e=D.e,s=D.s,segs=pfSegRows(R),SP=pfSplit(R);
  const chg=e.total_value-s.total_value;
  let h=`<div class="sechd" style="margin-top:8px"><h2>Portfolio</h2><a onclick="renderPortfolio(true)">Refresh &#8635;</a></div>
  <div class="herov"><div class="l">Total value &middot; ${Number(e.card_count).toLocaleString()} items</div><div class="n">${money(e.total_value)}</div>
- <div class="s"><span><b class="${chg>=0?'up':'dn'}">${pfSign(chg)}</b> since ${fmtDay(s.as_of)}</span><span>Market index <b>${e.market_index.toFixed(1)}</b> <span class="trend ${D.idxRet>0?'up':D.idxRet<0?'dn':'flat'}">${pfPct(D.idxRet)}</span></span></div></div>
+ <div class="s"><span><b class="${chg>=0?'up':'dn'}">${pfSign(chg)}</b> since ${fmtDay(s.as_of)}</span><span>Same cards <b class="${SP.heldRet>0.0005?'up':SP.heldRet<-0.0005?'dn':''}">${Math.abs(SP.heldRet)<0.0005?'0.0%':pfPct(SP.heldRet)}</b></span></div>
+ <div class="s"><span>Buying and selling ${pfSign(SP.inv)}</span><span>Held cards ${pfSign(SP.held)}</span></div></div>
  <div class="chips">${[['7d','1 week'],['30d','1 month'],['all','All history']].map(([k,t])=>`<div class="chip ${PFRANGE===k?'on':''}" onclick="PFRANGE='${k}';renderPortfolio()">${t}</div>`).join('')}</div>`;
  h+=`<div class="panel pfpanel"><div class="pfh"><b>Total value</b><span>Every item you own, valued at its latest price on each date</span></div>${pfLineChart('pfv',R,'total_value',{zero:true,label:'Total portfolio value over time'})}</div>`;
+ h+=pfSplitPanel(R,SP);
  const mx=Math.max(Math.abs(D.added),Math.abs(D.removed),Math.abs(D.market),Math.abs(D.reval),1);
  h+=`<div class="panel pfpanel"><div class="pfh"><b>Where the change came from</b><span>${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}: ${money(s.total_value)} &rarr; ${money(e.total_value)}</span></div>
   ${pfBar('New items',D.added,mx,D.addedN,`${D.addedN.toLocaleString()} added or priced for the first time`)}
@@ -2319,8 +2351,10 @@ async function renderPortfolio(force){
 }
 function pfInsights(R,D,segs){
  const e=D.e,s=D.s,out=[];const chg=e.total_value-s.total_value;
- if(R.length>1&&Math.abs(chg)>0){const share=v=>chg?Math.round(Math.abs(v)/Math.abs(chg)*100):0;
-  out.push(`Value went ${chg>0?'up':'down'} <b>${pfK(Math.abs(chg))}</b> since ${fmtDay(s.as_of)}. New items account for <b>${pfK(D.added)}</b>, revaluations <b>${pfSign(D.reval)}</b>, and market moves on cards you already held <b>${pfSign(D.market)}</b> (index ${pfPct(D.idxRet)}).${Math.abs(D.market)<Math.abs(chg)*0.1?' Almost all of the change is cataloging and comp corrections, not the market.':''}`);}
+ const SP=pfSplit(R);
+ if(R.length>1&&Math.abs(chg)>0){
+  const pctTxt=v=>Math.abs(v)<0.0005?'0.0%':pfPct(v);
+  out.push(`Total moved <b>${pfSign(chg)}</b> since ${fmtDay(s.as_of)}. Of that, <b>${pfSign(SP.inv)}</b> is cards arriving and leaving rather than any price changing. The cards you held throughout moved <b>${pfSign(SP.held)}</b> &mdash; a same-cards return of <b>${pctTxt(SP.heldRet)}</b>, of which the market itself is ${pctTxt(SP.mktRet)} and the remainder is comp corrections.${Math.abs(SP.held)&&Math.abs(SP.inv)>Math.abs(SP.held)*3?' So this range is mostly cataloguing, not the market.':''}`);}
  const fam=e.by_family||{},ftot=Object.values(fam).reduce((t,v)=>t+(+v||0),0)||1,est=+fam.estimate||0;
  if(est/ftot>0.15)out.push(`<b>${pfK(est)}</b> (${Math.round(est/ftot*100)}%) of the value rests on estimates and owner values rather than sales comps. Card Ladder or eBay comps on the biggest of these would firm up the total the most.`);
  if(+e.top10_value)out.push(`Your 10 most valuable items are <b>${pfK(+e.top10_value)}</b>, ${Math.round(+e.top10_value/e.total_value*100)}% of the portfolio. A move in any one of them shows up in the total.`);
