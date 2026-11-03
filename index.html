@@ -481,6 +481,14 @@ nav button.on{color:var(--ink)}
 .pftab td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
 .pftab td small{display:block;font-size:10.5px;color:var(--mut)}
 .pftab .r{text-align:right;white-space:nowrap}
+.pfllf{display:flex;align-items:baseline;gap:9px;padding:9px 2px 2px;border-top:1px solid var(--line);margin-top:8px}
+.pfllf span{font-size:12px;color:var(--mut);font-weight:600}
+.pfllf b{font-size:19px;font-weight:700}
+.pfllf small{font-size:11px;color:var(--mut);margin-left:auto}
+.pfper tbody tr{cursor:pointer}
+.pfun{font-style:normal;color:var(--accent)}
+.pfper tbody tr.sel{background:var(--goldsoft)}
+.pfper tbody tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--gold)}
 .pfshare{height:6px;background:var(--track);border-radius:3px;overflow:hidden;min-width:60px}
 .pfshare i{display:block;height:100%;background:var(--ink);border-radius:3px}
 .pfstack{display:flex;gap:2px;height:14px;border-radius:5px;overflow:hidden;margin:4px 0 10px}
@@ -789,7 +797,7 @@ let CARDS=[], DUPE={}, SEGFILTER=null;
 window.cvLocked=function(){try{localStorage.removeItem('cv_agent_pass');}catch(e){}if(window.CV_ASK){window.CV_ASK.pass=null;window.CV_ASK.status=null;}if(window.askOpen)window.askOpen();setTimeout(()=>{const el=document.getElementById('askmsgs');if(el&&!el.querySelector('.asklock'))el.insertAdjacentHTML('afterbegin','<div class="askwc asklock">Your Vault is locked on this device. Enter your passcode, then repeat what you were doing.</div>');},900);};
 
 const money=v=>v==null?'--':'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0});
-const SRCMAP={'ebay-sold':['eBay sold','var(--green)'],'ebay-thin':['eBay (thin)','var(--gold)'],'ebay-broad':['eBay (est)','var(--gold)'],'ebay-median':['eBay median','var(--green)'],'ebay+cl':['eBay + Card Ladder','var(--green)'],'cardladder-median':['Card Ladder','var(--blue)'],'cardladder-thin':['Card Ladder (thin)','var(--gold)'],'thin-both':['eBay + CL (thin)','var(--gold)'],'ebay-relative':['relative est','var(--gold)'],'cardladder-auto':['Card Ladder','var(--blue)'],'cardladder-comp':['Card Ladder','var(--blue)'],'cardladder-sold':['Card Ladder sold','var(--blue)'],'ebay-1st-ed':['eBay (1st Edition)','var(--green)'],'comp-mixed-review':['mixed comps — review','var(--accent)'],'comp-uncertain':['thin / uncertain — review','var(--accent)'],'no-comps':['no comps found','var(--mut)'],'ebay-none':['needs review','var(--mut)'],'sketch-pending':['sketch','var(--mut)'],'ask-tier':['ask tier','var(--mut)'],'owner-estimate':['owner estimate','var(--gold)'],'sketch-model':['sketch comps (model)','var(--gold)'],'sketch-confirmed':['sketch comps · you confirmed','var(--green)'],'cost-only':['paid (cost)','var(--mut)']};
+const SRCMAP={'ebay-sold':['eBay sold','var(--green)'],'ebay-thin':['eBay (thin)','var(--gold)'],'ebay-broad':['eBay (est)','var(--gold)'],'ebay-median':['eBay median','var(--green)'],'ebay+cl':['eBay + Card Ladder','var(--green)'],'cardladder-median':['Card Ladder','var(--blue)'],'cardladder-thin':['Card Ladder (thin)','var(--gold)'],'thin-both':['eBay + CL (thin)','var(--gold)'],'ebay-relative':['relative est','var(--gold)'],'cardladder-auto':['Card Ladder','var(--blue)'],'cardladder-comp':['Card Ladder','var(--blue)'],'cardladder-sold':['Card Ladder sold','var(--blue)'],'ebay-1st-ed':['eBay (1st Edition)','var(--green)'],'comp-mixed-review':['mixed comps — review','var(--accent)'],'comp-uncertain':['thin / uncertain — review','var(--accent)'],'no-comps':['no comps found','var(--mut)'],'ebay-none':['needs review','var(--mut)'],'sketch-pending':['sketch','var(--mut)'],'ask-tier':['ask tier','var(--mut)'],'owner-estimate':['owner estimate','var(--gold)'],'comps-recent':['comp run','var(--green)'],'comps-thin':['comp run (thin)','var(--gold)'],'sketch-model':['sketch comps (model)','var(--gold)'],'sketch-confirmed':['sketch comps · you confirmed','var(--green)'],'cost-only':['paid (cost)','var(--mut)']};
 function srcLabel(c){let v=c.value_source;if(!v)return 'unpriced';const s=SRCMAP[v];if(s)return s[0];if(v.endsWith('-broad')){const b=SRCMAP[v.slice(0,-6)];return (b?b[0]:v.slice(0,-6))+' (est)';}return v;}
 function srcColor(c){let v=c.value_source;if(!v)return 'var(--mut)';const s=SRCMAP[v];if(s)return s[1];if(v.endsWith('-broad'))return 'var(--gold)';return 'var(--mut)';}
 function needsReviewSrc(v){return v==='comp-mixed-review'||v==='comp-uncertain'||v==='no-comps'||v==='ebay-none';}
@@ -832,7 +840,7 @@ async function fetchJSON(u,tries){
    catch(e){if(i===(tries||3)-1)throw e;await new Promise(s=>setTimeout(s,600*(i+1)));}
  }
 }
-const COMP_SRC=/^(ebay-sold|ebay-median|ebay-comparable|cardladder)/;
+const COMP_SRC=/^(ebay-sold|ebay-median|ebay-comparable|cardladder|comps-recent|comps-thin)/;
 function vtagFor(c){
  if(c.status==='sold')return '<span class="vtag sold">SOLD</span>';
  if(c.needs_review)return '<span class="vtag rev">REVIEW</span>';
@@ -1003,27 +1011,58 @@ function liveCompsBlock(c){
 function compUpdateBlock(c){
  return `<button id="compbtn" class="addlotbtn" style="border-color:rgba(201,168,102,.45);color:var(--gold);font-weight:700" onclick="requestComp('${c.id}')">&#8635; Update comp now</button><div id="compstat" style="display:none"></div>`;
 }
-function setCompStatus(msg,cls){const el=document.getElementById('compstat');if(!el)return;el.style.display='block';el.className='stat-note'+(cls==='ok'?'':'');el.innerHTML=(cls==='ok'?'&#10003; ':'')+msg;if(cls==='ok')el.style.color='var(--green)';else el.style.color='';}
+function setCompStatus(msg,cls){const el=document.getElementById('compstat');if(!el)return;el.style.display='block';el.className='stat-note';el.innerHTML=(cls==='ok'?'&#10003; ':'')+msg;el.style.color=(cls==='ok'?'var(--green)':(cls==='err'?'var(--accent)':''));}
+/* closeCard() leaves window.CUR set, so CUR alone can't tell us the sheet is open.
+   Require both: sheet still rendered AND still showing this card. */
+function compOnScreen(cardId){const sh=document.getElementById('sheet');return !!(sh&&sh.innerHTML&&window.CUR&&window.CUR.id===cardId);}
+function compBtnReset(){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}}
+/* The runner polls from a background eBay tab, where browsers throttle setInterval
+   hard (15s can degrade to minutes). Observed pickup has run ~10 min, so we wait
+   well past that rather than calling it a failure at 4. */
+const COMP_DEADLINE_MS=20*60*1000;
+let COMPWATCH=0;
 async function requestComp(id){
  const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
  const btn=document.getElementById('compbtn');if(btn){btn.disabled=true;btn.textContent='Requesting…';}
- try{await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({card_id:id,ref:c.ref})});}catch(e){}
- if(btn){btn.textContent='Queued · pulling…';}
- setCompStatus('Requested. The comp runner is pulling live eBay sold + Card Ladder for this exact card and will write back the value, comps and date. Keep the runner tab open on your Mac.');
- pollComp(id,c.value_date,0);
-}
-async function pollComp(id,prevDate,tries){
- if(tries>48){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}
-  setCompStatus('Still queued after 4 min. If the runner tab isn’t armed, this card stays in the queue and updates the moment it runs. Nothing lost.');return;}
- await new Promise(r=>setTimeout(r,5000));
+ let reqId=null;
  try{
-  const rows=await fetchJSON(SB+'/rest/v1/comp_requests?card_id=eq.'+id+'&order=requested_at.desc&limit=1',1);
+  const r=await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({card_id:id,ref:c.ref})});
+  if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,120));
+  const rows=await r.json();reqId=rows&&rows[0]&&rows[0].id;
+  if(!reqId)throw new Error('queued but no request id returned');
+ }catch(e){
+  compBtnReset();
+  setCompStatus('Could not queue this request ('+String(e.message||e).slice(0,120)+'). Nothing was sent to the runner — tap again to retry.','err');
+  return;
+ }
+ if(btn)btn.textContent='Queued · waiting for runner…';
+ setCompStatus('Queued. The runner picks this up from your eBay tab and writes back value, comps and date. A backgrounded tab is throttled by the browser, so pickup can take ~10 min; foreground that tab to make it near-instant.');
+ const token=++COMPWATCH;
+ pollComp(reqId,id,token,Date.now());
+}
+async function pollComp(reqId,cardId,token,startedAt){
+ const elapsed=Date.now()-startedAt;
+ if(elapsed>COMP_DEADLINE_MS){
+  if(compOnScreen(cardId)){compBtnReset();
+   setCompStatus('Still queued after '+Math.round(elapsed/60000)+' min. The request is safely in the queue and will be picked up whenever the runner next polls — nothing is lost. Foreground the eBay tab to speed it up.');}
+  return;}
+ await new Promise(r=>setTimeout(r,elapsed<60000?5000:10000));
+ if(token!==COMPWATCH)return; /* superseded by a newer request */
+ try{
+  const rows=await fetchJSON(SB+'/rest/v1/comp_requests?id=eq.'+reqId+'&select=status,result',1);
   const r=rows&&rows[0];
-  if(r&&r.status==='done'){await refreshData();setCompStatus('Updated from live comps just now.','ok');openCard(id);return;}
-  if(r&&r.status==='error'){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Try again or check the runner tab.');return;}
+  if(r&&r.status==='done'){
+   const onScreen=compOnScreen(cardId);
+   await refreshData();
+   /* Never yank the user off whatever they navigated to while waiting, and never
+      write this card's result into a different card's sheet. */
+   if(onScreen){openCard(cardId);setCompStatus(r.result||'Updated from live comps.','ok');}
+   return;}
+  if(r&&r.status==='error'){if(compOnScreen(cardId)){compBtnReset();setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Tap to try again.','err');}return;}
  }catch(e){}
- setCompStatus('Pulling live comps… '+((tries+1)*5)+'s');
- pollComp(id,prevDate,tries+1);
+ const mins=Math.floor(elapsed/60000);
+ if(compOnScreen(cardId))setCompStatus('Waiting for the runner… '+(mins?mins+'m':Math.round(elapsed/1000)+'s'));
+ pollComp(reqId,cardId,token,startedAt);
 }
 function openCard(id){
  const c=CARDS.find(x=>x.id===id);if(!c)return;
@@ -2182,18 +2221,109 @@ function pfWire(id,R,key,tipFn){
  hit.addEventListener('mousemove',move);hit.addEventListener('touchstart',move,{passive:true});hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('mouseleave',out);
 }
 function pfBar(label,v,max,n,note){const w=max?Math.abs(v)/max*50:0;return `<div class="pfdrow"><div class="pfdl">${label}<small>${note||''}</small></div><div class="pfdtrack"><div class="pfdmid"></div><div class="pfdbar ${v>=0?'pos':'neg'}" style="${v>=0?'left:50%':'right:50%'};width:${w.toFixed(2)}%"></div></div><div class="pfdv ${v>0?'up':v<0?'dn':''}">${pfSign(v)}</div></div>`;}
+/* ---- Same cards vs buying and selling -------------------------------------
+   The two reasons the total moves are different questions and need separating:
+     inventory  = cards arriving and leaving      (added - removed)
+     same cards = what you already held did       (market + reval)
+   For the percentage we chain each step's return on that step's held_base, so
+   the figure is a true like-for-like read: cards bought or sold mid-range can
+   swing the total but cannot move this number. */
+function pfSplit(R){
+ const steps=R.slice(1);
+ let invAdd=0,invRem=0,mkt=0,rev=0,fM=1,fH=1,nb=0;
+ steps.forEach(p=>{
+  invAdd+=+p.added_value||0;invRem+=+p.removed_value||0;
+  const m=+p.market_change||0,v=+p.reval_change||0,hb=+p.held_base||0;
+  mkt+=m;rev+=v;
+  if(hb>0){fM*=1+m/hb;fH*=1+(m+v)/hb;nb++;}
+ });
+ return {invAdd,invRem,inv:invAdd-invRem,mkt,rev,held:mkt+rev,
+         mktRet:fM-1,heldRet:fH-1,nb};
+}
+function pfSplitPanel(R,S){
+ const s=R[0],e=R[R.length-1],chg=e.total_value-s.total_value;
+ const mx=Math.max(Math.abs(S.inv),Math.abs(S.held),1);
+ return `<div class="panel pfpanel"><div class="pfh"><b>Is it the cards, or the buying?</b><span>${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}: total ${pfSign(chg)}</span></div>
+ ${pfBar('Buying and selling',S.inv,mx,0,`${pfSign(S.invAdd)} came in${S.invRem?`, ${pfSign(-S.invRem)} sold or removed`:''}`)}
+ ${pfBar('Cards you already held',S.held,mx,0,`market ${pfSign(S.mkt)} &middot; re-valued ${pfSign(S.rev)}`)}
+ <div class="pfllf"><span>Same-cards return</span><b class="${S.heldRet>0.0005?'up':S.heldRet<-0.0005?'dn':''}">${Math.abs(S.heldRet)<0.0005?'0.0%':pfPct(S.heldRet)}</b><small>market alone ${Math.abs(S.mktRet)<0.0005?'0.0%':pfPct(S.mktRet)}</small></div>
+ <div class="dnote">Same-cards return is the apples-to-apples number: it only counts cards you held at both ends, so adding or selling cards cannot move it. Buying and selling changes the total without any card being worth more or less. Re-valued means a comp correction or method change on a card you held, so your best estimate moved even though the market didn't.</div></div>`;
+}
+/* ---- Period ledger: day / week / month -------------------------------------
+   Each period is expressed as a range whose first point is the baseline, so it
+   reuses pfDecomp() and stays consistent with the rest of the page. Snapshots
+   are not perfectly daily (there are gaps), so periods are built from the
+   snapshots that exist rather than from the calendar. */
+let PFGRAN='day', PFSEL=0;
+const PF_MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function pfWeekStart(ymd){const d=new Date(ymd+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10);}
+function pfPeriods(gran){
+ const P=PF.pts;if(P.length<2)return [];
+ const keyOf=p=>gran==='day'?p.as_of:gran==='month'?p.as_of.slice(0,7):pfWeekStart(p.as_of);
+ const groups=[];let cur=null;
+ P.forEach((p,i)=>{const k=keyOf(p);if(!cur||cur.k!==k){cur={k,from:i,to:i};groups.push(cur);}else cur.to=i;});
+ return groups.map(g=>{
+  const R=P.slice(g.from>0?g.from-1:0,g.to+1);
+  if(R.length<2)return null;
+  const D=pfDecomp(R),S=pfSplit(R);
+  return {gran,key:g.k,D,S,d0:D.s.as_of,d1:D.e.as_of,v0:D.s.total_value,v1:D.e.total_value,
+          chg:D.e.total_value-D.s.total_value,pct:D.s.total_value?D.e.total_value/D.s.total_value-1:0,
+          resid:(D.e.total_value-D.s.total_value)-(D.added-D.removed+D.market+D.reval),
+          snaps:g.to-g.from+1};
+ }).filter(Boolean).reverse();
+}
+function pfPeriodLabel(p){
+ if(p.gran==='day')return fmtDay(p.d1);
+ if(p.gran==='month'){const[y,m]=p.key.split('-');return PF_MON[+m-1]+' '+y;}
+ return 'Week of '+fmtDay(p.key);
+}
+function pfPeriodSub(p){
+ const S=p.S,bits=[];
+ if(S.inv)bits.push(`buying/selling ${pfSign(S.inv)}`);
+ if(S.held)bits.push(`same cards ${pfSign(S.held)}`);
+ /* The buckets should sum to the change, and after the 2026-11-03 full rebuild
+    they do (worst residual a cent). They drifted before, when points built on
+    different days sat on different card sets, so keep showing any gap rather
+    than printing components that quietly fail to add up. */
+ if(Math.abs(p.resid)>=1)bits.push(`<i class="pfun">unexplained ${pfSign(p.resid)}</i>`);
+ if(!bits.length)return p.gran==='day'?'no change':'no recorded change';
+ return bits.join(' &middot; ');
+}
+function pfPeriodRows(){
+ const ps=pfPeriods(PFGRAN);
+ if(!ps.length)return '<div class="dnote">Not enough history yet for this view.</div>';
+ const show=ps.slice(0,PFGRAN==='day'?21:PFGRAN==='week'?12:24);
+ return `<table class="pftab pfper"><thead><tr><th>${PFGRAN==='day'?'Day':PFGRAN==='week'?'Week':'Month'}</th><th class="r">Ended at</th><th class="r">Change</th></tr></thead><tbody>
+ ${show.map((p,i)=>`<tr class="${i===PFSEL?'sel':''}" onclick="pfPickPeriod(${i})"><td>${pfPeriodLabel(p)}<small>${pfPeriodSub(p)}</small></td>
+  <td class="r">${money(p.v1)}</td>
+  <td class="r ${p.chg>0?'up':p.chg<0?'dn':''}">${p.chg?pfSign(p.chg):'--'}<small>${p.chg&&p.v0?pfPct(p.pct):''}</small></td></tr>`).join('')}
+ </tbody></table><div class="dnote">Tap a ${PFGRAN} to see the cards that drove it. Change is measured between the snapshots either side of the ${PFGRAN}, so a gap in the daily run shows up as one longer step.</div>`;
+}
+function pfPickPeriod(i){
+ PFSEL=i;
+ const ps=pfPeriods(PFGRAN),p=ps[i];
+ if(!p){const R=pfRangePts();if(R.length>1)pfLoadMovers(R[0].as_of,R[R.length-1].as_of);return;}
+ document.querySelectorAll('.pfper tbody tr').forEach((tr,n)=>tr.classList.toggle('sel',n===i));
+ const hd=document.getElementById('pfmovhd');
+ if(hd)hd.innerHTML=`<b>${pfPeriodLabel(p)}</b>: total ${pfSign(p.chg)} = buying and selling ${pfSign(p.S.inv)} ${p.S.held>=0?'+':'-'} cards you held ${pfSign(Math.abs(p.S.held))}${p.S.nb?` (same-cards ${Math.abs(p.S.heldRet)<0.0005?'0.0%':pfPct(p.S.heldRet)})`:''}. Tap a card to open it.`;
+ const box=document.getElementById('pfmovers');if(box)box.innerHTML='<div class="spin">Loading…</div>';
+ pfLoadMovers(p.d0,p.d1);
+}
+function pfSetGran(g){PFGRAN=g;PFSEL=0;renderPortfolio();}
 async function renderPortfolio(force){
  const el=document.getElementById('portfolio');
  if(!PF||force)el.innerHTML='<div class="spin">Loading portfolio history…</div>';
  await loadPortfolio(force);
  if(!PF.pts.length){el.innerHTML='<div class="dnote" style="margin-top:20px">No portfolio history yet. The first point is built tonight.</div>';return;}
- const R=pfRangePts(),D=pfDecomp(R),e=D.e,s=D.s,segs=pfSegRows(R);
+ const R=pfRangePts(),D=pfDecomp(R),e=D.e,s=D.s,segs=pfSegRows(R),SP=pfSplit(R);
  const chg=e.total_value-s.total_value;
  let h=`<div class="sechd" style="margin-top:8px"><h2>Portfolio</h2><a onclick="renderPortfolio(true)">Refresh &#8635;</a></div>
  <div class="herov"><div class="l">Total value &middot; ${Number(e.card_count).toLocaleString()} items</div><div class="n">${money(e.total_value)}</div>
- <div class="s"><span><b class="${chg>=0?'up':'dn'}">${pfSign(chg)}</b> since ${fmtDay(s.as_of)}</span><span>Market index <b>${e.market_index.toFixed(1)}</b> <span class="trend ${D.idxRet>0?'up':D.idxRet<0?'dn':'flat'}">${pfPct(D.idxRet)}</span></span></div></div>
+ <div class="s"><span><b class="${chg>=0?'up':'dn'}">${pfSign(chg)}</b> since ${fmtDay(s.as_of)}</span><span>Same cards <b class="${SP.heldRet>0.0005?'up':SP.heldRet<-0.0005?'dn':''}">${Math.abs(SP.heldRet)<0.0005?'0.0%':pfPct(SP.heldRet)}</b></span></div>
+ <div class="s"><span>Buying and selling ${pfSign(SP.inv)}</span><span>Held cards ${pfSign(SP.held)}</span></div></div>
  <div class="chips">${[['7d','1 week'],['30d','1 month'],['all','All history']].map(([k,t])=>`<div class="chip ${PFRANGE===k?'on':''}" onclick="PFRANGE='${k}';renderPortfolio()">${t}</div>`).join('')}</div>`;
  h+=`<div class="panel pfpanel"><div class="pfh"><b>Total value</b><span>Every item you own, valued at its latest price on each date</span></div>${pfLineChart('pfv',R,'total_value',{zero:true,label:'Total portfolio value over time'})}</div>`;
+ h+=pfSplitPanel(R,SP);
  const mx=Math.max(Math.abs(D.added),Math.abs(D.removed),Math.abs(D.market),Math.abs(D.reval),1);
  h+=`<div class="panel pfpanel"><div class="pfh"><b>Where the change came from</b><span>${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}: ${money(s.total_value)} &rarr; ${money(e.total_value)}</span></div>
   ${pfBar('New items',D.added,mx,D.addedN,`${D.addedN.toLocaleString()} added or priced for the first time`)}
@@ -2201,6 +2331,9 @@ async function renderPortfolio(force){
   ${pfBar('Revaluations & corrections',D.reval,mx,D.revalN,`${D.revalN.toLocaleString()} method changes, comp fixes, your own values`)}
   ${pfBar('Sold or removed',-D.removed,mx,D.removedN,`${D.removedN.toLocaleString()} left the vault`)}
   <div class="dnote">Only market moves reflect prices actually changing. New items, revaluations and corrections change the total without the market moving.</div></div>`;
+ h+=`<div class="panel pfpanel"><div class="pfh"><b>Period by period</b><span>What the portfolio did in each day, week and month of recorded history</span></div>
+  <div class="chips">${[['day','Day by day'],['week','Week by week'],['month','Month by month']].map(([k,t])=>`<div class="chip ${PFGRAN===k?'on':''}" onclick="pfSetGran('${k}')">${t}</div>`).join('')}</div>
+  ${pfPeriodRows()}</div>`;
  h+=`<div class="panel pfpanel"><div class="pfh"><b>Vault market index</b><span>Starts at 100 on ${fmtDay(PF.pts[0].as_of)}. Moves only when a card you already held is re-comped by the same method and lands within 0.6x to 1.67x of its old value. Adding cards, method changes and comp corrections don't move it.</span></div>${pfLineChart('pfi',R,'market_index',{ref:100,fmt:v=>v.toFixed(1),label:'Vault market index'})}</div>`;
  const tot=e.total_value||1;
  h+=`<div class="panel pfpanel"><div class="pfh"><b>By segment</b><span>Market = same-method re-comps within a normal price band, chained over the range</span></div><table class="pftab"><thead><tr><th>Segment</th><th class="r">Value</th><th>Share</th><th class="r">Market</th><th class="r">Added</th></tr></thead><tbody>
@@ -2210,16 +2343,18 @@ async function renderPortfolio(force){
   <div class="pfstack">${PF_FAM.filter(([k])=>+fam[k]>0).map(([k,t,c])=>`<i style="width:${(+fam[k]/ftot*100).toFixed(2)}%;background:${c}" title="${esc(t)}"></i>`).join('')}</div>
   <div class="pflegend">${PF_FAM.map(([k,t,c])=>`<div><span class="sw" style="background:${c}"></span>${t}<b>${money(+fam[k]||0)}</b><small>${((+fam[k]||0)/ftot*100).toFixed(0)}%</small></div>`).join('')}</div></div>`;
  h+=`<div class="sechd"><h2>What stands out</h2></div><div class="pfins">${pfInsights(R,D,segs).map(t=>`<div class="pfi">${t}</div>`).join('')}</div>`;
- h+=`<div class="sechd"><h2>Biggest moves</h2></div><div class="dnote" style="margin-top:-4px">Individual cards, ${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}. Tap a card to open it.</div><div id="pfmovers"><div class="spin">Loading…</div></div>`;
+ h+=`<div class="sechd"><h2>Biggest movers</h2></div><div class="dnote" id="pfmovhd" style="margin-top:-4px">Individual cards, ${fmtDay(s.as_of)} to ${fmtDay(e.as_of)}. Tap a card to open it.</div><div id="pfmovers"><div class="spin">Loading…</div></div>`;
  el.innerHTML=h;
  pfWire('pfv',R,'total_value',(p,q)=>`<b>${fmtDay(p.as_of)}</b><div>${money(p.total_value)}</div>${q?`<small>${pfSign(p.total_value-q.total_value)} vs ${fmtDay(q.as_of)}${+p.added_value?`<br>new items ${pfSign(+p.added_value)}`:''}${+p.market_change?`<br>market ${pfSign(+p.market_change)}`:''}${+p.reval_change?`<br>revaluations ${pfSign(+p.reval_change)}`:''}${+p.removed_value?`<br>sold/removed ${pfSign(-p.removed_value)}`:''}</small>`:'<small>first point</small>'}`);
  pfWire('pfi',R,'market_index',(p,q)=>`<b>${fmtDay(p.as_of)}</b><div>${p.market_index.toFixed(2)}</div>${q?`<small>${pfPct(p.market_index/q.market_index-1)} on ${(+p.market_n).toLocaleString()} re-comps</small>`:''}`);
- pfLoadMovers(s.as_of,e.as_of);
+ if(pfPeriods(PFGRAN).length)pfPickPeriod(PFSEL);else pfLoadMovers(s.as_of,e.as_of);
 }
 function pfInsights(R,D,segs){
  const e=D.e,s=D.s,out=[];const chg=e.total_value-s.total_value;
- if(R.length>1&&Math.abs(chg)>0){const share=v=>chg?Math.round(Math.abs(v)/Math.abs(chg)*100):0;
-  out.push(`Value went ${chg>0?'up':'down'} <b>${pfK(Math.abs(chg))}</b> since ${fmtDay(s.as_of)}. New items account for <b>${pfK(D.added)}</b>, revaluations <b>${pfSign(D.reval)}</b>, and market moves on cards you already held <b>${pfSign(D.market)}</b> (index ${pfPct(D.idxRet)}).${Math.abs(D.market)<Math.abs(chg)*0.1?' Almost all of the change is cataloging and comp corrections, not the market.':''}`);}
+ const SP=pfSplit(R);
+ if(R.length>1&&Math.abs(chg)>0){
+  const pctTxt=v=>Math.abs(v)<0.0005?'0.0%':pfPct(v);
+  out.push(`Total moved <b>${pfSign(chg)}</b> since ${fmtDay(s.as_of)}. Of that, <b>${pfSign(SP.inv)}</b> is cards arriving and leaving rather than any price changing. The cards you held throughout moved <b>${pfSign(SP.held)}</b> &mdash; a same-cards return of <b>${pctTxt(SP.heldRet)}</b>, of which the market itself is ${pctTxt(SP.mktRet)} and the remainder is comp corrections.${Math.abs(SP.held)&&Math.abs(SP.inv)>Math.abs(SP.held)*3?' So this range is mostly cataloguing, not the market.':''}`);}
  const fam=e.by_family||{},ftot=Object.values(fam).reduce((t,v)=>t+(+v||0),0)||1,est=+fam.estimate||0;
  if(est/ftot>0.15)out.push(`<b>${pfK(est)}</b> (${Math.round(est/ftot*100)}%) of the value rests on estimates and owner values rather than sales comps. Card Ladder or eBay comps on the biggest of these would firm up the total the most.`);
  if(+e.top10_value)out.push(`Your 10 most valuable items are <b>${pfK(+e.top10_value)}</b>, ${Math.round(+e.top10_value/e.total_value*100)}% of the portfolio. A move in any one of them shows up in the total.`);
@@ -2227,6 +2362,16 @@ function pfInsights(R,D,segs){
  const fr=+e.fresh_value/e.total_value;if(fr<0.9)out.push(`Only ${Math.round(fr*100)}% of the value was priced in the last 14 days. A comp run would bring the rest up to date.`);
  const mv=segs.filter(r=>r.value>=1000&&Math.abs(r.mret)>=0.005).sort((a,b)=>b.mret-a.mret);
  if(mv.length){const b=mv[0],w=mv[mv.length-1];out.push(`Strongest segment on market moves: <b>${esc(b.g)}</b> ${pfPct(b.mret)}${mv.length>1&&w.mret<b.mret?`; weakest: <b>${esc(w.g)}</b> ${pfPct(w.mret)}`:''}.`);}
+ const ds=pfPeriods('day'),ws=pfPeriods('week'),ms=pfPeriods('month');
+ if(ds.length>2){const srt=[...ds].sort((a,b)=>b.chg-a.chg),bd=srt[0],wd=srt[srt.length-1];
+  if(bd.chg>0||wd.chg<0)out.push(`Biggest single-day gain was <b>${pfSign(bd.chg)}</b> on ${fmtDay(bd.d1)}; biggest single-day drop <b>${pfSign(wd.chg)}</b> on ${fmtDay(wd.d1)}.`);
+  const moved=ds.filter(x=>Math.abs(x.chg)>=1).length;
+  out.push(`The total actually changed on <b>${moved}</b> of the last ${ds.length} snapshot days, so most days the run confirms prices rather than moving them.`);}
+ if(ws.length>2){const srt=[...ws].sort((a,b)=>b.chg-a.chg),bw=srt[0],ww=srt[srt.length-1];
+  out.push(`Best week so far: <b>${pfPeriodLabel(bw)}</b> at ${pfSign(bw.chg)}. Weakest: <b>${pfPeriodLabel(ww)}</b> at ${pfSign(ww.chg)}.`);}
+ if(ms.length>=2)out.push(`<b>${pfPeriodLabel(ms[0])}</b> so far is ${pfSign(ms[0].chg)}, against ${pfSign(ms[1].chg)} for all of ${pfPeriodLabel(ms[1])}.`);
+ const rec=PF.pts.slice(-21),rm=rec.reduce((t,x)=>t+(+x.market_n||0),0),rr=rec.reduce((t,x)=>t+(+x.reval_n||0),0);
+ if(rm===0&&rr>0)out.unshift(`<b>The market signal is stalled.</b> Across the last ${rec.length} snapshots not one move was counted as a market move, even though <b>${rr.toLocaleString()}</b> card values changed. So the index sits flat and every move is filed as a revaluation. This is what happens when the comp runner writes a pricing method the index doesn't recognise as a market source — the prices are real, the label isn't.`);
  const days=(new Date(e.as_of)-new Date(PF.pts[0].as_of))/864e5;
  if(days<60)out.push(`History starts ${fmtDay(PF.pts[0].as_of)}, so the index is young. Early market moves still include first-time comp clean-ups. It becomes a real read on your cards once weekly re-comps pile up over a couple of months.`);
  return out;
