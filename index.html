@@ -2251,8 +2251,10 @@ function pfPeriodSub(p){
  if(D.added)bits.push(`new ${pfSign(D.added)}`);
  if(D.reval)bits.push(`re-comp ${pfSign(D.reval)}`);
  if(D.removed)bits.push(`sold ${pfSign(-D.removed)}`);
- /* The snapshot buckets do not always add up to the change (items can leave the
-    vault without being counted as removed), so show the gap instead of hiding it. */
+ /* The buckets should sum to the change, and after the 2026-11-03 full rebuild
+    they do (worst residual a cent). They drifted before, when points built on
+    different days sat on different card sets, so keep showing any gap rather
+    than printing components that quietly fail to add up. */
  if(Math.abs(p.resid)>=1)bits.push(`<i class="pfun">unexplained ${pfSign(p.resid)}</i>`);
  if(!bits.length)return p.gran==='day'?'no change':'no recorded change';
  return bits.join(' &middot; ');
