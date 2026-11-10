@@ -1008,13 +1008,13 @@ async function requestComp(id){
  const c=CARDS.find(x=>x.id===id)||window.CUR;if(!c)return;
  const btn=document.getElementById('compbtn');if(btn){btn.disabled=true;btn.textContent='Requesting…';}
  try{await fetch(SB+'/rest/v1/comp_requests',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({card_id:id,ref:c.ref})});}catch(e){}
- if(btn){btn.textContent='Queued · pulling…';}
- setCompStatus('Requested. The comp runner is pulling live eBay sold + Card Ladder for this exact card and will write back the value, comps and date. Keep the runner tab open on your Mac.');
+ if(btn){btn.textContent='Sent to Claude';}
+ setCompStatus('Sent to Claude. The hourly pickup (at :58, 8am to 11pm ET) pulls live eBay sold + Card Ladder for this exact card in your Chrome and writes back the value, comps and date. It shows up in a “Re-comp” chat in Ask AI. Keep Chrome open with Claude in Chrome connected.');
  pollComp(id,c.value_date,0);
 }
 async function pollComp(id,prevDate,tries){
  if(tries>48){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}
-  setCompStatus('Still queued after 4 min. If the runner tab isn’t armed, this card stays in the queue and updates the moment it runs. Nothing lost.');return;}
+  setCompStatus('Queued for Claude’s next hourly pickup (:58 past the hour, 8am to 11pm ET). The card updates when it runs; you can close this.');return;}
  await new Promise(r=>setTimeout(r,5000));
  try{
   const rows=await fetchJSON(SB+'/rest/v1/comp_requests?card_id=eq.'+id+'&order=requested_at.desc&limit=1',1);
@@ -1022,7 +1022,7 @@ async function pollComp(id,prevDate,tries){
   if(r&&r.status==='done'){await refreshData();setCompStatus('Updated from live comps just now.','ok');openCard(id);return;}
   if(r&&r.status==='error'){const b=document.getElementById('compbtn');if(b){b.disabled=false;b.innerHTML='&#8635; Update comp now';}setCompStatus('Runner hit an error on this card ('+(r.result||'unknown')+'). Try again or check the runner tab.');return;}
  }catch(e){}
- setCompStatus('Pulling live comps… '+((tries+1)*5)+'s');
+ setCompStatus('Queued for Claude’s hourly pickup… checking '+((tries+1)*5)+'s');
  pollComp(id,prevDate,tries+1);
 }
 function openCard(id){
